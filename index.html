@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>KURMAPLUS — Manisnya Sunnah, Berkahnya Ramadhan</title>
+    <meta
+      name="description"
+      content="Toko kurma sukari, ajwa, dan tunisia. Pesan dari HP, dikirim Sabtu dan Minggu ke Jabodetabek lewat Grab atau Gojek."
+    />
+    <meta name="theme-color" content="#A4511C" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" href="icons/icon-192.png" type="image/png" />
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon-180.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <link rel="preload" href="fonts/figtree-latin-800-normal.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="fonts/figtree-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="hero">
+      <section class="card" aria-labelledby="brand">
+        <div class="card-top">
+          <img class="logo" src="images/logo-kurma.png" alt="" width="60" height="60" />
+          <div>
+            <h1 class="wordmark" id="brand">KURMA<span class="wordmark-accent">PLUS</span></h1>
+            <p class="tagline">Manisnya Sunnah, Berkahnya Ramadhan.</p>
+          </div>
+        </div>
+        <!-- Mengarah ke katalog portal pelanggan yang dibangun setelah layar ini disetujui. -->
+        <a class="btn" href="/">
+          <svg
+            class="btn-icon"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
+            <path d="M3 6h18" />
+            <path d="M16 10a4 4 0 0 1-8 0" />
+          </svg>
+          Beli Kurma
+        </a>
+      </section>
+    </main>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          // Kegagalan pendaftaran diam-diam agar layar awal tetap terpakai di perangkat lama.
+          navigator.serviceWorker.register('sw.js').catch(() => {});
+        });
+      }
+    </script>
+  </body>
+</html>

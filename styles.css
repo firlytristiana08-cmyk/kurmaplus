@@ -1,0 +1,180 @@
+/* Font di-host sendiri: tanpa permintaan ke pihak luar (PRD — Tumpukan teknologi, Font). */
+@font-face {
+  font-family: 'Figtree';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('fonts/figtree-latin-400-normal.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Figtree';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('fonts/figtree-latin-600-normal.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Figtree';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('fonts/figtree-latin-700-normal.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Figtree';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url('fonts/figtree-latin-800-normal.woff2') format('woff2');
+}
+
+:root {
+  --ink: #241710;
+  --paper: #f4ede0;
+  --sand: #e7dac3;
+  --caramel: #a4511c;
+  --caramel-press: #8f4518;
+  --olive: #4a5a2b;
+  --brick: #9b2c2c;
+  --card-shadow: 0 12px 28px rgba(36, 23, 16, 0.22);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: 'Figtree', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  color: var(--ink);
+  background: var(--paper);
+  -webkit-font-smoothing: antialiased;
+}
+
+.hero {
+  position: relative;
+  min-height: 100vh;
+  min-height: 100svh;
+  min-height: 100dvh;
+  background: url('images/hero.webp') 50% 25% / cover no-repeat;
+}
+
+.card {
+  position: absolute;
+  top: clamp(72px, 17%, 220px);
+  right: clamp(16px, 4vw, 48px);
+  width: min(280px, calc(100vw - 32px));
+  padding: 14px;
+  background: #fff;
+  border-radius: 20px;
+  box-shadow: var(--card-shadow);
+}
+
+/* Ekor gelembung di sudut kanan bawah, mengikuti bentuk kartu pada rancangan. */
+.card::after {
+  content: '';
+  position: absolute;
+  right: 26px;
+  bottom: -9px;
+  width: 20px;
+  height: 20px;
+  background: #fff;
+  border-radius: 0 0 6px 0;
+  box-shadow: 6px 6px 12px rgba(36, 23, 16, 0.12);
+  transform: rotate(45deg);
+}
+
+.card-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logo {
+  display: block;
+  flex: none;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.wordmark {
+  margin: 0;
+  font-size: 21px;
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: 0.01em;
+}
+
+/* Tanda plus pada wordmark selalu karamel (PRD — Arah desain, logo). */
+.wordmark-accent {
+  color: var(--caramel);
+}
+
+.tagline {
+  margin: 3px 0 0;
+  font-size: 14px;
+  line-height: 1.35;
+  color: #4a392b;
+}
+
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 14px;
+  height: 50px;
+  padding: 0 16px;
+  border-radius: 14px;
+  background: var(--caramel);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  text-decoration: none;
+  transition:
+    background-color 150ms ease,
+    transform 150ms ease;
+}
+
+.btn:hover {
+  background: var(--caramel-press);
+}
+
+.btn:active {
+  transform: scale(0.98);
+}
+
+.btn:focus-visible {
+  outline: 3px solid var(--olive);
+  outline-offset: 2px;
+}
+
+.btn-icon {
+  flex: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn {
+    transition: none;
+  }
+}
+
+/* Layar pendek (misalnya HP lanskap): kartu tidak boleh terpotong. */
+@media (max-height: 560px) {
+  .card {
+    top: 24px;
+  }
+}
+
+/* Desktop: komposisi tetap di kanan atas seperti rancangan. */
+@media (min-width: 768px) {
+  .card {
+    top: clamp(96px, 18vh, 240px);
+    right: clamp(40px, 8vw, 120px);
+    width: 300px;
+  }
+}
