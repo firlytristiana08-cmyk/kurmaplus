@@ -9,13 +9,6 @@
 @font-face {
   font-family: 'Figtree';
   font-style: normal;
-  font-weight: 600;
-  font-display: swap;
-  src: url('fonts/figtree-latin-600-normal.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Figtree';
-  font-style: normal;
   font-weight: 700;
   font-display: swap;
   src: url('fonts/figtree-latin-700-normal.woff2') format('woff2');
@@ -35,8 +28,14 @@
   --caramel: #a4511c;
   --caramel-press: #8f4518;
   --olive: #4a5a2b;
-  --brick: #9b2c2c;
-  --card-shadow: 0 12px 28px rgba(36, 23, 16, 0.22);
+
+  /* Kartu gelembung: permukaan putih 80% dipakai badan kartu dan ekor
+     agar keduanya selalu sama (PRD/riwayat: beda warna = garis sambungan). */
+  --card-surface: rgb(255 255 255 / 0.8);
+  --card-radius: 1.75rem;
+  --tail-x: 38%;
+  --tail-w: 2.7rem;
+  --tail-h: 1.05rem;
 }
 
 *,
@@ -49,64 +48,136 @@ body {
   margin: 0;
   font-family: 'Figtree', system-ui, -apple-system, 'Segoe UI', sans-serif;
   color: var(--ink);
-  background: var(--paper);
+  background: var(--ink);
   -webkit-font-smoothing: antialiased;
 }
 
-.hero {
-  position: relative;
+.page {
+  display: flex;
   min-height: 100vh;
-  min-height: 100svh;
   min-height: 100dvh;
-  background: url('images/hero.webp') 50% 25% / cover no-repeat;
+  justify-content: center;
+  background: var(--ink);
 }
 
-.card {
+/* Kanvas mobile-only: lebar tetap 430px, di desktop dikelilingi warna tinta. */
+.canvas {
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  max-width: 26.875rem;
+  overflow: hidden;
+  background: var(--ink);
+  box-shadow: 0 0 100px -30px rgb(0 0 0 / 0.9);
+}
+
+.hero-bg {
   position: absolute;
-  top: clamp(72px, 17%, 220px);
-  right: clamp(16px, 4vw, 48px);
-  width: min(280px, calc(100vw - 32px));
-  padding: 14px;
-  background: #fff;
-  border-radius: 20px;
-  box-shadow: var(--card-shadow);
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
 }
 
-/* Ekor gelembung di sudut kanan bawah, mengikuti bentuk kartu pada rancangan. */
+/* Gradien bertingkat (bukan dua titik) agar peralihannya halus. */
+.hero-shade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    rgb(36 23 16 / 0.62) 0%,
+    rgb(36 23 16 / 0.46) 26%,
+    rgb(36 23 16 / 0.29) 50%,
+    rgb(36 23 16 / 0.14) 72%,
+    rgb(36 23 16 / 0.05) 88%,
+    rgb(36 23 16 / 0) 100%
+  );
+}
+
+.hero-content {
+  position: relative;
+  display: flex;
+  min-height: 100vh;
+  min-height: 100dvh;
+  flex-direction: column;
+  padding: 19dvh 1rem max(1.25rem, env(safe-area-inset-bottom));
+}
+
+/* Kartu gelembung mengambang di sepertiga atas, rata kiri seperti rancangan. */
+.card {
+  position: relative;
+  width: 73%;
+  max-width: 19.5rem;
+  margin-left: 9%;
+  padding: 1.05rem 1.1rem 1.25rem;
+  border-radius: var(--card-radius);
+  animation: rise-in 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Lapisan 1 — siluet badan kartu + bayangan di luar saja. */
+.card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-color: var(--card-surface);
+  border-radius: var(--card-radius);
+  box-shadow:
+    0 1px 0 0 rgb(255 255 255 / 0.9) inset,
+    0 22px 30px -6px rgb(36 23 16 / 0.45),
+    0 5px 10px -4px rgb(36 23 16 / 0.32);
+}
+
+/* Lapisan 2 — ekor segitiga, warna permukaan yang sama. */
 .card::after {
   content: '';
   position: absolute;
-  right: 26px;
-  bottom: -9px;
-  width: 20px;
-  height: 20px;
-  background: #fff;
-  border-radius: 0 0 6px 0;
-  box-shadow: 6px 6px 12px rgba(36, 23, 16, 0.12);
-  transform: rotate(45deg);
+  left: var(--tail-x);
+  bottom: calc(var(--tail-h) * -1 + 1px);
+  width: var(--tail-w);
+  height: calc(var(--tail-h) + 1px);
+  z-index: -1;
+  translate: -50% 0;
+  background-color: var(--card-surface);
+  clip-path: polygon(50% 100%, 0 0, 100% 0);
+  filter: drop-shadow(0 6px 5px rgb(36 23 16 / 0.35));
 }
 
-.card-top {
+/* `isolate` + `z-index: 0` menaruh isi kartu DI ATAS ::before/::after
+   (z-index:-1) agar isi tidak tenggelam di belakang latar halaman. */
+.card-body {
+  position: relative;
+  z-index: 0;
+  isolation: isolate;
+}
+
+.brand-row {
   display: flex;
-  align-items: center;
-  gap: 12px;
+  align-items: flex-start;
+  gap: 0.7rem;
 }
 
 .logo {
   display: block;
   flex: none;
-  width: 60px;
-  height: 60px;
+  width: 2.9rem;
+  height: 2.9rem;
+  margin-top: 0.1rem;
   border-radius: 50%;
   object-fit: cover;
 }
 
+.brand-text {
+  min-width: 0;
+}
+
 .wordmark {
   margin: 0;
-  font-size: 21px;
+  font-size: 0.9375rem;
   font-weight: 800;
   line-height: 1.15;
-  letter-spacing: 0.01em;
+  letter-spacing: -0.015em;
 }
 
 /* Tanda plus pada wordmark selalu karamel (PRD — Arah desain, logo). */
@@ -115,37 +186,67 @@ body {
 }
 
 .tagline {
-  margin: 3px 0 0;
-  font-size: 14px;
+  margin: 0.3rem 0 0;
+  font-size: 0.75rem;
   line-height: 1.35;
-  color: #4a392b;
+}
+
+/* Pill info jadwal kirim — sepadan dengan pill jam buka pada rancangan. */
+.info-pill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  width: 100%;
+  margin-top: 0.6rem;
+  padding: 0.42rem 0.55rem;
+  border-radius: 9999px;
+  background: var(--sand);
+  color: var(--ink);
+  font-size: 0.75rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.01em;
+}
+
+.info-pill span {
+  white-space: nowrap;
+}
+
+.pill-icon {
+  flex: none;
+  width: 1.2rem;
+  height: 1.2rem;
+  color: var(--caramel);
 }
 
 .btn {
   display: flex;
+  width: 100%;
+  min-height: 50px;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  margin-top: 14px;
-  height: 50px;
-  padding: 0 16px;
-  border-radius: 14px;
+  gap: 0.45rem;
+  margin-top: 0.7rem;
+  padding: 0.72rem 0.8rem;
+  border-radius: 0.7rem;
   background: var(--caramel);
-  color: #fff;
-  font-size: 16px;
+  color: #fffdf8;
+  font-size: 0.9375rem;
   font-weight: 700;
+  letter-spacing: -0.005em;
   text-decoration: none;
+  box-shadow:
+    0 8px 16px -8px rgb(164 81 28 / 0.85),
+    inset 0 1px 0 rgb(255 255 255 / 0.22);
   transition:
-    background-color 150ms ease,
-    transform 150ms ease;
-}
-
-.btn:hover {
-  background: var(--caramel-press);
+    transform 150ms ease-out,
+    background-color 150ms ease-out;
 }
 
 .btn:active {
-  transform: scale(0.98);
+  transform: scale(0.975);
+  background: var(--caramel-press);
 }
 
 .btn:focus-visible {
@@ -155,26 +256,27 @@ body {
 
 .btn-icon {
   flex: none;
+  width: 1.05rem;
+  height: 1.05rem;
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .card {
+    animation: none;
+  }
+
   .btn {
     transition: none;
-  }
-}
-
-/* Layar pendek (misalnya HP lanskap): kartu tidak boleh terpotong. */
-@media (max-height: 560px) {
-  .card {
-    top: 24px;
-  }
-}
-
-/* Desktop: komposisi tetap di kanan atas seperti rancangan. */
-@media (min-width: 768px) {
-  .card {
-    top: clamp(96px, 18vh, 240px);
-    right: clamp(40px, 8vw, 120px);
-    width: 300px;
   }
 }
