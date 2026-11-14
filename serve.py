@@ -30,5 +30,8 @@ class Server(socketserver.ThreadingTCPServer):
 
 
 if __name__ == "__main__":
-    with Server(("0.0.0.0", 4173), Handler) as httpd:
+    import sys
+
+    port = int(sys.argv[1]) if len(sys.argv) > 1 else 4173
+    with Server(("0.0.0.0", port), Handler) as httpd:
         httpd.serve_forever()
