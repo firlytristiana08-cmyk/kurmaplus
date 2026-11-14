@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kurmaplus-splash-v3';
+const CACHE_NAME = 'kurmaplus-splash-v4';
 
 // Aset layar awal disimpan sejak awal agar tetap terbuka tanpa jaringan (FR-17).
 const PRECACHE = [
@@ -31,6 +31,26 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   if (request.method !== 'GET') return;
+
+  const isTextAsset =
+    request.mode === 'navigate' || /\.(?:html?|css|js|webmanifest)$/i.test(new URL(request.url).pathname);
+
+  if (isTextAsset) {
+    // Teks (HTML/CSS/JS): jaringan DULU agar pembaruan selalu langsung terlihat,
+    // cache hanya menjadi cadangan saat offline.
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+          return response;
+        })
+        .catch(() => caches.match(request).then((cached) => cached || caches.match('./index.html'))),
+    );
+    return;
+  }
+
+  // Gambar dan font: cache dulu agar hemat kuota, jaringan bila belum tersimpan.
   event.respondWith(
     caches.match(request).then(
       (cached) =>
