@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kurmaplus-splash-v4';
+const CACHE_NAME = 'kurmaplus-splash-v5';
 
 // Aset layar awal disimpan sejak awal agar tetap terbuka tanpa jaringan (FR-17).
 const PRECACHE = [
@@ -61,8 +61,8 @@ self.addEventListener('fetch', (event) => {
             caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
             return response;
           })
-          // Saat offline dan aset belum tersimpan, layar awal tetap tampil.
-          .catch(() => caches.match('./index.html')),
+          // Saat offline, tampilkan versi HP yang selalu diprakache sebagai gantinya.
+          .catch(() => caches.match('./images/hero.webp')),
     ),
   );
 });

@@ -14,7 +14,27 @@
     <link rel="apple-touch-icon" href="icons/apple-touch-icon-180.png" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <link rel="preload" href="images/hero.webp" as="image" type="image/webp" />
+    <link
+      rel="preload"
+      href="images/hero.webp"
+      as="image"
+      type="image/webp"
+      media="(max-width: 639px)"
+    />
+    <link
+      rel="preload"
+      href="images/bg-tablet.webp"
+      as="image"
+      type="image/webp"
+      media="(min-width: 640px) and (max-width: 1023px)"
+    />
+    <link
+      rel="preload"
+      href="images/bg-desktop.webp"
+      as="image"
+      type="image/webp"
+      media="(min-width: 1024px)"
+    />
     <link rel="preload" href="fonts/figtree-latin-800-normal.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="preload" href="fonts/figtree-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="styles.css" />
@@ -24,16 +44,21 @@
       <!-- Kanvas mobile-only seperti rancangan beranda referensi: di desktop
           tetap selebar 430px dan dikelilingi warna tinta. -->
       <div class="canvas">
-        <img
-          class="hero-bg"
-          src="images/hero.webp"
-          srcset="images/hero.webp 539w, images/hero-wide.webp 1078w"
-          sizes="100vw"
-          alt="Ilustrasi kampung Jakarta dengan Monas di kejauhan"
-          width="539"
-          height="956"
-          fetchpriority="high"
-        />
+        <!-- Art direction: tiap perangkat hanya mengunduh satu gambar sesuai
+            lebar layarnya (HP portrait, tablet, desktop lanskap) agar akses
+            publik tetap ringan. -->
+        <picture>
+          <source media="(min-width: 1024px)" srcset="images/bg-desktop.webp" type="image/webp" />
+          <source media="(min-width: 640px)" srcset="images/bg-tablet.webp" type="image/webp" />
+          <img
+            class="hero-bg"
+            src="images/hero.webp"
+            alt="Ilustrasi kampung Jakarta dengan Monas di kejauhan"
+            width="539"
+            height="956"
+            fetchpriority="high"
+          />
+        </picture>
         <!-- Gradien bawah ke atas agar kartu dan tombol terbaca di atas ilustrasi. -->
         <div class="hero-shade" aria-hidden="true"></div>
 
