@@ -4,7 +4,7 @@
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 		<meta name="theme-color" content="#f4ede0" />
-		<script>
+		<script data-kurma-diag>
 			// Shim konstanta global SvelteKit: runtime klien membaca konstanta
 			// __SVELTEKIT_* yang seharusnya ditetapkan oleh klien dev Vite lewat
 			// __DEFINES__. Bila itu tidak aktif, referensi telanjang melempar
@@ -29,7 +29,7 @@
 					__SVELTEKIT_APP_VERSION_FILE__: '_app/version.json',
 					__SVELTEKIT_APP_VERSION_POLL_INTERVAL__: 0,
 					__SVELTEKIT_APP_VERSION_CHECKS_ENABLED__: false,
-					__SVELTEKIT_GLOBAL_NAME__: '__sveltekit_dev',
+					__SVELTEKIT_GLOBAL_NAME__: '__sveltekit' + '_dev',
 					__SVELTEKIT_CSRF_CHECK_ORIGIN__: false,
 					__SVELTEKIT_LINK_HEADER_PRELOAD__: false,
 					__SVELTEKIT_SERVICE_WORKER__: false,
@@ -49,22 +49,32 @@
 	</head>
 	<body data-sveltekit-preload-data="hover">
 		<div style="display: contents">%sveltekit.body%</div>
-		<script>
+		<script data-kurma-diag>
 			// Diagnostik preview pengembangan: mencatat kegagalan pemuatan modul
 			// dan keberhasilan hidrasi. Pita status muncul hanya bila aplikasi belum
 			// siap, lalu MENGHILANG SENDIRI saat hidrasi selesai (pemuatan modul dev
 			// bisa beberapa detik lewat proksi — itu normal, bukan kegagalan).
-			// Hanya aktif pada server dev (bootstrap @sveltejs/kit).
 			(function () {
-				var devBootstrap = false;
+				// Gerbang mode dev berlapis yang TIDAK BISA mencocokkan dirinya
+				// sendiri (penyebab pita salah tampil di produksi: deteksi lama
+				// mencari teks yang juga ada di dalam skrip ini):
+				// (1) skrip kami berpenanda data-kurma-diag dan dilewati saat pindai;
+				// (2) sinyal dev harus POSITIF — bootstrap dev menetapkan global
+				//     "__sveltekit" + "_dev" (build produksi memakai nama ber-hash);
+				// (3) bila terlihat jejak bundel produksi, langsung batal.
+				// Tidak ada satu pun kata kunci utuh yang ditulis literal di sini.
+				var DEV_NEEDLE = '__sveltekit' + '_dev';
+				var PROD_NEEDLE = '/_app/' + 'immutable/';
+				var isDev = false;
 				for (var i = 0; i < document.scripts.length; i++) {
 					var s = document.scripts[i];
-					if (!s.src && s.textContent.indexOf('@sveltejs/kit') !== -1) {
-						devBootstrap = true;
-						break;
-					}
+					if (s.hasAttribute && s.hasAttribute('data-kurma-diag')) continue;
+					var t = s.src ? '' : s.textContent || '';
+					if (!t) continue;
+					if (t.indexOf(PROD_NEEDLE) !== -1) return;
+					if (t.indexOf(DEV_NEEDLE) !== -1) isDev = true;
 				}
-				if (!devBootstrap) return;
+				if (!isDev) return;
 				// Modul inti + seluruh pembungkus node rute mulai diunduh sekarang,
 				// paralel dengan rantai import bootstrap. Tanpa ini, tiap lapis
 				// (entry → client → app → node → komponen) menunggu lapis
