@@ -30,6 +30,7 @@ Aturan 5 PRD: dependensi baru hanya masuk bila alasannya dicatat di berkas ini.
 | `@biomejs/biome` | PRD: lint dan format satu alat. |
 | SvelteKit, Svelte, adapter-auto, vite, typescript, svelte-check | PRD: tumpukan inti (adapter-auto → otomatis memakai adapter-vercel di Vercel; adapter-cloudflare dibuang karena menyalakan runtime workerd tambahan dan menyumbang port pratinjau ekstra). |
 | — | Aturan lingkungan (keputusan pemilik, 2026-11-16) | Pratinjau Arena dijalankan dari server **development** (`npm run dev`); **produksi = Vercel** dan **hanya pemilik** yang menaikkan production dari Vercel secara manual. Jangan menyajikan build produksi di pratinjau dan jangan men-deploy tanpa perintah pemilik. |
+| — | Klien dev stabil (vite.config) | Middleware `devStableClient` menyajikan `/@vite/client` pengganti (tanpa websocket/ping/muat ulang) dan `/_app/version.json` yang stabil, khusus server dev | Klien Vite bawaan memuat ulang halaman sendiri saat koneksi putus-nyambung lewat proksi pratinjau → tampilan "hilang-muncul" berulang. Gaya CSS tetap ter-inject (updateStyle/removeStyle dipertahankan). |
 
 ## Nilai sementara (tanda "(belum ditentukan)" di PRD — diisi pemilik lewat tabel settings sebelum rilis)
 
