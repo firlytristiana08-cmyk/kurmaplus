@@ -4,6 +4,7 @@
 	import { cart } from '#lib/cart.svelte';
 	import PageFooter from '#lib/components/PageFooter.svelte';
 	import PageHeader from '#lib/components/PageHeader.svelte';
+	import { clearInvalid, handleInvalid } from '#lib/validation';
 	import type { CheckoutData } from './+page.server';
 
 	let { data, form }: { data: CheckoutData; form?: { message?: string; code?: string } } = $props();
@@ -79,13 +80,27 @@
 						'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
 				})
 				.addTo(map);
+			// Ikon pin kustom (SVG inline). Ikon bawaan Leaflet memakai berkas PNG
+			// yang kerap gagal dimuat setelah proses build, dan warnanya biru di
+			// luar identitas toko. Pin terisi warna bata dengan titik putih dan
+			// garis navy — konsisten dengan tombol dan kartu KURMAPLUS.
+			const pinSvg =
+				'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 34 46" width="34" height="46">' +
+				'<path d="M17 2C9.3 2 3 8.3 3 16c0 10.6 14 28 14 28s14-17.4 14-28c0-7.7-6.3-14-14-14z" fill="#AB3710" stroke="#2D264B" stroke-width="2" stroke-linejoin="round"/>' +
+				'<circle cx="17" cy="16" r="5" fill="#FFFFFF"/></svg>';
+			const pinIcon = leaflet.icon({
+				iconUrl: `data:image/svg+xml,${encodeURIComponent(pinSvg)}`,
+				iconSize: [34, 46],
+				iconAnchor: [17, 45]
+			});
+
 			let marker: import('leaflet').Marker | null = null;
 
 			const placePin = (lat: number, lng: number): void => {
 				if (marker) {
 					marker.setLatLng([lat, lng]);
 				} else {
-					marker = leaflet.marker([lat, lng], { draggable: true }).addTo(map);
+					marker = leaflet.marker([lat, lng], { draggable: true, icon: pinIcon }).addTo(map);
 					marker.on('dragend', () => {
 						const position = marker?.getLatLng();
 						if (position) {
@@ -149,7 +164,7 @@
 			<div class="error-box" role="alert">{form.message}</div>
 		{/if}
 
-		<form id="form-checkout" method="POST" onsubmit={handleSubmit}>
+		<form id="form-checkout" method="POST" onsubmit={handleSubmit} oninvalidcapture={handleInvalid} oninputcapture={clearInvalid}>
 			<input type="hidden" name="items" value={itemsJson} />
 			<input type="hidden" name="lat" value={latValue} />
 			<input type="hidden" name="lng" value={lngValue} />

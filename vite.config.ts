@@ -1,4 +1,5 @@
 /// <reference types="vitest/config" />
+import { gzipSync } from "node:zlib";
 import adapter from "@sveltejs/adapter-auto";
 import { sveltekit } from "@sveltejs/kit/vite";
 import { vitePreprocess } from "@sveltejs/vite-plugin-svelte";
@@ -8,6 +9,11 @@ import { defineConfig } from "vitest/config";
 // websocket, ping, atau muat ulang halaman. Klien Vite bawaan memuat ulang
 // halaman sendiri saat koneksi putus-nyambung lewat proksi pratinjau — itulah
 // tampilan "hilang-muncul" yang dikeluhkan. (Lihat DECISIONS.md.)
+// PENTING: klien bawaan juga menetapkan semua konstanta define (__SVELTEKIT_*)
+// sebagai global sebelum modul lain dievaluasi. Karena stub ini
+// menggantikannya, blok penetapan global HARUS disuntikkan di depan stub
+// (lihat define_globals di devStableClient) — tanpa itu, setiap referensi
+// __SVELTEKIT_* di modul klien melempar ReferenceError dan interaksi mati.
 const DEV_CLIENT_STUB = `
 const sheets = new Map();
 export function updateStyle(id, content) {
@@ -37,16 +43,46 @@ export class ErrorOverlay {}
 export default {};
 `;
 
+// Identitas unik tiap kali server dev dijalankan. Halaman yang masih menyimpan
+// modul generasi sebelumnya akan mendeteksi perbedaan versi dan memuat ulang
+// diri, sehingga klik/tombol tidak pernah "mati" karena modul campuran.
+const DEV_RUN_ID = Date.now().toString(36);
+
+// Memoisasi gzip: konten modul stabil selama satu kali jalan server, jadi
+// kunjungan/klik ulang tidak mengompresi ulang ratusan KB. Kunci = isi modul
+// (bukan URL) agar hasil selalu segar; dibatasi agar memori tetap kecil.
+const gzipMemo = new Map<string, Buffer>();
+function gzipCached(text: string): Buffer {
+  const hit = gzipMemo.get(text);
+  if (hit) return hit;
+  const out = gzipSync(Buffer.from(text, "utf8"));
+  if (gzipMemo.size > 24) gzipMemo.delete(gzipMemo.keys().next().value as string);
+  gzipMemo.set(text, out);
+  return out;
+}
+
+// Modul rute dinamis beralamat kurung ([slug], [kode]) dilaporkan gagal dimuat
+// di beberapa proksi pratinjau. Alamat modul ditulis tanpa kurung (@slug, @kode)
+// dan dipetakan kembali ke berkas aslinya sebelum diproses Vite.
+const ROUTE_SEGMENT_ALIAS_RE = /@([a-zA-Z_]+)/g;
+
 function devStableClient() {
   return {
     name: "kurmaplus-dev-stable-client",
     configureServer(server: {
+      config: { define?: Record<string, string> };
       middlewares: {
         use: (
           fn: (
-            req: { url?: string },
+            req: {
+              url?: string;
+              headers?: Record<string, string | string[] | undefined>;
+            },
             res: {
-              setHeader: (k: string, v: string) => void;
+              setHeader: (k: string, v: string | number | string[]) => void;
+              getHeader: (k: string) => string | number | undefined;
+              removeHeader: (k: string) => void;
+              write: (chunk: string | Buffer, ...rest: unknown[]) => boolean;
               end: (body: string) => void;
             },
             next: () => void,
@@ -54,18 +90,89 @@ function devStableClient() {
         ) => void;
       };
     }) {
+      // Konstanta define SvelteKit (__SVELTEKIT_*) harus menjadi global sebelum
+      // modul klien lain dievaluasi; klien Vite bawaan melakukannya lewat
+      // __DEFINES__, tetapi kita menggantikan klien itu. Suntikkan sendiri:
+      // nilai mentah define dievaluasi dan ditetapkan di globalThis.
+      const define_globals = Object.entries(server.config.define ?? {})
+        .filter(([key]) => /^__SVELTEKIT_[A-Z0-9_]+__$/.test(key))
+        .map(([key, value]) => `try { globalThis.${key} = (${value}); } catch {}`)
+        .join("\n");
+      const dev_client = `${define_globals}\n${DEV_CLIENT_STUB}`;
       server.middlewares.use((req, res, next) => {
-        const url = req.url ?? "";
+        let url = req.url ?? "";
+        // Aset statis (gambar/font) tidak pernah mematikan interaksi — boleh
+        // direvalidasi (304) agar kunjungan ulang tidak mengunduh ulang ratusan
+        // KB. Kode (JS/JSON/HTML) tetap no-store: modul campuran = klik mati.
+        const isAsset = /\.(png|jpe?g|webp|gif|svg|ico|avif|woff2?|ttf|otf|mp4|webm)(\?|$)/i.test(
+          url,
+        );
+        const acceptsGzip = String(req.headers?.["accept-encoding"] ?? "").includes("gzip");
+        const originalSetHeader = res.setHeader.bind(res);
+        res.setHeader = (key: string, value: string | number | string[]) => {
+          if (key.toLowerCase() === "cache-control") {
+            value = isAsset ? "no-cache" : "no-store";
+          }
+          return originalSetHeader(key, value);
+        };
+        res.setHeader("Cache-Control", isAsset ? "no-cache" : "no-store");
+
+        // @slug -> [slug] pada permintaan modul (lihat ROUTE_SEGMENT_ALIAS_RE).
+        if (url.includes("/src/routes/") && url.includes("@")) {
+          url = url.replace(ROUTE_SEGMENT_ALIAS_RE, "[$1]");
+          req.url = url;
+        }
+
+        // (1) Tulis ulang alamat modul kurung di respons JS ([slug] -> @slug).
+        // (2) Kompresi gzip untuk JS/JSON/CSS — modul dev mentah ~3MB per halaman;
+        //     lewat proksi pratinjau inilah biaya terbesarnya.
+        // Diagnostik disuntikkan lewat src/app.html, bukan lewat respons,
+        // agar tidak pernah menyentuh aliran body HTML.
+        const originalEnd = (
+          res.end as unknown as (body?: string | Buffer, ...rest: unknown[]) => void
+        ).bind(res);
+        res.end = (body?: string | Buffer, ...rest: unknown[]) => {
+          try {
+            const type = String(res.getHeader("content-type") ?? "");
+            const isHtml = type.includes("text/html");
+            const isText =
+              type.includes("javascript") || type.includes("json") || type.includes("css");
+            const tail =
+              typeof body === "string" ? body : Buffer.isBuffer(body) ? body.toString("utf8") : "";
+            let out = tail;
+            if (type.includes("javascript") && out.includes("/src/routes/")) {
+              out = out.replace(/(\/src\/routes\/[^"'`?]*?)\[([a-zA-Z_]+)\]/g, "$1@$2");
+            }
+            if (
+              !isHtml &&
+              isText &&
+              acceptsGzip &&
+              out.length > 1024 &&
+              !res.getHeader("content-encoding")
+            ) {
+              res.setHeader("Vary", "Accept-Encoding");
+              res.setHeader("Content-Encoding", "gzip");
+              res.removeHeader("content-length");
+              return originalEnd(gzipCached(out), ...rest);
+            }
+            if (out !== tail) {
+              res.removeHeader("content-length");
+              return originalEnd(out, ...rest);
+            }
+          } catch {
+            /* penulisan ulang/kompresi bersifat opsional; respons tetap lanjut */
+          }
+          return originalEnd(body, ...rest);
+        };
+
         if (url.startsWith("/@vite/client")) {
           res.setHeader("Content-Type", "text/javascript; charset=utf-8");
-          res.setHeader("Cache-Control", "no-store");
-          res.end(DEV_CLIENT_STUB);
+          res.end(dev_client);
           return;
         }
         if (url.startsWith("/_app/version.json")) {
           res.setHeader("Content-Type", "application/json");
-          res.setHeader("Cache-Control", "no-store");
-          res.end('{"version":"kurmaplus-dev"}');
+          res.end(JSON.stringify({ version: `kurmaplus-dev-${DEV_RUN_ID}` }));
           return;
         }
         next();
@@ -90,6 +197,23 @@ export default defineConfig({
     // muat ulang halaman sendiri; dimatikan agar tampilan tidak berkedip.
     // Refresh manual selalu melihat perubahan terbaru (tanpa cache dev).
     hmr: false,
+    // Pra-transformasi SEMUA halaman saat server mulai — kunjungan pertama
+    // di rute mana pun tidak menunggu kompilasi komponen Svelte.
+    warmup: {
+      clientFiles: [
+        "./src/routes/+layout.svelte",
+        "./src/routes/+page.svelte",
+        "./src/routes/katalog/+page.svelte",
+        "./src/routes/kurma/[slug]/+page.svelte",
+        "./src/routes/keranjang/+page.svelte",
+        "./src/routes/checkout/+page.svelte",
+        "./src/routes/lacak/+page.svelte",
+        "./src/routes/pesanan/[kode]/+page.svelte",
+        "./src/routes/info/+page.svelte",
+        "./src/routes/privasi/+page.svelte",
+        "./src/app.css",
+      ],
+    },
   },
   test: {
     include: ["src/**/*.test.ts"],

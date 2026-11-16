@@ -4,6 +4,44 @@
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 		<meta name="theme-color" content="#f4ede0" />
+		<script>
+			// Shim konstanta global SvelteKit: runtime klien membaca konstanta
+			// __SVELTEKIT_* yang seharusnya ditetapkan oleh klien dev Vite lewat
+			// __DEFINES__. Bila itu tidak aktif, referensi telanjang melempar
+			// ReferenceError dan aplikasi tidak pernah terhidrasi. Shim ini hanya
+			// mengisi yang belum ada — nilai sebenarnya (lewat klien dev) menang.
+			(function () {
+				var d = {
+					__SVELTEKIT_DEV__: true,
+					__SVELTEKIT_PATHS_BASE__: '',
+					__SVELTEKIT_PATHS_ASSETS__: '',
+					__SVELTEKIT_PATHS_RELATIVE__: true,
+					__SVELTEKIT_PATHS_ORIGIN__: '',
+					__SVELTEKIT_CLIENT_ROUTING__: true,
+					__SVELTEKIT_HASH_ROUTING__: false,
+					__SVELTEKIT_EMBEDDED__: false,
+					__SVELTEKIT_FORK_PRELOADS__: false,
+					__SVELTEKIT_SUPPORTS_ASYNC__: false,
+					__SVELTEKIT_HAS_SERVER_LOAD__: true,
+					__SVELTEKIT_HAS_UNIVERSAL_LOAD__: true,
+					__SVELTEKIT_APP_DIR__: '_app',
+					__SVELTEKIT_APP_VERSION__: '',
+					__SVELTEKIT_APP_VERSION_FILE__: '_app/version.json',
+					__SVELTEKIT_APP_VERSION_POLL_INTERVAL__: 0,
+					__SVELTEKIT_APP_VERSION_CHECKS_ENABLED__: false,
+					__SVELTEKIT_GLOBAL_NAME__: '__sveltekit_dev',
+					__SVELTEKIT_CSRF_CHECK_ORIGIN__: false,
+					__SVELTEKIT_LINK_HEADER_PRELOAD__: false,
+					__SVELTEKIT_SERVICE_WORKER__: false,
+					__SVELTEKIT_SERVER_TRACING_ENABLED__: false,
+					__SVELTEKIT_TRACK__: function () {},
+					__SVELTEKIT_PAYLOAD__: {}
+				};
+				for (var k in d) {
+					if (typeof globalThis[k] === 'undefined') globalThis[k] = d[k];
+				}
+			})();
+		</script>
 		<link rel="manifest" href="%sveltekit.assets%/manifest.webmanifest" />
 		<link rel="icon" href="%sveltekit.assets%/icons/icon-192.png" />
 		<link rel="apple-touch-icon" href="%sveltekit.assets%/icons/apple-touch-icon-180.png" />
@@ -11,5 +49,118 @@
 	</head>
 	<body data-sveltekit-preload-data="hover">
 		<div style="display: contents">%sveltekit.body%</div>
+		<script>
+			// Diagnostik preview pengembangan: mencatat kegagalan pemuatan modul
+			// dan keberhasilan hidrasi. Pita status muncul hanya bila aplikasi belum
+			// siap, lalu MENGHILANG SENDIRI saat hidrasi selesai (pemuatan modul dev
+			// bisa beberapa detik lewat proksi — itu normal, bukan kegagalan).
+			// Hanya aktif pada server dev (bootstrap @sveltejs/kit).
+			(function () {
+				var devBootstrap = false;
+				for (var i = 0; i < document.scripts.length; i++) {
+					var s = document.scripts[i];
+					if (!s.src && s.textContent.indexOf('@sveltejs/kit') !== -1) {
+						devBootstrap = true;
+						break;
+					}
+				}
+				if (!devBootstrap) return;
+				// Modul inti + seluruh pembungkus node rute mulai diunduh sekarang,
+				// paralel dengan rantai import bootstrap. Tanpa ini, tiap lapis
+				// (entry → client → app → node → komponen) menunggu lapis
+				// sebelumnya — di koneksi ber-RTT tinggi inilah "delay" terbesar.
+				// Pranala dibuat persis dengan spesifikasi import app.js agar
+				// browser tidak mengunduh dua kali (dedupe URL identik).
+				[
+					'../node_modules/@sveltejs/kit/src/runtime/client/entry.js',
+					'../@fs/home/user/kurmaplus/.svelte-kit/generated/dev/client/app.js',
+					'/.svelte-kit/generated/dev/shared/error-template.js',
+					'/.svelte-kit/generated/dev/client/nodes/0.js',
+					'/.svelte-kit/generated/dev/client/nodes/1.js',
+					'/.svelte-kit/generated/dev/client/nodes/2.js',
+					'/.svelte-kit/generated/dev/client/nodes/3.js',
+					'/.svelte-kit/generated/dev/client/nodes/4.js',
+					'/.svelte-kit/generated/dev/client/nodes/5.js',
+					'/.svelte-kit/generated/dev/client/nodes/6.js',
+					'/.svelte-kit/generated/dev/client/nodes/7.js',
+					'/.svelte-kit/generated/dev/client/nodes/8.js',
+					'/.svelte-kit/generated/dev/client/nodes/9.js',
+					'/.svelte-kit/generated/dev/client/nodes/10.js'
+				].forEach(function (u) {
+					var l = document.createElement('link');
+					l.rel = 'modulepreload';
+					l.href = u;
+					document.head.appendChild(l);
+				});
+				var errs = [];
+				var banner = null;
+				var done = false;
+				function finish() {
+					done = true;
+					if (banner && banner.parentNode) banner.parentNode.removeChild(banner);
+					banner = null;
+				}
+				function show(text) {
+					if (done) return;
+					if (!banner) {
+						banner = document.createElement('div');
+						banner.setAttribute('role', 'status');
+						banner.style.cssText =
+							'position:fixed;left:0;right:0;bottom:0;z-index:2147483647;background:#2D264B;color:#fff;font:12px/1.5 system-ui,sans-serif;padding:10px 12px';
+						document.body.appendChild(banner);
+					}
+					banner.textContent = text;
+				}
+				window.addEventListener('kurma:hydrated', finish);
+				var poll = setInterval(function () {
+					if (window.__kurmaHydrated) {
+						clearInterval(poll);
+						finish();
+					}
+				}, 500);
+				setTimeout(function () {
+					clearInterval(poll);
+				}, 30000);
+				window.addEventListener(
+					'error',
+					function (e) {
+						var t = e.target;
+						if (t && (t.src || t.href)) {
+							errs.push('gagal memuat ' + (t.src || t.href));
+						} else if (e.message) {
+							errs.push(e.message + ' @' + (e.filename || '?') + ':' + (e.lineno || '?'));
+						}
+					},
+					true
+				);
+				window.addEventListener('unhandledrejection', function (e) {
+					var r = e.reason;
+					errs.push('async: ' + String((r && r.message) || r));
+				});
+				setTimeout(function () {
+					if (done || window.__kurmaHydrated) return;
+					if (errs.length > 0) {
+						show(
+							'Diagnostik preview — ada galat saat memuat: ' +
+								errs.slice(0, 3).join(' | ') +
+								' (pesan ini menghilang sendiri bila aplikasi tetap berhasil dimulai)'
+						);
+					} else {
+						show(
+							'Diagnostik preview — aplikasi masih memuat modul… (pesan ini menghilang sendiri saat siap)'
+						);
+					}
+				}, 5000);
+				setTimeout(function () {
+					if (done || window.__kurmaHydrated) return;
+					show(
+						'Diagnostik preview — aplikasi TIDAK berhasil dimulai. ' +
+							(errs.length
+								? errs.slice(0, 3).join(' | ')
+								: 'Tidak ada modul yang gagal tercatat — laporkan teks ini.')
+					);
+				}, 15000);
+			})();
+		</script>
 	</body>
 </html>
