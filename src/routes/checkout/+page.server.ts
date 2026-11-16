@@ -31,16 +31,16 @@ export interface CheckoutData {
   previewPayment: boolean;
 }
 
-export const load = (): CheckoutData => {
-  const settings = getSettings();
+export const load = async (): Promise<CheckoutData> => {
+  const settings = await getSettings();
   const deliveryDates = upcomingDeliveryDates(new Date(), {
     cutoffWeekday: Number(settings.order_cutoff_weekday),
     cutoffTime: settings.order_cutoff_time ?? "23:59",
     dailyCapacity: Number(settings.daily_capacity),
-    booked: bookedCounts(),
+    booked: await bookedCounts(),
   });
   return {
-    products: listProducts(),
+    products: await listProducts(),
     deliveryDates,
     cities: JABODETABEK_CITIES,
     previewPayment: loadDokuConfig(process.env) === null,
@@ -64,7 +64,7 @@ function isRateLimited(ip: string, now: Date): boolean {
 export const actions: Actions = {
   default: async ({ request, url }) => {
     const now = new Date();
-    expireStaleOrders(now);
+    await expireStaleOrders(now);
 
     const form = await request.formData();
     const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "lokal";
@@ -110,7 +110,7 @@ export const actions: Actions = {
       return fail(400, { message: "Kota atau kabupaten di luar area layanan." });
     }
 
-    const settings = getSettings();
+    const settings = await getSettings();
     const bounds = boundsFromSettings(settings);
     if (!isInServiceArea(parsed.output.lat, parsed.output.lng, bounds)) {
       return fail(400, {
@@ -122,7 +122,7 @@ export const actions: Actions = {
       cutoffWeekday: Number(settings.order_cutoff_weekday),
       cutoffTime: settings.order_cutoff_time ?? "23:59",
       dailyCapacity: Number(settings.daily_capacity),
-      booked: bookedCounts(),
+      booked: await bookedCounts(),
     });
     if (!isDeliverableDate(parsed.output.deliveryDate, deliveryDates)) {
       return fail(400, {
@@ -132,7 +132,7 @@ export const actions: Actions = {
 
     // Server adalah sumber kebenaran harga dan stok (FR-03, FR-09).
     const variants = new Map(
-      listProducts().flatMap((product) =>
+      (await listProducts()).flatMap((product) =>
         product.variants.map((variant) => [variant.id, { ...variant, productName: product.name }]),
       ),
     );
@@ -150,7 +150,7 @@ export const actions: Actions = {
 
     const code = newCode();
     const paymentTimeoutMinutes = Number(settings.payment_timeout_minutes);
-    const created = createOrder({
+    const created = await createOrder({
       code,
       customerName: parsed.output.customerName,
       customerPhone: phone,
@@ -199,7 +199,7 @@ export const actions: Actions = {
           },
           now,
         );
-        saveCheckoutUrl(code, payment.paymentUrl);
+        await saveCheckoutUrl(code, payment.paymentUrl);
         redirect(303, payment.paymentUrl);
       } catch {
         return fail(502, {

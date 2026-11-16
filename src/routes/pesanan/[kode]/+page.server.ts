@@ -18,12 +18,12 @@ export interface OrderPageData {
 
 export const load = async ({ params }): Promise<OrderPageData> => {
   const now = new Date();
-  expireStaleOrders(now);
-  const order = getOrderByCode(params.kode);
+  await expireStaleOrders(now);
+  const order = await getOrderByCode(params.kode);
   if (!order) {
     error(404, "Pesanan tidak ditemukan.");
   }
-  const settings = getSettings();
+  const settings = await getSettings();
   const dokuConfig = loadDokuConfig(process.env);
 
   // FR-14: saat masih menunggu bayar, tanyakan status ke DOKU dulu.
@@ -31,7 +31,7 @@ export const load = async ({ params }): Promise<OrderPageData> => {
     try {
       const status = await checkStatus(dokuConfig, order.code, now);
       if (status.transactionStatus === "SUCCESS") {
-        markPaidByInvoice(order.code, now);
+        await markPaidByInvoice(order.code, now);
         order.status = "paid";
         order.paidAt = now.toISOString();
       }
@@ -55,7 +55,7 @@ export const actions: Actions = {
     if (!kode) {
       error(404, "Pesanan tidak ditemukan.");
     }
-    const order = getOrderByCode(kode);
+    const order = await getOrderByCode(kode);
     if (!order) {
       error(404, "Pesanan tidak ditemukan.");
     }
@@ -69,7 +69,7 @@ export const actions: Actions = {
     const payment = await createCheckoutPayment(dokuConfig, {
       invoiceNumber: order.code,
       amountIdr: order.totalIdr,
-      paymentDueMinutes: Number(getSettings().payment_timeout_minutes),
+      paymentDueMinutes: Number((await getSettings()).payment_timeout_minutes),
       customer: {
         name: order.customerName,
         phone: order.customerPhone,
@@ -83,25 +83,25 @@ export const actions: Actions = {
         price: item.priceIdr,
       })),
     });
-    saveCheckoutUrl(order.code, payment.paymentUrl);
+    await saveCheckoutUrl(order.code, payment.paymentUrl);
     redirect(303, payment.paymentUrl);
   },
 
   // Pratinjau tanpa kunci DOKU: status sukses diset lewat jalur yang sama
   // dengan notifikasi (markPaidByInvoice — idempoten).
-  simulasi: ({ params }) => {
+  simulasi: async ({ params }) => {
     const kode = params.kode;
     if (!kode) {
       error(404, "Pesanan tidak ditemukan.");
     }
-    const order = getOrderByCode(kode);
+    const order = await getOrderByCode(kode);
     if (!order) {
       error(404, "Pesanan tidak ditemukan.");
     }
     if (loadDokuConfig(process.env) !== null) {
       error(403, "Simulasi hanya tersedia saat kunci DOKU belum diatur.");
     }
-    markPaidByInvoice(order.code, new Date());
+    await markPaidByInvoice(order.code, new Date());
     redirect(303, `/pesanan/${order.code}`);
   },
 };

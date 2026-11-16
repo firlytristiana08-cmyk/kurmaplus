@@ -7,16 +7,16 @@ export interface KatalogData {
   deliveryDates: DeliveryOption[];
 }
 
-export const load = (): KatalogData => {
+export const load = async (): Promise<KatalogData> => {
   try {
-    const settings = getSettings();
+    const settings = await getSettings();
     const deliveryDates = upcomingDeliveryDates(new Date(), {
       cutoffWeekday: Number(settings.order_cutoff_weekday),
       cutoffTime: settings.order_cutoff_time ?? "23:59",
       dailyCapacity: Number(settings.daily_capacity),
-      booked: bookedCounts(),
+      booked: await bookedCounts(),
     });
-    return { products: listProducts(), deliveryDates };
+    return { products: await listProducts(), deliveryDates };
   } catch {
     error(500, "Katalog belum bisa dimuat. Coba lagi sebentar lagi.");
   }

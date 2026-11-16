@@ -2,12 +2,12 @@
   "extends": "$app/tsconfig",
   "include": ["src", "test", "*"],
   "exclude": ["src/service-worker"],
-	"compilerOptions": {
-		"strict": true,
-		"noImplicitOverride": true,
-		"checkJs": true,
-		"paths": {
-			"#lib/*": ["./src/lib/*"]
-		}
-	}
+  "compilerOptions": {
+    "strict": true,
+    "noImplicitOverride": true,
+    "checkJs": true,
+    "paths": {
+      "#lib/*": ["./src/lib/*"]
+    }
+  }
 }

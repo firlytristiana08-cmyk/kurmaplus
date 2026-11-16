@@ -5,6 +5,8 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 const tempDir = mkdtempSync(path.join(tmpdir(), "kurmaplus-test-"));
 process.env.KURMAPLUS_DATA_DIR = tempDir;
+// Tes memakai database lokal supaya deterministik tanpa jaringan.
+process.env.KURMAPLUS_DB = "sqlite";
 
 const db = await import("./db");
 
@@ -29,56 +31,56 @@ function makeOrder(code: string, variantId: number, qty: number) {
 }
 
 describe("db: stok, pembayaran, kedaluwarsa (BR-09, BR-11..BR-13, FR-09..FR-13)", () => {
-  beforeAll(() => {
-    db.getDb();
+  beforeAll(async () => {
+    await db.getDb();
   });
 
   afterAll(() => {
     rmSync(tempDir, { recursive: true, force: true });
   });
 
-  it("mengunci stok saat pesanan dibuat", () => {
-    const before = db.getProductBySlug("sukari")?.variants[0]?.stock ?? -1;
-    const result = makeOrder("ORDER001", 1, 2);
+  it("mengunci stok saat pesanan dibuat", async () => {
+    const before = (await db.getProductBySlug("sukari"))?.variants[0]?.stock ?? -1;
+    const result = await makeOrder("ORDER001", 1, 2);
     expect(result.ok).toBe(true);
-    const after = db.getProductBySlug("sukari")?.variants[0]?.stock ?? -1;
+    const after = (await db.getProductBySlug("sukari"))?.variants[0]?.stock ?? -1;
     expect(after).toBe(before - 2);
   });
 
-  it("menolak pesanan saat stok kurang dan tidak mengubah stok", () => {
-    const before = db.getProductBySlug("ajwa")?.variants[2]?.stock ?? -1;
-    const result = makeOrder("ORDER002", 6, before + 1);
+  it("menolak pesanan saat stok kurang dan tidak mengubah stok", async () => {
+    const before = (await db.getProductBySlug("ajwa"))?.variants[2]?.stock ?? -1;
+    const result = await makeOrder("ORDER002", 6, before + 1);
     expect(result).toMatchObject({ ok: false, reason: "stock" });
-    const after = db.getProductBySlug("ajwa")?.variants[2]?.stock ?? -1;
+    const after = (await db.getProductBySlug("ajwa"))?.variants[2]?.stock ?? -1;
     expect(after).toBe(before);
   });
 
-  it("status berubah sekali walau notifikasi berulang", () => {
-    expect(db.markPaidByInvoice("ORDER001", now)).toBe(true);
-    expect(db.markPaidByInvoice("ORDER001", now)).toBe(false);
-    expect(db.getOrderByCode("ORDER001")?.status).toBe("paid");
+  it("status berubah sekali walau notifikasi berulang", async () => {
+    expect(await db.markPaidByInvoice("ORDER001", now)).toBe(true);
+    expect(await db.markPaidByInvoice("ORDER001", now)).toBe(false);
+    expect((await db.getOrderByCode("ORDER001"))?.status).toBe("paid");
   });
 
-  it("event webhook ganda hanya diproses sekali", () => {
-    expect(db.recordWebhookEvent("req-duplikat", now)).toBe(true);
-    expect(db.recordWebhookEvent("req-duplikat", now)).toBe(false);
+  it("event webhook ganda hanya diproses sekali", async () => {
+    expect(await db.recordWebhookEvent("req-duplikat", now)).toBe(true);
+    expect(await db.recordWebhookEvent("req-duplikat", now)).toBe(false);
   });
 
-  it("pesanan kedaluwarsa mengembalikan stok", () => {
-    const before = db.getProductBySlug("tunisia")?.variants[0]?.stock ?? -1;
-    const result = makeOrder("ORDER003", 7, 3);
+  it("pesanan kedaluwarsa mengembalikan stok", async () => {
+    const before = (await db.getProductBySlug("tunisia"))?.variants[0]?.stock ?? -1;
+    const result = await makeOrder("ORDER003", 7, 3);
     expect(result.ok).toBe(true);
-    expect(db.getProductBySlug("tunisia")?.variants[0]?.stock).toBe(before - 3);
+    expect((await db.getProductBySlug("tunisia"))?.variants[0]?.stock).toBe(before - 3);
 
     const future = new Date("2026-11-11T12:00:00Z");
-    expect(db.expireStaleOrders(future)).toBe(1);
-    expect(db.getOrderByCode("ORDER003")?.status).toBe("expired");
-    expect(db.getProductBySlug("tunisia")?.variants[0]?.stock).toBe(before);
+    expect(await db.expireStaleOrders(future)).toBe(1);
+    expect((await db.getOrderByCode("ORDER003"))?.status).toBe("expired");
+    expect((await db.getProductBySlug("tunisia"))?.variants[0]?.stock).toBe(before);
   });
 
-  it("lacak hanya cocok dengan kode dan 4 digit terakhir WhatsApp", () => {
-    expect(db.findOrderByCodeAndPhoneTail("ORDER001", "7890")?.code).toBe("ORDER001");
-    expect(db.findOrderByCodeAndPhoneTail("ORDER001", "0000")).toBeNull();
-    expect(db.findOrderByCodeAndPhoneTail("TIDAKADA", "7890")).toBeNull();
+  it("lacak hanya cocok dengan kode dan 4 digit terakhir WhatsApp", async () => {
+    expect((await db.findOrderByCodeAndPhoneTail("ORDER001", "7890"))?.code).toBe("ORDER001");
+    expect(await db.findOrderByCodeAndPhoneTail("ORDER001", "0000")).toBeNull();
+    expect(await db.findOrderByCodeAndPhoneTail("TIDAKADA", "7890")).toBeNull();
   });
 });

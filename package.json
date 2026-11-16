@@ -1,11 +1,11 @@
 {
   "name": "kurmaplus-portal",
   "private": true,
-	"version": "0.1.0",
-	"type": "module",
-	"imports": {
-		"#lib/*": "./src/lib/*"
-	},
+  "version": "0.1.0",
+  "type": "module",
+  "imports": {
+    "#lib/*": "./src/lib/*"
+  },
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",
@@ -22,6 +22,7 @@
     "@sveltejs/vite-plugin-svelte": "^7.3.1",
     "@types/leaflet": "^1.9.22",
     "@types/node": "^26.6.6",
+    "@types/pg": "^8.23.1",
     "svelte": "^5.57.3",
     "svelte-check": "^4.7.8",
     "typescript": "^6.0.3",
@@ -30,6 +31,7 @@
   },
   "dependencies": {
     "leaflet": "^1.9.4",
+    "pg": "^8.23.1",
     "valibot": "^1.5.0"
   }
 }

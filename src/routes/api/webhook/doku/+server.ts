@@ -31,7 +31,7 @@ export const POST: RequestHandler = async ({ request }) => {
   }
 
   const now = new Date();
-  const isNewEvent = recordWebhookEvent(requestId, now);
+  const isNewEvent = await recordWebhookEvent(requestId, now);
   if (!isNewEvent) {
     return json({ message: "Notifikasi sudah diproses" });
   }
@@ -46,7 +46,7 @@ export const POST: RequestHandler = async ({ request }) => {
   // Hanya status SUCCESS yang mengubah pesanan; FAILED diabaikan karena
   // pembeli boleh mengganti metode bayar di Checkout.
   if (payload.transaction?.status === "SUCCESS" && payload.order?.invoice_number) {
-    markPaidByInvoice(payload.order.invoice_number, now);
+    await markPaidByInvoice(payload.order.invoice_number, now);
   }
 
   return json({ message: "OK" });

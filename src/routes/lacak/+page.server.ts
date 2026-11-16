@@ -15,7 +15,7 @@ export const actions: Actions = {
       });
     }
 
-    const order = findOrderByCodeAndPhoneTail(code, phoneTail);
+    const order = await findOrderByCodeAndPhoneTail(code, phoneTail);
     if (!order) {
       return fail(404, {
         message: "Kombinasi kode dan nomor WhatsApp tidak cocok dengan pesanan mana pun.",

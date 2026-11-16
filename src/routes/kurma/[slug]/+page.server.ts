@@ -5,8 +5,8 @@ export interface ProductData {
   product: ProductView;
 }
 
-export const load = ({ params }): ProductData => {
-  const product = getProductBySlug(params.slug);
+export const load = async ({ params }): Promise<ProductData> => {
+  const product = await getProductBySlug(params.slug);
   if (!product) {
     error(404, "Produk tidak ditemukan.");
   }
