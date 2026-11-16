@@ -15,6 +15,10 @@ export default defineConfig({
     // Pratinjau diakses lewat host proksi, bukan localhost.
     host: true,
     allowedHosts: true,
+    // Websocket HMR tidak stabil lewat proksi pratinjau dan bisa memicu
+    // muat ulang halaman sendiri; dimatikan agar tampilan tidak berkedip.
+    // Refresh manual selalu melihat perubahan terbaru (tanpa cache dev).
+    hmr: false,
   },
   test: {
     include: ["src/**/*.test.ts"],
