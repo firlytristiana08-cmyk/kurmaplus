@@ -51,7 +51,7 @@ Versi 1 hanya memuat yang dibutuhkan untuk menerima pesanan dan pembayaran perta
 - Perhitungan dan tampilan tarif ongkir di toko, kurir lain, ambil di tempat, dan pengiriman di luar Jabodetabek.
 - Bayar di tempat (COD) dan bahasa selain Indonesia.
 
-**Ketergantungan pada portal admin.** Portal admin dibuat setelah portal ini, sehingga data awal (produk, harga, stok, pengaturan ongkir dan jadwal) dimasukkan lewat berkas seed dan perintah `wrangler d1 execute`. Skema data di bagian Model data sudah disiapkan agar admin nanti langsung memakai tabel yang sama.
+**Ketergantungan pada portal admin.** Portal admin dibuat setelah portal ini, sehingga data awal (produk, harga, stok, pengaturan ongkir dan jadwal) dimasukkan lewat berkas seed dan perintah SQL Supabase (`supabase db push` atau SQL Editor). Skema data di bagian Model data sudah disiapkan agar admin nanti langsung memakai tabel yang sama.
 
 ## Aturan bisnis
 
@@ -115,7 +115,7 @@ Setiap baris punya kriteria penerimaan yang bisa diuji. Tugas pembangunan meruju
 | FR-07 | Pembeli memilih tanggal kirim | Hanya Sabtu dan Minggu yang sah menurut BR-02, tanggal penuh tidak bisa dipilih |
 | FR-08 | Ringkasan biaya tampil sebelum bayar | Subtotal, total, kurir, dan tanggal kirim terlihat bersama, dengan catatan ongkir dibayar pemesan |
 | FR-09 | Tombol bayar membuat pesanan dan mengunci stok dalam satu transaksi database | Jika stok kurang, pesanan tidak dibuat dan keranjang diperbarui dengan pesan yang jelas |
-| FR-10 | Pembuatan pesanan dilindungi dari spam | Cloudflare Turnstile lolos dan jumlah pesanan per IP dibatasi |
+| FR-10 | Pembuatan pesanan dilindungi dari spam | Proteksi CAPTCHA Supabase lolos dan jumlah pesanan per IP dibatasi |
 | FR-11 | Sistem membuat sesi DOKU Checkout dan mengarahkan pembeli ke halaman bayar | Nomor invoice DOKU sama dengan kode pesanan, tautan bayar disimpan |
 | FR-12 | Sistem menerima notifikasi DOKU | Signature diverifikasi, status berubah sekali walau notifikasi datang berulang, balasan 200 segera |
 | FR-13 | Pesanan kedaluwarsa otomatis | Pesanan menunggu bayar yang melewati batas waktu menjadi kedaluwarsa dan stoknya kembali dalam 5 menit |
@@ -126,7 +126,7 @@ Setiap baris punya kriteria penerimaan yang bisa diuji. Tugas pembangunan meruju
 
 ## Model data
 
-Database Cloudflare D1 (SQLite). Uang disimpan sebagai bilangan bulat rupiah, waktu disimpan UTC dan ditampilkan dalam Asia/Jakarta. Portal admin nanti memakai tabel yang sama.
+Database Supabase (Postgres). Uang disimpan sebagai bilangan bulat rupiah, waktu disimpan UTC dan ditampilkan dalam Asia/Jakarta. Portal admin nanti memakai tabel yang sama.
 
 | Tabel | Kolom penting | Catatan |
 | --- | --- | --- |
@@ -155,7 +155,7 @@ Portal memakai DOKU Checkout: pembeli membayar di halaman milik DOKU, sehingga d
 5. Pesanan menjadi dibayar hanya jika status transaksi SUCCESS. Status FAILED diabaikan karena di Checkout pembeli boleh mengganti metode bayar. Notifikasi yang sama bisa datang berulang, jadi pemrosesan harus aman diulang (tabel webhook\_events).
 6. Sebagai cadangan, halaman status menanyakan Check Status API DOKU bila pesanan masih menunggu bayar dan notifikasi belum masuk.
 
-**Keputusan implementasi.** Klien DOKU ditulis sendiri (sekitar 100 baris) memakai Web Crypto bawaan Workers, tanpa paket pihak ketiga. Paket komunitas yang ada masih versi awal dan tidak dikelola DOKU, sedangkan kode ini menyentuh uang.
+**Keputusan implementasi.** Klien DOKU ditulis sendiri (sekitar 100 baris) memakai Web Crypto bawaan runtime, tanpa paket pihak ketiga. Paket komunitas yang ada masih versi awal dan tidak dikelola DOKU, sedangkan kode ini menyentuh uang.
 
 **Biaya dan syarat akun**
 
@@ -164,18 +164,18 @@ Portal memakai DOKU Checkout: pembeli membayar di halaman milik DOKU, sehingga d
 - Usaha perorangan boleh mendaftar. Data yang diminta: KTP, foto selfie dengan KTP, dan foto bukti usaha (lokasi, kegiatan, atau produk). NIB tidak disebut sebagai syarat untuk akun perorangan.
 - Virtual Account, Alfa Group, Indomaret, DOKU e-Wallet, dan Akulaku langsung aktif setelah akun bisnis dibuat. QRIS harus diaktifkan di dashboard, jadi jangan dijanjikan ke pembeli sebelum aktif.
 
-**Dari sandbox ke live.** Bangun dan uji penuh di sandbox memakai DOKU Payment Simulator. Kunci sandbox dan live disimpan sebagai secret Cloudflare yang berbeda, dan peralihan ke live hanya mengganti secret, alamat dasar, dan alamat notifikasi.
+**Dari sandbox ke live.** Bangun dan uji penuh di sandbox memakai DOKU Payment Simulator. Kunci sandbox dan live disimpan sebagai secret Supabase yang berbeda, dan peralihan ke live hanya mengganti secret, alamat dasar, dan alamat notifikasi.
 
 ## Tumpukan teknologi dan library
 
-Semua pilihan punya paket gratis yang cukup untuk satu toko kecil. Untuk database D1 paket gratis memberi 5 juta baca dan 100 ribu tulis per hari serta 500 MB per database, jauh di atas kebutuhan awal. Batas harian itu ditegakkan Cloudflare mulai 1 September 2026, jadi query dibuat hemat sejak awal. Versi library yang dipakai adalah rilis stabil terbaru saat proyek dimulai.
+Semua pilihan punya paket gratis yang cukup untuk satu toko kecil. Untuk database Supabase paket gratis memberi 500 MB basis data per proyek dan 5 GB egress per bulan, jauh di atas kebutuhan awal. Basis data gratis dapat dijeda bila proyek tidak aktif, jadi aplikasi dan pemantauan disiapkan agar proyek tetap terpakai, dan query tetap dibuat hemat sejak awal. Versi library yang dipakai adalah rilis stabil terbaru saat proyek dimulai.
 
 | Lapisan | Pilihan | Alasan |
 | --- | --- | --- |
-| Hosting | Cloudflare Workers lewat @sveltejs/adapter-cloudflare | Gratis, satu tempat untuk situs, API, dan jadwal otomatis. Adapter lama untuk Workers sudah tidak disarankan |
+| Hosting | Vercel (atau host Node lain) lewat @sveltejs/adapter-auto | Gratis untuk toko kecil, pratinjau otomatis tiap perubahan, dan cocok dipasangkan dengan Supabase |
 | Framework | SvelteKit 2, Svelte 5, TypeScript strict | Ukuran JS kecil untuk HP lambat, form tetap jalan tanpa JS lewat form actions |
-| Database | Cloudflare D1 | Gratis, SQLite, satu binding dengan Workers |
-| ORM dan migrasi | Drizzle ORM, drizzle-kit untuk membuat migrasi, wrangler d1 migrations apply untuk menjalankannya | Ringan di Workers, kueri bertipe, migrasi berupa SQL yang bisa dibaca |
+| Database | Supabase (Postgres) | Gratis, SQL penuh, terhubung lewat URL basis data, dan siap dipakai portal admin nanti |
+| ORM dan migrasi | Drizzle ORM, drizzle-kit untuk membuat migrasi, `drizzle-kit migrate` atau `supabase db push` untuk menjalankannya | Ringan, kueri bertipe, migrasi berupa SQL yang bisa dibaca |
 | Validasi | Valibot | Kecil dan bisa dipakai di server dan klien dengan skema yang sama |
 | Styling | Tailwind CSS 4 dengan token desain sendiri lewat @theme | Cepat ditulis, tampilan tetap milik KURMAPLUS karena tanpa kit komponen siap pakai |
 | Komponen tanpa gaya | Bits UI (hanya dialog, bottom sheet, radio group) | Aksesibilitas keyboard dan pembaca layar sudah benar, gayanya kita tulis sendiri |
@@ -183,16 +183,16 @@ Semua pilihan punya paket gratis yang cukup untuk satu toko kecil. Untuk databas
 | PWA | @vite-pwa/sveltekit | Manifest, service worker, dan cache katalog untuk dibuka tanpa internet |
 | Gambar | @sveltejs/enhanced-img | Foto produk dibuat dalam beberapa ukuran dan format modern saat build |
 | Font | Fontsource, di-host sendiri | Tanpa permintaan ke pihak luar, lebih cepat dan lebih privat |
-| Anti-bot | Cloudflare Turnstile | Gratis, tidak membatasi jumlah verifikasi di paket gratis |
+| Anti-bot | Proteksi CAPTCHA Supabase (hCaptcha) | Gratis, tidak membatasi jumlah verifikasi di paket gratis |
 | Pembayaran | Klien DOKU tulisan sendiri dengan Web Crypto | Lihat bagian Integrasi DOKU |
-| Tugas terjadwal | Cron Trigger Workers, tiap 5 menit | Mengembalikan stok pesanan kedaluwarsa |
+| Tugas terjadwal | Cron Supabase (pg_cron), tiap 5 menit | Mengembalikan stok pesanan kedaluwarsa |
 | Tes | Vitest untuk logika, Playwright untuk alur beli | Logika uang, jarak, dan jadwal wajib bertes |
 | Kualitas kode | Biome (lint dan format), svelte-check | Satu alat cepat, nol error dan nol peringatan |
 | Ikon | SVG inline seperlunya, sumber Lucide | Hanya ikon yang benar-benar dipakai, tanpa emoji |
 
 Sengaja dibuat sendiri tanpa library: format rupiah dan tanggal (Intl bawaan browser, zona Asia/Jakarta), dan penyimpanan keranjang (runes Svelte 5 dan localStorage dengan try/catch).
 
-Sengaja tidak dipakai: kit komponen siap pakai (shadcn-svelte, DaisyUI, Flowbite), pustaka state global, axios (cukup fetch), moment atau lodash, dan layanan pihak ketiga yang menambah akun atau biaya (Firebase, Supabase).
+Sengaja tidak dipakai: kit komponen siap pakai (shadcn-svelte, DaisyUI, Flowbite), pustaka state global, axios (cukup fetch), moment atau lodash, dan layanan pihak ketiga yang menambah biaya (Firebase).
 
 ## Arah desain
 
@@ -248,22 +248,22 @@ Aturan ini berlaku untuk semua kode, termasuk yang dibuat dengan bantuan AI. Tuj
 3. **Server adalah sumber kebenaran.** Harga, stok, dan jadwal selalu dihitung ulang di server. Klien hanya menampilkan.
 4. **Tidak ada yang dianggap selesai sebelum dijalankan.** Perubahan harus dijalankan lewat tes atau dev server, tampilan dicek di lebar 390 px, dan alur bayar dicoba di HP sungguhan.
 5. **Dependensi harus beralasan.** Library baru hanya masuk bila alasannya dicatat di berkas DECISIONS.md. Fungsi yang bisa ditulis di bawah 50 baris ditulis sendiri.
-6. **Rahasia tidak pernah di kode.** Kunci DOKU dan Turnstile hanya ada sebagai secret Cloudflare atau di .dev.vars yang masuk .gitignore, tidak pernah dikirim ke klien.
+6. **Rahasia tidak pernah di kode.** Kunci DOKU dan CAPTCHA hanya ada sebagai secret Supabase atau di .dev.vars yang masuk .gitignore, tidak pernah dikirim ke klien.
 7. **Tidak ada sisa pekerjaan.** Build produksi gagal bila masih ada lorem, TODO, console.log, atau data contoh.
 8. **Gaya kode.** TypeScript strict tanpa `any`, svelte-check dan Biome nol error nol peringatan. Nama dalam kode memakai bahasa Inggris, teks yang dilihat pembeli memakai bahasa Indonesia, komentar hanya menjelaskan mengapa, bukan apa.
 9. **Struktur tetap.** Logika server di `src/lib/server` (db, doku, pricing, schedule, geo), komponen di `src/lib/components`, rute di `src/routes`. File baru di luar struktur ini harus punya alasan.
 10. **Tes minimum sebelum rilis.** Vitest untuk harga, jadwal, stok, signature, dan notifikasi ganda. Playwright untuk satu alur beli sukses dan satu alur kedaluwarsa di sandbox DOKU.
-11. **Tinjau diff, bukan hanya hasilnya.** Perubahan AI yang menyentuh file di luar tugas ditolak. Commit kecil dengan pesan jelas, dan setiap perubahan dicoba di pratinjau Cloudflare sebelum digabung.
+11. **Tinjau diff, bukan hanya hasilnya.** Perubahan AI yang menyentuh file di luar tugas ditolak. Commit kecil dengan pesan jelas, dan setiap perubahan dicoba di pratinjau Vercel sebelum digabung.
 
 ## Kebutuhan non-fungsional
 
 | Aspek | Target |
 | --- | --- |
 | Performa | Skor Lighthouse mobile performance minimal 90, LCP di bawah 2,5 detik pada simulasi 4G, JS awal halaman katalog di bawah 100 KB terkompresi |
-| Keamanan | HTTPS saja, signature DOKU diverifikasi, semua input divalidasi skema, Turnstile dan pembatasan per IP pada pembuatan pesanan, Content-Security-Policy ketat, tidak ada data kartu atau rekening di sistem |
+| Keamanan | HTTPS saja, signature DOKU diverifikasi, semua input divalidasi skema, CAPTCHA dan pembatasan per IP pada pembuatan pesanan, Content-Security-Policy ketat, tidak ada data kartu atau rekening di sistem |
 | Data pribadi | Nama, WhatsApp, alamat, dan koordinat hanya untuk pengiriman, ada halaman kebijakan privasi sesuai UU Pelindungan Data Pribadi, dan data pesanan lama dianonimkan setelah masa simpan yang ditentukan pemilik |
 | Aksesibilitas | WCAG 2.2 AA: kontras, fokus terlihat, label pada setiap kolom form, target sentuh minimal 48 px, peta punya alternatif lewat tombol lokasi saya dan kolom alamat |
 | PWA | Manifest, ikon 192 dan 512 px (termasuk maskable), service worker menyimpan katalog dan halaman info, ada pesan saat versi baru siap dipakai |
 | Kompatibilitas | Chrome Android dan Safari iOS 16.4 ke atas, serta browser desktop terbaru |
 | Bahasa dan format | Bahasa Indonesia, rupiah dengan pemisah ribuan titik, tanggal dalam format Indonesia dan zona Asia/Jakarta |
-| Biaya | Rp0 per bulan untuk sistem. Pemakaian D1 dipantau di dashboard Cloudflare, dan bila mendekati batas harian menjelang musim ramai, pilihan naik ke paket berbayar dibahas lebih dulu |
+| Biaya | Rp0 per bulan untuk sistem. Pemakaian database dipantau di dashboard Supabase, dan bila mendekati batas paket gratis menjelang musim ramai, pilihan naik ke paket berbayar dibahas lebih dulu |

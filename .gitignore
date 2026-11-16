@@ -1,0 +1,19 @@
+.dev.vars.local
+.dev.vars
+.env
+.env.*
+!.env.example
+node_modules/
+.DS_Store
+
+# Portal pelanggan
+node_modules/
+.svelte-kit/
+build/
+.wrangler/
+dist/
+.data/
+.env
+.env.*
+!.env.example
+.dev.vars
