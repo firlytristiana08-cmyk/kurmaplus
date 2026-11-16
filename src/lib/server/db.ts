@@ -273,6 +273,12 @@ function openSqlite(): Db {
   if ((seeded?.n ?? 0) === 0) {
     raw.exec(readFileSync(path.join(process.cwd(), "db/seed.sql"), "utf8"));
   }
+  // Data demo (pesanan contoh) hanya untuk pengembangan/preview lokal — lihat
+  // db/seed-demo.sql. Jalur Postgres/Supabase tidak pernah menjalankan ini.
+  const demoSeeded = sqliteGet<{ n: number }>(raw, "SELECT COUNT(*) AS n FROM orders", []);
+  if ((demoSeeded?.n ?? 0) === 0) {
+    raw.exec(readFileSync(path.join(process.cwd(), "db/seed-demo.sql"), "utf8"));
+  }
   return new SqliteDb(raw);
 }
 
