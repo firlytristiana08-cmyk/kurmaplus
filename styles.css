@@ -198,6 +198,11 @@ body {
   letter-spacing: -0.01em;
 }
 
+/* Kata "PLUS" pada wordmark sewarna tombol Beli Kurma. */
+.wordmark-plus {
+  color: var(--rust);
+}
+
 .tagline {
   margin: 0.25rem 0 0;
   color: var(--navy);
