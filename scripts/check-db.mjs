@@ -2,7 +2,11 @@
 // galat (tanpa pesan/sandi) ke log build agar mudah didiagnosis dari luar.
 // Selalu exit 0 — pemeriksaan tidak boleh menggagalkan build.
 
+import { setDefaultResultOrder } from "node:dns";
 import { Client } from "pg";
+
+// Lihat src/lib/server/db.ts: paksa IPv4 (host Supabase me-resolve IPv6 duluan).
+setDefaultResultOrder("ipv4first");
 
 const ref = (process.env.SUPABASE_PROJECT_REF ?? "").trim();
 const password = (process.env.SUPABASE_DB_PASSWORD ?? "")
