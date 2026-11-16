@@ -80,9 +80,10 @@ body {
   object-position: center;
 }
 
-/* Jangkar posisi kartu: kanan-atas mengambang di atas rumah yang menyala,
-   tepat seperti komposisi mockup. Nilai top berbeda per breakpoint karena
-   tiap latar punya rumah di posisi berbeda. */
+/* Jangkar posisi kartu: ekor harus menunjuk ke atas genteng rumah yang
+   menyala di tiap latar (hasil ukur piksel). Nilai `left` = titik jatuh
+   ekor (65,6% lebar kartu, lewat translateX), `top` = dasar badan kartu
+   sehingga ujung ekor mengambang ~3% di atas garis atap. */
 .card-anchor {
   position: absolute;
   right: clamp(14px, 9.5vw, 51px);
@@ -91,17 +92,30 @@ body {
   transform: translateY(-100%);
 }
 
+/* Tablet: genteng rumah menyala membentang x 49,5–71% (puncak y 34%)
+   pada latar bg-tablet; ekor di sisi kanan atap mengikuti gaya mockup. */
 @media (min-width: 640px) {
   .card-anchor {
-    right: clamp(24px, 6vw, 64px);
-    top: 28%;
+    right: auto;
+    left: 68%;
+    top: 28.5%;
+    transform: translate(-65.6%, -100%);
   }
 }
 
+/* Desktop: genteng membentang x 46,6–70,8% (puncak y 30–32%) pada
+   latar bg-desktop. */
 @media (min-width: 1024px) {
   .card-anchor {
-    right: clamp(32px, 6vw, 80px);
     top: 26%;
+  }
+}
+
+/* Layar sangat lebar (≥2:1): latar terpotong atas-bawah sehingga rumah
+   naik — angkat kartunya agar tetap di atas genteng. */
+@media (min-width: 1024px) and (min-aspect-ratio: 2/1) {
+  .card-anchor {
+    top: 21%;
   }
 }
 
