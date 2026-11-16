@@ -41,8 +41,6 @@
   </head>
   <body>
     <main class="page">
-      <!-- Kanvas mobile-only seperti rancangan beranda referensi: di desktop
-          tetap selebar 430px dan dikelilingi warna tinta. -->
       <div class="canvas">
         <!-- Art direction: tiap perangkat hanya mengunduh satu gambar sesuai
             lebar layarnya (HP portrait, tablet, desktop lanskap) agar akses
@@ -62,44 +60,22 @@
         <!-- Gradien bawah ke atas agar kartu dan tombol terbaca di atas ilustrasi. -->
         <div class="hero-shade" aria-hidden="true"></div>
 
-        <div class="hero-content">
+        <!-- Posisi kartu mengambang tepat di atas rumah yang menyala pada
+            tiap latar; lewat kelas .card-anchor agar animasi masuk tidak
+            bertabrakan dengan transform pemosisian. -->
+        <div class="card-anchor">
           <section class="card" aria-labelledby="brand">
             <div class="card-body">
               <div class="brand-row">
-                <img class="logo" src="images/logo-kurma.png" alt="" width="47" height="47" />
+                <img class="logo" src="images/logo-kurma.png" alt="" width="60" height="60" />
                 <div class="brand-text">
-                  <h1 class="wordmark" id="brand">KURMA<span class="wordmark-accent">PLUS</span></h1>
-                  <p class="tagline">
-                    Kurma sukari, ajwa, dan tunisia<br />
-                    Manisnya Sunnah,<br />
-                    Berkahnya Ramadhan.
-                  </p>
+                  <h1 class="wordmark" id="brand">KURMAPLUS</h1>
+                  <p class="tagline">Manisnya Sunnah,<br />Berkahnya Ramadhan.</p>
                 </div>
               </div>
 
-              <p class="info-pill" aria-label="Pengiriman setiap Sabtu dan Minggu ke Jabodetabek lewat Grab atau Gojek">
-                <span>Sabtu &amp; Minggu</span>
-                <svg
-                  class="pill-icon"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  aria-hidden="true"
-                >
-                  <path d="M5 18H3c-.6 0-1-.4-1-1V7c0-.6.4-1 1-1h10c.6 0 1 .4 1 1v11" />
-                  <path d="M14 9h4l4 4v4c0 .6-.4 1-1 1h-2" />
-                  <circle cx="7" cy="18" r="2" />
-                  <circle cx="17" cy="18" r="2" />
-                </svg>
-                <span>Jabodetabek</span>
-              </p>
-
               <!-- Mengarah ke katalog portal pelanggan yang dibangun setelah layar ini disetujui. -->
               <a class="btn" href="/">
-                Beli Kurma
                 <svg
                   class="btn-icon"
                   viewBox="0 0 24 24"
@@ -114,6 +90,7 @@
                   <path d="M3 6h18" />
                   <path d="M16 10a4 4 0 0 1-8 0" />
                 </svg>
+                Beli Kurma
               </a>
             </div>
           </section>

@@ -24,18 +24,20 @@
 :root {
   --ink: #241710;
   --paper: #f4ede0;
-  --sand: #e7dac3;
-  --caramel: #a4511c;
-  --caramel-press: #8f4518;
+  --navy: #2d264b;
+  --rust: #ab3710;
+  --rust-press: #96300d;
   --olive: #4a5a2b;
 
-  /* Kartu gelembung: permukaan putih 80% dipakai badan kartu dan ekor
-     agar keduanya selalu sama (PRD/riwayat: beda warna = garis sambungan). */
+  /* Geometri bubble mengikuti mockup (ukur piksel, bukan perkiraan):
+     badan kartu radius 28/247 px, ekor segitiga selebar 61 px di 65,6%
+     lebar kartu, permukaan putih 80% dipakai badan DAN ekor agar sambungan
+     keduanya tidak meninggalkan garis. */
   --card-surface: rgb(255 255 255 / 0.8);
-  --card-radius: 1.75rem;
-  --tail-x: 38%;
-  --tail-w: 2.7rem;
-  --tail-h: 1.05rem;
+  --card-radius: 1.875rem;
+  --tail-x: 65.6%;
+  --tail-w: 4.375rem;
+  --tail-h: 1.6875rem;
 }
 
 *,
@@ -47,7 +49,7 @@
 body {
   margin: 0;
   font-family: 'Figtree', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  color: var(--ink);
+  color: var(--navy);
   background: var(--ink);
   -webkit-font-smoothing: antialiased;
 }
@@ -63,6 +65,8 @@ body {
   position: relative;
   isolation: isolate;
   width: 100%;
+  height: 100vh;
+  height: 100dvh;
   overflow: hidden;
   background: var(--ink);
 }
@@ -91,22 +95,42 @@ body {
   );
 }
 
-.hero-content {
-  position: relative;
-  display: flex;
-  min-height: 100vh;
-  min-height: 100dvh;
-  flex-direction: column;
-  padding: 19dvh 1rem max(1.25rem, env(safe-area-inset-bottom));
+/* Jangkar posisi kartu: titik pusat horizontal (left) di atas rumah yang
+   menyala, dan tepi bawah kartu (top + translateY(-100%)) tepat di atas
+   atapnya. Nilai berbeda per breakpoint karena tiap latar punya rumah di
+   posisi berbeda. */
+.card-anchor {
+  position: absolute;
+  left: 56%;
+  top: 44%;
+  width: min(280px, calc(100vw - 32px));
+  transform: translate(-50%, -100%);
 }
 
-/* Kartu gelembung mengambang di sepertiga atas, rata kiri seperti rancangan. */
+@media (min-width: 640px) {
+  .card-anchor {
+    left: 56%;
+    top: 34%;
+  }
+}
+
+@media (min-width: 1024px) {
+  .card-anchor {
+    left: 61%;
+    top: 30%;
+  }
+}
+
+/* Layar pendek (HP lanskap): kartu dinaikkan agar tetap terlihat penuh. */
+@media (max-height: 560px) {
+  .card-anchor {
+    top: 62%;
+  }
+}
+
 .card {
   position: relative;
-  width: 73%;
-  max-width: 19.5rem;
-  margin-left: clamp(1rem, 9%, 8rem);
-  padding: 1.05rem 1.1rem 1.25rem;
+  padding: 1.125rem 1.125rem 1.25rem;
   border-radius: var(--card-radius);
   animation: rise-in 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
@@ -125,7 +149,7 @@ body {
     0 5px 10px -4px rgb(36 23 16 / 0.32);
 }
 
-/* Lapisan 2 — ekor segitiga, warna permukaan yang sama. */
+/* Lapisan 2 — ekor segitiga menghadap ke bawah ke arah rumah. */
 .card::after {
   content: '';
   position: absolute;
@@ -150,16 +174,15 @@ body {
 
 .brand-row {
   display: flex;
-  align-items: flex-start;
-  gap: 0.7rem;
+  align-items: center;
+  gap: 0.5625rem;
 }
 
 .logo {
   display: block;
   flex: none;
-  width: 2.9rem;
-  height: 2.9rem;
-  margin-top: 0.1rem;
+  width: 3.75rem;
+  height: 3.75rem;
   border-radius: 50%;
   object-fit: cover;
 }
@@ -170,70 +193,39 @@ body {
 
 .wordmark {
   margin: 0;
-  font-size: 0.9375rem;
+  color: var(--navy);
+  font-size: 1.3125rem;
   font-weight: 800;
   line-height: 1.15;
-  letter-spacing: -0.015em;
-}
-
-/* Tanda plus pada wordmark selalu karamel (PRD — Arah desain, logo). */
-.wordmark-accent {
-  color: var(--caramel);
-}
-
-.tagline {
-  margin: 0.3rem 0 0;
-  font-size: 0.75rem;
-  line-height: 1.35;
-}
-
-/* Pill info jadwal kirim — sepadan dengan pill jam buka pada rancangan. */
-.info-pill {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.4rem;
-  width: 100%;
-  margin-top: 0.6rem;
-  padding: 0.42rem 0.55rem;
-  border-radius: 9999px;
-  background: var(--sand);
-  color: var(--ink);
-  font-size: 0.75rem;
-  font-weight: 800;
-  line-height: 1;
   letter-spacing: -0.01em;
 }
 
-.info-pill span {
-  white-space: nowrap;
-}
-
-.pill-icon {
-  flex: none;
-  width: 1.2rem;
-  height: 1.2rem;
-  color: var(--caramel);
+.tagline {
+  margin: 0.25rem 0 0;
+  color: var(--navy);
+  font-size: 0.8125rem;
+  font-weight: 400;
+  line-height: 1.4;
 }
 
 .btn {
   display: flex;
   width: 100%;
-  min-height: 50px;
+  min-height: 52px;
   align-items: center;
   justify-content: center;
-  gap: 0.45rem;
-  margin-top: 0.7rem;
-  padding: 0.72rem 0.8rem;
-  border-radius: 0.7rem;
-  background: var(--caramel);
+  gap: 0.5rem;
+  margin-top: 0.875rem;
+  padding: 0.72rem 1rem;
+  border-radius: 1rem;
+  background: var(--rust);
   color: #fffdf8;
-  font-size: 0.9375rem;
+  font-size: 1rem;
   font-weight: 700;
   letter-spacing: -0.005em;
   text-decoration: none;
   box-shadow:
-    0 8px 16px -8px rgb(164 81 28 / 0.85),
+    0 8px 16px -8px rgb(171 55 16 / 0.85),
     inset 0 1px 0 rgb(255 255 255 / 0.22);
   transition:
     transform 150ms ease-out,
@@ -242,7 +234,7 @@ body {
 
 .btn:active {
   transform: scale(0.975);
-  background: var(--caramel-press);
+  background: var(--rust-press);
 }
 
 .btn:focus-visible {
@@ -252,8 +244,8 @@ body {
 
 .btn-icon {
   flex: none;
-  width: 1.05rem;
-  height: 1.05rem;
+  width: 1.3125rem;
+  height: 1.3125rem;
 }
 
 @keyframes rise-in {
