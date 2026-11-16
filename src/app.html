@@ -65,12 +65,27 @@
 					}
 				}
 				if (!devBootstrap) return;
-				// Modul inti mulai diunduh sekarang, paralel dengan rantai
-				// import bootstrap — menghemat beberapa putaran jaringan yang
-				// terasa sebagai "delay" sebelum tombol bisa diklik.
+				// Modul inti + seluruh pembungkus node rute mulai diunduh sekarang,
+				// paralel dengan rantai import bootstrap. Tanpa ini, tiap lapis
+				// (entry → client → app → node → komponen) menunggu lapis
+				// sebelumnya — di koneksi ber-RTT tinggi inilah "delay" terbesar.
+				// Pranala dibuat persis dengan spesifikasi import app.js agar
+				// browser tidak mengunduh dua kali (dedupe URL identik).
 				[
 					'../node_modules/@sveltejs/kit/src/runtime/client/entry.js',
-					'../@fs/home/user/kurmaplus/.svelte-kit/generated/dev/client/app.js'
+					'../@fs/home/user/kurmaplus/.svelte-kit/generated/dev/client/app.js',
+					'/.svelte-kit/generated/dev/shared/error-template.js',
+					'/.svelte-kit/generated/dev/client/nodes/0.js',
+					'/.svelte-kit/generated/dev/client/nodes/1.js',
+					'/.svelte-kit/generated/dev/client/nodes/2.js',
+					'/.svelte-kit/generated/dev/client/nodes/3.js',
+					'/.svelte-kit/generated/dev/client/nodes/4.js',
+					'/.svelte-kit/generated/dev/client/nodes/5.js',
+					'/.svelte-kit/generated/dev/client/nodes/6.js',
+					'/.svelte-kit/generated/dev/client/nodes/7.js',
+					'/.svelte-kit/generated/dev/client/nodes/8.js',
+					'/.svelte-kit/generated/dev/client/nodes/9.js',
+					'/.svelte-kit/generated/dev/client/nodes/10.js'
 				].forEach(function (u) {
 					var l = document.createElement('link');
 					l.rel = 'modulepreload';

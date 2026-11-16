@@ -48,6 +48,19 @@ export default {};
 // diri, sehingga klik/tombol tidak pernah "mati" karena modul campuran.
 const DEV_RUN_ID = Date.now().toString(36);
 
+// Memoisasi gzip: konten modul stabil selama satu kali jalan server, jadi
+// kunjungan/klik ulang tidak mengompresi ulang ratusan KB. Kunci = isi modul
+// (bukan URL) agar hasil selalu segar; dibatasi agar memori tetap kecil.
+const gzipMemo = new Map<string, Buffer>();
+function gzipCached(text: string): Buffer {
+  const hit = gzipMemo.get(text);
+  if (hit) return hit;
+  const out = gzipSync(Buffer.from(text, "utf8"));
+  if (gzipMemo.size > 24) gzipMemo.delete(gzipMemo.keys().next().value as string);
+  gzipMemo.set(text, out);
+  return out;
+}
+
 // Modul rute dinamis beralamat kurung ([slug], [kode]) dilaporkan gagal dimuat
 // di beberapa proksi pratinjau. Alamat modul ditulis tanpa kurung (@slug, @kode)
 // dan dipetakan kembali ke berkas aslinya sebelum diproses Vite.
@@ -140,7 +153,7 @@ function devStableClient() {
               res.setHeader("Vary", "Accept-Encoding");
               res.setHeader("Content-Encoding", "gzip");
               res.removeHeader("content-length");
-              return originalEnd(gzipSync(Buffer.from(out, "utf8")), ...rest);
+              return originalEnd(gzipCached(out), ...rest);
             }
             if (out !== tail) {
               res.removeHeader("content-length");
@@ -184,14 +197,20 @@ export default defineConfig({
     // muat ulang halaman sendiri; dimatikan agar tampilan tidak berkedip.
     // Refresh manual selalu melihat perubahan terbaru (tanpa cache dev).
     hmr: false,
-    // Pra-transformasi halaman utama saat server mulai — kunjungan pertama
-    // tidak menunggu transformasi kompilasi Svelte.
+    // Pra-transformasi SEMUA halaman saat server mulai — kunjungan pertama
+    // di rute mana pun tidak menunggu kompilasi komponen Svelte.
     warmup: {
       clientFiles: [
         "./src/routes/+layout.svelte",
         "./src/routes/+page.svelte",
         "./src/routes/katalog/+page.svelte",
         "./src/routes/kurma/[slug]/+page.svelte",
+        "./src/routes/keranjang/+page.svelte",
+        "./src/routes/checkout/+page.svelte",
+        "./src/routes/lacak/+page.svelte",
+        "./src/routes/pesanan/[kode]/+page.svelte",
+        "./src/routes/info/+page.svelte",
+        "./src/routes/privasi/+page.svelte",
         "./src/app.css",
       ],
     },
