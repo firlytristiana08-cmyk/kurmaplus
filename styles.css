@@ -29,15 +29,14 @@
   --rust-press: #96300d;
   --olive: #4a5a2b;
 
-  /* Geometri bubble mengikuti mockup (ukur piksel, bukan perkiraan):
-     badan kartu radius 28/247 px, ekor segitiga selebar 61 px di 65,6%
-     lebar kartu, permukaan putih 80% dipakai badan DAN ekor agar sambungan
-     keduanya tidak meninggalkan garis. */
-  --card-surface: rgb(255 255 255 / 0.8);
-  --card-radius: 1.875rem;
+  /* Geometri bubble dari mockup (hasil ukur piksel): badan radius 26,
+     ekor segitiga selebar 64 px di 65,6% lebar kartu, permukaan putih
+     dipakai badan DAN ekor agar sambungan tidak meninggalkan garis. */
+  --card-surface: rgb(255 255 255 / 0.88);
+  --card-radius: 1.625rem;
   --tail-x: 65.6%;
-  --tail-w: 4.375rem;
-  --tail-h: 1.6875rem;
+  --tail-w: 4rem;
+  --tail-h: 1.5625rem;
 }
 
 *,
@@ -60,7 +59,8 @@ body {
   background: var(--ink);
 }
 
-/* Tampilan memenuhi seluruh layar di semua ukuran jendela, seperti di mobile. */
+/* Tampilan memenuhi seluruh layar; ilustrasi tampil terang tanpa gradasi
+   gelap agar latar tidak "terpotong" (sesuai mockup). */
 .canvas {
   position: relative;
   isolation: isolate;
@@ -80,57 +80,41 @@ body {
   object-position: center;
 }
 
-/* Gradien bertingkat (bukan dua titik) agar peralihannya halus. */
-.hero-shade {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    to top,
-    rgb(36 23 16 / 0.62) 0%,
-    rgb(36 23 16 / 0.46) 26%,
-    rgb(36 23 16 / 0.29) 50%,
-    rgb(36 23 16 / 0.14) 72%,
-    rgb(36 23 16 / 0.05) 88%,
-    rgb(36 23 16 / 0) 100%
-  );
-}
-
-/* Jangkar posisi kartu: titik pusat horizontal (left) di atas rumah yang
-   menyala, dan tepi bawah kartu (top + translateY(-100%)) tepat di atas
-   atapnya. Nilai berbeda per breakpoint karena tiap latar punya rumah di
-   posisi berbeda. */
+/* Jangkar posisi kartu: kanan-atas mengambang di atas rumah yang menyala,
+   tepat seperti komposisi mockup. Nilai top berbeda per breakpoint karena
+   tiap latar punya rumah di posisi berbeda. */
 .card-anchor {
   position: absolute;
-  left: 56%;
-  top: 44%;
-  width: min(280px, calc(100vw - 32px));
-  transform: translate(-50%, -100%);
+  right: clamp(14px, 9.5vw, 51px);
+  top: 38%;
+  width: min(250px, calc(100vw - 28px));
+  transform: translateY(-100%);
 }
 
 @media (min-width: 640px) {
   .card-anchor {
-    left: 56%;
-    top: 34%;
+    right: clamp(24px, 6vw, 64px);
+    top: 28%;
   }
 }
 
 @media (min-width: 1024px) {
   .card-anchor {
-    left: 61%;
-    top: 30%;
+    right: clamp(32px, 6vw, 80px);
+    top: 26%;
   }
 }
 
-/* Layar pendek (HP lanskap): kartu dinaikkan agar tetap terlihat penuh. */
+/* Layar pendek (HP lanskap): kartu diturunkan agar tetap terlihat penuh. */
 @media (max-height: 560px) {
   .card-anchor {
-    top: 62%;
+    top: 72%;
   }
 }
 
 .card {
   position: relative;
-  padding: 1.125rem 1.125rem 1.25rem;
+  padding: 1.25rem;
   border-radius: var(--card-radius);
   animation: rise-in 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
@@ -145,8 +129,8 @@ body {
   border-radius: var(--card-radius);
   box-shadow:
     0 1px 0 0 rgb(255 255 255 / 0.9) inset,
-    0 22px 30px -6px rgb(36 23 16 / 0.45),
-    0 5px 10px -4px rgb(36 23 16 / 0.32);
+    0 22px 30px -6px rgb(36 23 16 / 0.4),
+    0 5px 10px -4px rgb(36 23 16 / 0.28);
 }
 
 /* Lapisan 2 — ekor segitiga menghadap ke bawah ke arah rumah. */
@@ -161,7 +145,7 @@ body {
   translate: -50% 0;
   background-color: var(--card-surface);
   clip-path: polygon(50% 100%, 0 0, 100% 0);
-  filter: drop-shadow(0 6px 5px rgb(36 23 16 / 0.35));
+  filter: drop-shadow(0 6px 5px rgb(36 23 16 / 0.3));
 }
 
 /* `isolate` + `z-index: 0` menaruh isi kartu DI ATAS ::before/::after
@@ -175,14 +159,14 @@ body {
 .brand-row {
   display: flex;
   align-items: center;
-  gap: 0.5625rem;
+  gap: 0.875rem;
 }
 
 .logo {
   display: block;
   flex: none;
-  width: 3.75rem;
-  height: 3.75rem;
+  width: 4rem;
+  height: 4rem;
   border-radius: 50%;
   object-fit: cover;
 }
@@ -194,7 +178,7 @@ body {
 .wordmark {
   margin: 0;
   color: var(--navy);
-  font-size: 1.3125rem;
+  font-size: 1.25rem;
   font-weight: 800;
   line-height: 1.15;
   letter-spacing: -0.01em;
@@ -205,22 +189,22 @@ body {
   color: var(--navy);
   font-size: 0.8125rem;
   font-weight: 400;
-  line-height: 1.4;
+  line-height: 1.35;
 }
 
 .btn {
   display: flex;
   width: 100%;
-  min-height: 52px;
+  min-height: 50px;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  margin-top: 0.875rem;
+  margin-top: 0.9375rem;
   padding: 0.72rem 1rem;
-  border-radius: 1rem;
+  border-radius: 0.8125rem;
   background: var(--rust);
   color: #fffdf8;
-  font-size: 1rem;
+  font-size: 0.96875rem;
   font-weight: 700;
   letter-spacing: -0.005em;
   text-decoration: none;
