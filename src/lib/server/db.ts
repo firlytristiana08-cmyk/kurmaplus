@@ -251,7 +251,14 @@ function connectionString(): string | null {
   if (ref && password) {
     // Password boleh mengandung karakter khusus; percent-encode agar URL
     // koneksi tidak rusak (driver pg akan decode kembali sebelum menyambung).
-    return `postgresql://postgres.${ref}:${encodeURIComponent(password)}@db.${ref}.supabase.co:5432/postgres`;
+    //
+    // Koneksi langsung `db.<ref>.supabase.co` me-resolve ke alamat IPv6 yang
+    // tidak dapat dijangkau dari jaringan Vercel (ENETUNREACH). Pooler Supabase
+    // adalah jalur serverless yang didukung (IPv4); mode sesi (port 5432)
+    // menjaga perilaku prepared statement seperti koneksi langsung. Jalur
+    // diverifikasi lewat `DB_CHECK` di log build — lihat scripts/check-db.mjs.
+    const region = cleanEnv(process.env.SUPABASE_REGION) || "ap-southeast-1";
+    return `postgresql://postgres.${ref}:${encodeURIComponent(password)}@aws-0-${region}.pooler.supabase.com:5432/postgres`;
   }
   return null;
 }
