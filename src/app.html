@@ -65,6 +65,18 @@
 					}
 				}
 				if (!devBootstrap) return;
+				// Modul inti mulai diunduh sekarang, paralel dengan rantai
+				// import bootstrap — menghemat beberapa putaran jaringan yang
+				// terasa sebagai "delay" sebelum tombol bisa diklik.
+				[
+					'../node_modules/@sveltejs/kit/src/runtime/client/entry.js',
+					'../@fs/home/user/kurmaplus/.svelte-kit/generated/dev/client/app.js'
+				].forEach(function (u) {
+					var l = document.createElement('link');
+					l.rel = 'modulepreload';
+					l.href = u;
+					document.head.appendChild(l);
+				});
 				var errs = [];
 				var banner = null;
 				var done = false;

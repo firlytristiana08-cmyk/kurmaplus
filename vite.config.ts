@@ -1,4 +1,5 @@
 /// <reference types="vitest/config" />
+import { gzipSync } from "node:zlib";
 import adapter from "@sveltejs/adapter-auto";
 import { sveltekit } from "@sveltejs/kit/vite";
 import { vitePreprocess } from "@sveltejs/vite-plugin-svelte";
@@ -83,26 +84,30 @@ function devStableClient() {
         .join("\n");
       const dev_client = `${define_globals}\n${DEV_CLIENT_STUB}`;
       server.middlewares.use((req, res, next) => {
-        // Semua respons dev tanpa cache: pemuatan selalu segar dari server ini,
-        // tidak mungkin mencampur modul lama dan baru (penyebab klik mati).
-        // Header dipaksa no-store apa pun yang ditetapkan middleware lain.
+        let url = req.url ?? "";
+        // Aset statis (gambar/font) tidak pernah mematikan interaksi — boleh
+        // direvalidasi (304) agar kunjungan ulang tidak mengunduh ulang ratusan
+        // KB. Kode (JS/JSON/HTML) tetap no-store: modul campuran = klik mati.
+        const isAsset = /\.(png|jpe?g|webp|gif|svg|ico|avif|woff2?|ttf|otf|mp4|webm)(\?|$)/i.test(url);
+        const acceptsGzip = String(req.headers["accept-encoding"] ?? "").includes("gzip");
         const originalSetHeader = res.setHeader.bind(res);
         res.setHeader = (key: string, value: string | number | string[]) => {
           if (key.toLowerCase() === "cache-control") {
-            value = "no-store";
+            value = isAsset ? "no-cache" : "no-store";
           }
           return originalSetHeader(key, value);
         };
-        res.setHeader("Cache-Control", "no-store");
+        res.setHeader("Cache-Control", isAsset ? "no-cache" : "no-store");
 
-        let url = req.url ?? "";
         // @slug -> [slug] pada permintaan modul (lihat ROUTE_SEGMENT_ALIAS_RE).
         if (url.includes("/src/routes/") && url.includes("@")) {
           url = url.replace(ROUTE_SEGMENT_ALIAS_RE, "[$1]");
           req.url = url;
         }
 
-        // Tulis ulang alamat modul kurung di respons JS ([slug] -> @slug).
+        // (1) Tulis ulang alamat modul kurung di respons JS ([slug] -> @slug).
+        // (2) Kompresi gzip untuk JS/JSON/CSS — modul dev mentah ~3MB per halaman;
+        //     lewat proksi pratinjau inilah biaya terbesarnya.
         // Diagnostik disuntikkan lewat src/app.html, bukan lewat respons,
         // agar tidak pernah menyentuh aliran body HTML.
         const originalEnd = ((res.end as unknown) as (
@@ -112,21 +117,37 @@ function devStableClient() {
         res.end = (body?: string | Buffer, ...rest: unknown[]) => {
           try {
             const type = String(res.getHeader("content-type") ?? "");
+            const isHtml = type.includes("text/html");
+            const isText =
+              type.includes("javascript") || type.includes("json") || type.includes("css");
             const tail =
               typeof body === "string"
                 ? body
                 : Buffer.isBuffer(body)
                   ? body.toString("utf8")
                   : "";
-            if (type.includes("javascript") && tail.includes("/src/routes/")) {
+            let out = tail;
+            if (type.includes("javascript") && out.includes("/src/routes/")) {
+              out = out.replace(/(\/src\/routes\/[^"'\`?]*?)\[([a-zA-Z_]+)\]/g, "$1@$2");
+            }
+            if (
+              !isHtml &&
+              isText &&
+              acceptsGzip &&
+              out.length > 1024 &&
+              !res.getHeader("content-encoding")
+            ) {
+              res.setHeader("Vary", "Accept-Encoding");
+              res.setHeader("Content-Encoding", "gzip");
               res.removeHeader("content-length");
-              return originalEnd(
-                tail.replace(/(\/src\/routes\/[^"'\`?]*?)\[([a-zA-Z_]+)\]/g, "$1@$2"),
-                ...rest,
-              );
+              return originalEnd(gzipSync(Buffer.from(out, "utf8")), ...rest);
+            }
+            if (out !== tail) {
+              res.removeHeader("content-length");
+              return originalEnd(out, ...rest);
             }
           } catch {
-            /* penulisan ulang bersifat opsional; respons tetap dilanjutkan */
+            /* penulisan ulang/kompresi bersifat opsional; respons tetap lanjut */
           }
           return originalEnd(body, ...rest);
         };
@@ -163,6 +184,17 @@ export default defineConfig({
     // muat ulang halaman sendiri; dimatikan agar tampilan tidak berkedip.
     // Refresh manual selalu melihat perubahan terbaru (tanpa cache dev).
     hmr: false,
+    // Pra-transformasi halaman utama saat server mulai — kunjungan pertama
+    // tidak menunggu transformasi kompilasi Svelte.
+    warmup: {
+      clientFiles: [
+        "./src/routes/+layout.svelte",
+        "./src/routes/+page.svelte",
+        "./src/routes/katalog/+page.svelte",
+        "./src/routes/kurma/[slug]/+page.svelte",
+        "./src/app.css",
+      ],
+    },
   },
   test: {
     include: ["src/**/*.test.ts"],
