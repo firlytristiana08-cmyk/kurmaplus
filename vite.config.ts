@@ -8,6 +8,11 @@ import { defineConfig } from "vitest/config";
 // websocket, ping, atau muat ulang halaman. Klien Vite bawaan memuat ulang
 // halaman sendiri saat koneksi putus-nyambung lewat proksi pratinjau — itulah
 // tampilan "hilang-muncul" yang dikeluhkan. (Lihat DECISIONS.md.)
+// PENTING: klien bawaan juga menetapkan semua konstanta define (__SVELTEKIT_*)
+// sebagai global sebelum modul lain dievaluasi. Karena stub ini
+// menggantikannya, blok penetapan global HARUS disuntikkan di depan stub
+// (lihat define_globals di devStableClient) — tanpa itu, setiap referensi
+// __SVELTEKIT_* di modul klien melempar ReferenceError dan interaksi mati.
 const DEV_CLIENT_STUB = `
 const sheets = new Map();
 export function updateStyle(id, content) {
@@ -51,6 +56,7 @@ function devStableClient() {
   return {
     name: "kurmaplus-dev-stable-client",
     configureServer(server: {
+      config: { define?: Record<string, string> };
       middlewares: {
         use: (
           fn: (
@@ -67,6 +73,15 @@ function devStableClient() {
         ) => void;
       };
     }) {
+      // Konstanta define SvelteKit (__SVELTEKIT_*) harus menjadi global sebelum
+      // modul klien lain dievaluasi; klien Vite bawaan melakukannya lewat
+      // __DEFINES__, tetapi kita menggantikan klien itu. Suntikkan sendiri:
+      // nilai mentah define dievaluasi dan ditetapkan di globalThis.
+      const define_globals = Object.entries(server.config.define ?? {})
+        .filter(([key]) => /^__SVELTEKIT_[A-Z0-9_]+__$/.test(key))
+        .map(([key, value]) => `try { globalThis.${key} = (${value}); } catch {}`)
+        .join("\n");
+      const dev_client = `${define_globals}\n${DEV_CLIENT_STUB}`;
       server.middlewares.use((req, res, next) => {
         // Semua respons dev tanpa cache: pemuatan selalu segar dari server ini,
         // tidak mungkin mencampur modul lama dan baru (penyebab klik mati).
@@ -118,7 +133,7 @@ function devStableClient() {
 
         if (url.startsWith("/@vite/client")) {
           res.setHeader("Content-Type", "text/javascript; charset=utf-8");
-          res.end(DEV_CLIENT_STUB);
+          res.end(dev_client);
           return;
         }
         if (url.startsWith("/_app/version.json")) {
@@ -133,7 +148,7 @@ function devStableClient() {
 }
 
 export default defineConfig({
-  plugins: [
+	plugins: [
     devStableClient(),
     sveltekit({
       preprocess: vitePreprocess(),
