@@ -8,7 +8,7 @@ INSERT INTO orders (id, code, status, customer_name, customer_phone, address, ci
   (1, 'DEMO2233', 'pending_payment', 'Budi Pratama', '081234567890',
    'Jl. Kemang Raya No. 12, gang di samping minimarket', 'Jakarta Selatan',
    -6.2615, 106.8106, 'Grab', '2026-11-21', 180000, 180000,
-   'Demo: batas bayar sengaja panjang agar bisa dieksplor.', '2026-11-16T11:30:00.000Z', '2026-11-17T23:59:00.000Z', NULL),
+   'Demo: batas bayar sengaja panjang agar bisa dieksplor.', '2026-11-16T11:30:00.000Z', strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '+30 days'), NULL),
   (2, 'DEMO4455', 'paid', 'Siti Rahayu', '081398765432',
    'Jl. Tanjung Duren Raya No. 88, lantai 2', 'Jakarta Barat',
    -6.1785, 106.7920, 'Gojek', '2026-11-21', 270000, 270000,
