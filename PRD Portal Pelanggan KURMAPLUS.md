@@ -266,4 +266,4 @@ Aturan ini berlaku untuk semua kode, termasuk yang dibuat dengan bantuan AI. Tuj
 | PWA | Manifest, ikon 192 dan 512 px (termasuk maskable), service worker menyimpan katalog dan halaman info, ada pesan saat versi baru siap dipakai |
 | Kompatibilitas | Chrome Android dan Safari iOS 16.4 ke atas, serta browser desktop terbaru |
 | Bahasa dan format | Bahasa Indonesia, rupiah dengan pemisah ribuan titik, tanggal dalam format Indonesia dan zona Asia/Jakarta |
-| Biaya | Rp0 per bulan untuk sistem. Pemakaian D1 dipantau di dashboard Cloudflare, dan bila mendekati batas harian menjelang musim ramai, pilihan naik ke paket berbayar dibahas lebih dulu |
+| Biaya | Rp0 per bulan untuk sistem. Pemakaian database dipantau di dashboard Supabase, dan bila mendekati batas paket gratis menjelang musim ramai, pilihan naik ke paket berbayar dibahas lebih dulu |
