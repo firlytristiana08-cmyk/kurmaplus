@@ -149,7 +149,7 @@
 			<div class="error-box" role="alert">{form.message}</div>
 		{/if}
 
-		<form method="POST" onsubmit={handleSubmit}>
+		<form id="form-checkout" method="POST" onsubmit={handleSubmit}>
 			<input type="hidden" name="items" value={itemsJson} />
 			<input type="hidden" name="lat" value={latValue} />
 			<input type="hidden" name="lng" value={lngValue} />
@@ -292,16 +292,20 @@
 				</p>
 			</section>
 
-			<div class="sticky-bar">
-				<div class="sticky-inner">
-					<button type="submit" class="btn">
-						Bayar {formatRupiah(subtotal)}
-					</button>
-				</div>
-			</div>
 		</form>
 	{/if}
 </main>
+
+<!-- Bilah tombol di luar .wrap agar lebarnya rata kiri-kanan seperti halaman lain. -->
+{#if rows.length > 0}
+	<div class="sticky-bar">
+		<div class="sticky-inner">
+			<button type="submit" form="form-checkout" class="btn">
+				Bayar {formatRupiah(subtotal)}
+			</button>
+		</div>
+	</div>
+{/if}
 
 <PageFooter />
 

@@ -230,12 +230,13 @@ textarea {
 	resize: vertical;
 }
 
+/* Field aktif: hanya border-nya yang berwarna, senada warna tombol. */
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
-	outline: 3px solid var(--olive);
-	outline-offset: 1px;
-	border-color: var(--olive);
+	outline: none;
+	border-width: 2px;
+	border-color: var(--rust);
 }
 
 .required-mark {

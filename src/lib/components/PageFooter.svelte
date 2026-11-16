@@ -1,9 +1,5 @@
 <footer class="footer">
 	<div class="footer-inner">
-		<p class="note">
-			Pengiriman Sabtu dan Minggu ke Jabodetabek lewat Grab atau Gojek. Ongkir dibayar pemesan di
-			luar total pesanan.
-		</p>
 		<nav aria-label="Tautan tambahan">
 			<a href="/info">Cara pesan</a>
 			<a href="/privasi">Privasi</a>
@@ -22,12 +18,6 @@
 		max-width: 430px;
 		margin: 0 auto;
 		padding: 0 16px;
-	}
-
-	.note {
-		font-size: 0.8125rem;
-		color: color-mix(in srgb, var(--ink) 62%, var(--paper));
-		margin-bottom: 0.75rem;
 	}
 
 	nav {

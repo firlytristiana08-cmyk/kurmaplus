@@ -114,15 +114,17 @@
 			<span>Subtotal</span>
 			<strong class="tabular">{formatRupiah(subtotal)}</strong>
 		</div>
-		<p class="muted">Total = subtotal. Ongkir kurir dibayar pemesan, tidak termasuk di sini.</p>
-
-		<div class="sticky-bar">
-			<div class="sticky-inner">
-				<a class="btn" href="/checkout">Lanjut ke checkout</a>
-			</div>
-		</div>
 	{/if}
 </main>
+
+<!-- Bilah tombol di luar .wrap agar lebarnya rata kiri-kanan seperti halaman lain. -->
+{#if rows.length > 0}
+	<div class="sticky-bar">
+		<div class="sticky-inner">
+			<a class="btn" href="/checkout">Lanjut ke checkout</a>
+		</div>
+	</div>
+{/if}
 
 <PageFooter />
 
