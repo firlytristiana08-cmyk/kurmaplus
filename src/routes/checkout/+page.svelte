@@ -4,6 +4,7 @@
 	import { cart } from '#lib/cart.svelte';
 	import PageFooter from '#lib/components/PageFooter.svelte';
 	import PageHeader from '#lib/components/PageHeader.svelte';
+	import { clearInvalid, handleInvalid } from '#lib/validation';
 	import type { CheckoutData } from './+page.server';
 
 	let { data, form }: { data: CheckoutData; form?: { message?: string; code?: string } } = $props();
@@ -163,7 +164,7 @@
 			<div class="error-box" role="alert">{form.message}</div>
 		{/if}
 
-		<form id="form-checkout" method="POST" onsubmit={handleSubmit}>
+		<form id="form-checkout" method="POST" onsubmit={handleSubmit} oninvalidcapture={handleInvalid} oninputcapture={clearInvalid}>
 			<input type="hidden" name="items" value={itemsJson} />
 			<input type="hidden" name="lat" value={latValue} />
 			<input type="hidden" name="lng" value={lngValue} />

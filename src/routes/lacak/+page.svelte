@@ -1,6 +1,7 @@
 <script lang="ts">
 	import PageFooter from '#lib/components/PageFooter.svelte';
 	import PageHeader from '#lib/components/PageHeader.svelte';
+	import { clearInvalid, handleInvalid } from '#lib/validation';
 
 	let { form }: { form?: { message?: string } } = $props();
 </script>
@@ -23,7 +24,7 @@
 		<div class="error-box" role="alert">{form.message}</div>
 	{/if}
 
-	<form method="POST">
+	<form method="POST" oninvalidcapture={handleInvalid} oninputcapture={clearInvalid}>
 		<div class="field">
 			<label for="code">Kode pesanan <span class="required-mark">*</span></label>
 			<input
@@ -34,7 +35,10 @@
 				minlength="8"
 				maxlength="8"
 				autocomplete="off"
-				style="text-transform: uppercase"
+				data-validation-message="Kode pesanan terdiri dari 8 karakter (huruf besar dan angka 2-9)."
+				oninput={(event) => {
+					event.currentTarget.value = event.currentTarget.value.toUpperCase();
+				}}
 			/>
 		</div>
 		<div class="field">
@@ -47,6 +51,7 @@
 				pattern="[0-9]{4}"
 				maxlength="4"
 				required
+				data-validation-message="Isi tepat 4 digit terakhir nomor WhatsApp (angka saja)."
 			/>
 		</div>
 		<button type="submit" class="btn">Lihat status pesanan</button>
