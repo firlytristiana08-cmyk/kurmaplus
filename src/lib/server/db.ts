@@ -226,16 +226,26 @@ function loadLocalEnv(): void {
   }
 }
 
+// Nilai env sering terbawa spasi atau kutip saat ditempel di panel hosting.
+function cleanEnv(value: string | undefined): string {
+  if (!value) {
+    return "";
+  }
+  return value.trim().replace(/^["']|["']$/g, "");
+}
+
 function connectionString(): string | null {
   loadLocalEnv();
-  const url = process.env.DATABASE_URL ?? process.env.SUPABASE_DB_URL;
+  const url = cleanEnv(process.env.DATABASE_URL ?? process.env.SUPABASE_DB_URL);
   if (url) {
     return url;
   }
-  const ref = process.env.SUPABASE_PROJECT_REF;
-  const password = process.env.SUPABASE_DB_PASSWORD;
+  const ref = cleanEnv(process.env.SUPABASE_PROJECT_REF);
+  const password = cleanEnv(process.env.SUPABASE_DB_PASSWORD);
   if (ref && password) {
-    return `postgresql://postgres.${ref}:${password}@db.${ref}.supabase.co:5432/postgres`;
+    // Password boleh mengandung karakter khusus; percent-encode agar URL
+    // koneksi tidak rusak (driver pg akan decode kembali sebelum menyambung).
+    return `postgresql://postgres.${ref}:${encodeURIComponent(password)}@db.${ref}.supabase.co:5432/postgres`;
   }
   return null;
 }
@@ -264,6 +274,13 @@ async function openPostgres(url: string): Promise<Db> {
     await pool.query("SELECT 1");
   } catch (error) {
     await pool.end().catch(() => undefined);
+    // Kode galat saja (tanpa pesan/sandi) supaya mudah didiagnosis dari log
+    // hosting: 28P01 = salah password, ENOTFOUND = salah SUPABASE_PROJECT_REF,
+    // ETIMEDOUT/ECONNREFUSED = masalah jaringan.
+    const code = (error as { code?: string }).code ?? (error as Error).name;
+    process.stderr.write(
+      `KURMAPLUS: koneksi database gagal (${code}) — periksa SUPABASE_PROJECT_REF dan SUPABASE_DB_PASSWORD.\n`,
+    );
     throw error;
   }
   return new PostgresDb(pool);
