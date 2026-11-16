@@ -51,8 +51,10 @@
 		<div style="display: contents">%sveltekit.body%</div>
 		<script>
 			// Diagnostik preview pengembangan: mencatat kegagalan pemuatan modul
-			// dan keberhasilan hidrasi, lalu menampilkan ringkasannya di layar bila
-			// ada masalah. Hanya aktif pada server dev (bootstrap @sveltejs/kit).
+			// dan keberhasilan hidrasi. Pita status muncul hanya bila aplikasi belum
+			// siap, lalu MENGHILANG SENDIRI saat hidrasi selesai (pemuatan modul dev
+			// bisa beberapa detik lewat proksi — itu normal, bukan kegagalan).
+			// Hanya aktif pada server dev (bootstrap @sveltejs/kit).
 			(function () {
 				var devBootstrap = false;
 				for (var i = 0; i < document.scripts.length; i++) {
@@ -64,6 +66,34 @@
 				}
 				if (!devBootstrap) return;
 				var errs = [];
+				var banner = null;
+				var done = false;
+				function finish() {
+					done = true;
+					if (banner && banner.parentNode) banner.parentNode.removeChild(banner);
+					banner = null;
+				}
+				function show(text) {
+					if (done) return;
+					if (!banner) {
+						banner = document.createElement('div');
+						banner.setAttribute('role', 'status');
+						banner.style.cssText =
+							'position:fixed;left:0;right:0;bottom:0;z-index:2147483647;background:#2D264B;color:#fff;font:12px/1.5 system-ui,sans-serif;padding:10px 12px';
+						document.body.appendChild(banner);
+					}
+					banner.textContent = text;
+				}
+				window.addEventListener('kurma:hydrated', finish);
+				var poll = setInterval(function () {
+					if (window.__kurmaHydrated) {
+						clearInterval(poll);
+						finish();
+					}
+				}, 500);
+				setTimeout(function () {
+					clearInterval(poll);
+				}, 30000);
 				window.addEventListener(
 					'error',
 					function (e) {
@@ -81,21 +111,28 @@
 					errs.push('async: ' + String((r && r.message) || r));
 				});
 				setTimeout(function () {
-					if (window.__kurmaHydrated && errs.length === 0) return;
-					var d = document.createElement('div');
-					d.setAttribute('role', 'status');
-					d.style.cssText =
-						'position:fixed;left:0;right:0;bottom:0;z-index:2147483647;background:#2D264B;color:#fff;font:12px/1.5 system-ui,sans-serif;padding:10px 12px';
-					d.textContent =
-						'Diagnostik preview — ' +
-						(window.__kurmaHydrated
-							? 'aplikasi jalan, tapi ada galat: ' + errs.slice(0, 2).join(' | ')
-							: 'aplikasi TIDAK berhasil dimulai. ' +
-								(errs.length
-									? errs.slice(0, 3).join(' | ')
-									: 'Tidak ada modul yang gagal tercatat — laporkan teks ini.'));
-					document.body.appendChild(d);
+					if (done || window.__kurmaHydrated) return;
+					if (errs.length > 0) {
+						show(
+							'Diagnostik preview — ada galat saat memuat: ' +
+								errs.slice(0, 3).join(' | ') +
+								' (pesan ini menghilang sendiri bila aplikasi tetap berhasil dimulai)'
+						);
+					} else {
+						show(
+							'Diagnostik preview — aplikasi masih memuat modul… (pesan ini menghilang sendiri saat siap)'
+						);
+					}
 				}, 5000);
+				setTimeout(function () {
+					if (done || window.__kurmaHydrated) return;
+					show(
+						'Diagnostik preview — aplikasi TIDAK berhasil dimulai. ' +
+							(errs.length
+								? errs.slice(0, 3).join(' | ')
+								: 'Tidak ada modul yang gagal tercatat — laporkan teks ini.')
+					);
+				}, 15000);
 			})();
 		</script>
 	</body>

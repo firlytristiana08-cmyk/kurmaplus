@@ -5,9 +5,10 @@
 	let { children } = $props();
 
 	onMount(() => {
-		// Penanda untuk panel diagnostik preview (lihat vite.config.ts).
+		// Penanda untuk panel diagnostik preview (lihat src/app.html).
 		if (import.meta.env.DEV) {
 			(window as typeof window & { __kurmaHydrated?: boolean }).__kurmaHydrated = true;
+			window.dispatchEvent(new Event('kurma:hydrated'));
 		}
 	});
 
