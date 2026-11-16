@@ -136,12 +136,12 @@
 <PageFooter />
 
 <style>
+	/* Foto mengikuti margin kiri-kanan yang sama seperti halaman lain. */
 	.photo {
-		width: calc(100% + 32px);
-		max-width: none;
-		margin: 0 -16px;
+		width: 100%;
 		aspect-ratio: 43 / 30;
 		object-fit: cover;
+		border-radius: var(--radius-m);
 	}
 
 	article {
@@ -170,13 +170,14 @@
 		gap: 0.125rem;
 		min-height: 72px;
 		padding: 0.75rem 0.875rem;
-		border: 1.5px solid var(--sand);
+		border: 1.5px solid transparent;
 		border-radius: var(--radius-m);
 		background: var(--card);
 		font-family: inherit;
 		cursor: pointer;
 	}
 
+	/* Hanya tombol ukuran yang aktif yang memakai border. */
 	.size-btn.selected {
 		border-color: var(--rust);
 		background: color-mix(in srgb, var(--rust) 7%, var(--card));
