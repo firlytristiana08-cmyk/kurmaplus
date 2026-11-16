@@ -1,24 +1,19 @@
 <script lang="ts">
+	import BackLink from './BackLink.svelte';
 	import Wordmark from './Wordmark.svelte';
-
-	// Tombol teks "Kembali": riwayat bila ada, selain itu ke layar masuk.
-	function goBack(event: MouseEvent): void {
-		if (window.history.length > 1) {
-			event.preventDefault();
-			window.history.back();
-		}
-	}
 </script>
 
 <header class="header">
 	<div class="header-inner">
-		<a class="back-link" href="/" onclick={goBack}>Kembali</a>
 		<Wordmark href="/katalog" />
 		<nav aria-label="Navigasi utama">
 			<a href="/lacak">Lacak pesanan</a>
 		</nav>
 	</div>
 </header>
+
+<!-- Tombol kembali berada di luar navbar, di atas konten halaman. -->
+<BackLink />
 
 <style>
 	/* Navbar tetap terlihat di atas saat halaman di-scroll. */
@@ -33,29 +28,11 @@
 	.header-inner {
 		max-width: 430px;
 		margin: 0 auto;
-		padding: 8px 16px;
+		padding: 12px 16px;
 		display: flex;
 		align-items: center;
-		gap: 0.875rem;
-	}
-
-	.back-link {
-		color: var(--ink);
-		font-size: 0.875rem;
-		font-weight: 700;
-		text-decoration: none;
-		min-height: 48px;
-		display: inline-flex;
-		align-items: center;
-		flex: none;
-	}
-
-	.back-link:hover {
-		text-decoration: underline;
-	}
-
-	nav {
-		margin-left: auto;
+		justify-content: space-between;
+		gap: 0.75rem;
 	}
 
 	.header a {
