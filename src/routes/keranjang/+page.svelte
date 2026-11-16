@@ -135,10 +135,15 @@
 		padding: 0;
 	}
 
+	/* Dua kolom + total di baris sendiri. Lebar konten dibatasi 430 px
+	   (.wrap), sedangkan deret tombol sentuh 48 px dan nominal tidak bisa
+	   dipaksa mengecil — susunan tiga kolom membuat layar HP bergeser
+	   ke kanan-kiri. */
 	.cart-row {
 		display: grid;
-		grid-template-columns: 72px 1fr auto;
-		gap: 0.75rem;
+		grid-template-columns: 72px minmax(0, 1fr);
+		column-gap: 0.75rem;
+		row-gap: 0.375rem;
 		padding: 1rem 0;
 		border-bottom: 1px solid var(--sand);
 	}
@@ -150,14 +155,20 @@
 		border-radius: var(--radius-s);
 	}
 
+	.cart-info {
+		min-width: 0;
+	}
+
 	.name {
 		font-weight: 700;
 		margin: 0;
+		overflow-wrap: anywhere;
 	}
 
 	.row-actions {
 		display: flex;
 		align-items: center;
+		flex-wrap: wrap;
 		gap: 0.75rem;
 		margin-top: 0.5rem;
 	}
@@ -205,6 +216,8 @@
 	}
 
 	.line-total {
+		grid-column: 1 / -1;
+		text-align: right;
 		font-weight: 700;
 		white-space: nowrap;
 	}
