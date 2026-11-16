@@ -1,5 +1,5 @@
 /// <reference types="vitest/config" />
-import adapter from "@sveltejs/adapter-node";
+import adapter from "@sveltejs/adapter-auto";
 import { sveltekit } from "@sveltejs/kit/vite";
 import { vitePreprocess } from "@sveltejs/vite-plugin-svelte";
 import { defineConfig } from "vitest/config";
@@ -9,10 +9,6 @@ export default defineConfig({
     sveltekit({
       preprocess: vitePreprocess(),
       adapter: adapter(),
-      // Build pratinjau (KURMAPLUS_PREVIEW=1) berjalan di balik proksi yang
-      // URL publiknya tidak diketahui saat build, jadi semua origin dipercaya
-      // HANYA di build pratinjau. Build produksi/Vercel tetap memeriksa origin.
-      csrf: { trustedOrigins: process.env.KURMAPLUS_PREVIEW ? ["*"] : [] },
     }),
   ],
   server: {

@@ -28,8 +28,8 @@ Aturan 5 PRD: dependensi baru hanya masuk bila alasannya dicatat di berkas ini.
 | `leaflet` | PRD: peta penandaan lokasi di checkout, tile OSM gratis. |
 | `vitest` | PRD: logika uang, jadwal, stok, signature wajib bertes. |
 | `@biomejs/biome` | PRD: lint dan format satu alat. |
-| SvelteKit, Svelte, adapter-node, vite, typescript, svelte-check | PRD: tumpukan inti (adapter-node → host Node/Vercel; adapter-cloudflare dibuang karena menyalakan runtime workerd tambahan dan menyumbang port pratinjau ekstra). |
-| Pratinjau memakai build produksi | — | Pratinjau dijalankan dari `npm run preview` (build produksi + `node build/index.js`), bukan `vite dev` | Mesin dev menyusun ulang halaman diam-diam dan memicu kedipan "hilang-muncul" di balik proksi pratinjau; build produksi memberi respons konstan cepat sekaligus menguji artefak yang akan dideploy. `KURMAPLUS_DB=sqlite` karena sandbox tidak menjangkau Supabase; di Vercel koneksi ke Supabase dipakai. |
+| SvelteKit, Svelte, adapter-auto, vite, typescript, svelte-check | PRD: tumpukan inti (adapter-auto → otomatis memakai adapter-vercel di Vercel; adapter-cloudflare dibuang karena menyalakan runtime workerd tambahan dan menyumbang port pratinjau ekstra). |
+| — | Aturan lingkungan (keputusan pemilik, 2026-11-16) | Pratinjau Arena dijalankan dari server **development** (`npm run dev`); **produksi = Vercel** dan **hanya pemilik** yang menaikkan production dari Vercel secara manual. Jangan menyajikan build produksi di pratinjau dan jangan men-deploy tanpa perintah pemilik. |
 
 ## Nilai sementara (tanda "(belum ditentukan)" di PRD — diisi pemilik lewat tabel settings sebelum rilis)
 
