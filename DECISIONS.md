@@ -16,6 +16,7 @@ Aturan 5 PRD: dependensi baru hanya masuk bila alasannya dicatat di berkas ini.
 | ORM | Drizzle + drizzle-kit | `src/lib/server/db.ts` dengan antarmuka gaya D1 (`prepare().bind().all/run`) atas `node:sqlite` | Berjalan penuh di sandbox tanpa wrangler; SQL yang sama dipakai saat dipindah ke D1. Skema tetap SQL bacaan di `db/migrations`. |
 | Tes E2E | Playwright | Tidak dipasang | Sandbox memblokir unduhan browser Playwright; verifikasi alur lewat pratinjau dan tes unit. |
 | Foto produk | Foto asli pemilik, tanpa gambar AI | Sementara memakai foto hasil generate, **wajib diganti foto asli pemilik sebelum rilis** | PRD melarang foto produk AI untuk rilis; pemilik belum mengirim foto. Kolom `photo` sudah siap untuk penukaran. |
+| Basis data | Cloudflare D1 (PRD mengecualikan Supabase) | Skema 7 tabel + data 3 produk/9 varian/pengaturan juga dimasukkan ke proyek Supabase `dmwtrtcehxjcweoanbsx` atas permintaan pengguna | Aplikasi pratinjau membaca database lokal (jaringan sandbox tidak menjangkau Supabase); lapisan `src/lib/server/db` memakai SQL yang sama dan tinggal diarahkan ke D1 atau Supabase saat deployment. |
 
 ## Dependensi (alasan singkat)
 
