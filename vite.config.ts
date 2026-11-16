@@ -37,6 +37,11 @@ export class ErrorOverlay {}
 export default {};
 `;
 
+// Identitas unik tiap kali server dev dijalankan. Halaman yang masih menyimpan
+// modul generasi sebelumnya akan mendeteksi perbedaan versi dan memuat ulang
+// diri, sehingga klik/tombol tidak pernah "mati" karena modul campuran.
+const DEV_RUN_ID = Date.now().toString(36);
+
 function devStableClient() {
   return {
     name: "kurmaplus-dev-stable-client",
@@ -55,17 +60,26 @@ function devStableClient() {
       };
     }) {
       server.middlewares.use((req, res, next) => {
+        // Semua respons dev tanpa cache: pemuatan selalu segar dari server ini,
+        // tidak mungkin mencampur modul lama dan baru (penyebab klik mati).
+        // Header dipaksa no-store apa pun yang ditetapkan middleware lain.
+        const originalSetHeader = res.setHeader.bind(res);
+        res.setHeader = (key: string, value: string | number | string[]) => {
+          if (key.toLowerCase() === "cache-control") {
+            value = "no-store";
+          }
+          return originalSetHeader(key, value);
+        };
+        res.setHeader("Cache-Control", "no-store");
         const url = req.url ?? "";
         if (url.startsWith("/@vite/client")) {
           res.setHeader("Content-Type", "text/javascript; charset=utf-8");
-          res.setHeader("Cache-Control", "no-store");
           res.end(DEV_CLIENT_STUB);
           return;
         }
         if (url.startsWith("/_app/version.json")) {
           res.setHeader("Content-Type", "application/json");
-          res.setHeader("Cache-Control", "no-store");
-          res.end('{"version":"kurmaplus-dev"}');
+          res.end(JSON.stringify({ version: "kurmaplus-dev-" + DEV_RUN_ID }));
           return;
         }
         next();
