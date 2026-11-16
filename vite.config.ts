@@ -61,7 +61,10 @@ function devStableClient() {
       middlewares: {
         use: (
           fn: (
-            req: { url?: string },
+            req: {
+              url?: string;
+              headers?: Record<string, string | string[] | undefined>;
+            },
             res: {
               setHeader: (k: string, v: string | number | string[]) => void;
               getHeader: (k: string) => string | number | undefined;
