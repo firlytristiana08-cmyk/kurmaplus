@@ -3,7 +3,9 @@
 </script>
 
 <svelte:head>
-	<title>Halaman tidak ditemukan — KURMAPLUS</title>
+	<title
+		>{page.status === 404 ? 'Halaman tidak ditemukan' : 'Terjadi kesalahan'} — KURMAPLUS</title
+	>
 </svelte:head>
 
 <main class="wrap">
