@@ -4,6 +4,15 @@
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 		<meta name="theme-color" content="#f4ede0" />
+		<script>
+			// Shim payload SvelteKit: runtime klien membaca __SVELTEKIT_PAYLOAD__
+			// (seharusnya diganti menjadi globalThis.__SVELTEKIT_PAYLOAD__ oleh
+			// define Vite). Bila penggantian itu tidak aktif, referensi telanjang
+			// melempar ReferenceError dan aplikasi tidak pernah terhidrasi.
+			// Shim ini hanya mengisi bila belum ada — aman untuk build produksi.
+			if (typeof window.__SVELTEKIT_PAYLOAD__ === 'undefined')
+				window.__SVELTEKIT_PAYLOAD__ = {};
+		</script>
 		<link rel="manifest" href="%sveltekit.assets%/manifest.webmanifest" />
 		<link rel="icon" href="%sveltekit.assets%/icons/icon-192.png" />
 		<link rel="apple-touch-icon" href="%sveltekit.assets%/icons/apple-touch-icon-180.png" />
