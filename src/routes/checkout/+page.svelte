@@ -316,6 +316,7 @@
 		margin-bottom: 1rem;
 	}
 
+	/* isolation: z-index internal peta Leaflet tidak boleh menutupi tombol di atasnya. */
 	.map {
 		width: 100%;
 		height: 240px;
@@ -323,6 +324,7 @@
 		border-radius: var(--radius-m);
 		overflow: hidden;
 		background: var(--sand);
+		isolation: isolate;
 	}
 
 	.choice-list {

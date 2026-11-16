@@ -230,6 +230,16 @@ textarea {
 	resize: vertical;
 }
 
+/* Dropdown: panah di kanan dengan ruang di kiri dan kanannya, tidak mepet tepi. */
+select {
+	appearance: none;
+	padding-right: 3rem;
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%232D264B'%3E%3Cpath d='M16.59 8.59 12 13.17 7.41 8.59 6 10l6 6 6-6z'/%3E%3C/svg%3E");
+	background-repeat: no-repeat;
+	background-position: right 1.125rem center;
+	background-size: 1.125rem 1.125rem;
+}
+
 /* Field aktif: hanya border-nya yang berwarna, senada warna tombol. */
 input:focus-visible,
 select:focus-visible,
