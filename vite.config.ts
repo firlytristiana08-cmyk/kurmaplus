@@ -91,8 +91,10 @@ function devStableClient() {
         // Aset statis (gambar/font) tidak pernah mematikan interaksi — boleh
         // direvalidasi (304) agar kunjungan ulang tidak mengunduh ulang ratusan
         // KB. Kode (JS/JSON/HTML) tetap no-store: modul campuran = klik mati.
-        const isAsset = /\.(png|jpe?g|webp|gif|svg|ico|avif|woff2?|ttf|otf|mp4|webm)(\?|$)/i.test(url);
-        const acceptsGzip = String(req.headers["accept-encoding"] ?? "").includes("gzip");
+        const isAsset = /\.(png|jpe?g|webp|gif|svg|ico|avif|woff2?|ttf|otf|mp4|webm)(\?|$)/i.test(
+          url,
+        );
+        const acceptsGzip = String(req.headers?.["accept-encoding"] ?? "").includes("gzip");
         const originalSetHeader = res.setHeader.bind(res);
         res.setHeader = (key: string, value: string | number | string[]) => {
           if (key.toLowerCase() === "cache-control") {
@@ -113,10 +115,9 @@ function devStableClient() {
         //     lewat proksi pratinjau inilah biaya terbesarnya.
         // Diagnostik disuntikkan lewat src/app.html, bukan lewat respons,
         // agar tidak pernah menyentuh aliran body HTML.
-        const originalEnd = ((res.end as unknown) as (
-          body?: string | Buffer,
-          ...rest: unknown[]
-        ) => void).bind(res);
+        const originalEnd = (
+          res.end as unknown as (body?: string | Buffer, ...rest: unknown[]) => void
+        ).bind(res);
         res.end = (body?: string | Buffer, ...rest: unknown[]) => {
           try {
             const type = String(res.getHeader("content-type") ?? "");
@@ -124,14 +125,10 @@ function devStableClient() {
             const isText =
               type.includes("javascript") || type.includes("json") || type.includes("css");
             const tail =
-              typeof body === "string"
-                ? body
-                : Buffer.isBuffer(body)
-                  ? body.toString("utf8")
-                  : "";
+              typeof body === "string" ? body : Buffer.isBuffer(body) ? body.toString("utf8") : "";
             let out = tail;
             if (type.includes("javascript") && out.includes("/src/routes/")) {
-              out = out.replace(/(\/src\/routes\/[^"'\`?]*?)\[([a-zA-Z_]+)\]/g, "$1@$2");
+              out = out.replace(/(\/src\/routes\/[^"'`?]*?)\[([a-zA-Z_]+)\]/g, "$1@$2");
             }
             if (
               !isHtml &&
@@ -162,7 +159,7 @@ function devStableClient() {
         }
         if (url.startsWith("/_app/version.json")) {
           res.setHeader("Content-Type", "application/json");
-          res.end(JSON.stringify({ version: "kurmaplus-dev-" + DEV_RUN_ID }));
+          res.end(JSON.stringify({ version: `kurmaplus-dev-${DEV_RUN_ID}` }));
           return;
         }
         next();
@@ -172,7 +169,7 @@ function devStableClient() {
 }
 
 export default defineConfig({
-	plugins: [
+  plugins: [
     devStableClient(),
     sveltekit({
       preprocess: vitePreprocess(),
