@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kurmaplus-splash-v9';
+const CACHE_NAME = 'kurmaplus-splash-v10';
 
 // Aset layar awal disimpan sejak awal agar tetap terbuka tanpa jaringan (FR-17).
 const PRECACHE = [
