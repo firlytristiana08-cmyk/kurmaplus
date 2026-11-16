@@ -57,8 +57,8 @@
 								</span>
 							</p>
 						{/if}
-						<a class="btn" href={`/kurma/${product.slug}`}>Lihat ukuran</a>
 					</div>
+					<a class="btn" href={`/kurma/${product.slug}`}>Lihat ukuran</a>
 				</article>
 			</li>
 		{/each}
@@ -114,5 +114,10 @@
 		margin: 0 0 0.875rem;
 		font-weight: 700;
 		color: var(--rust);
+	}
+
+	/* Tombol selebar kartu — sisi kiri-kanannya rata dengan margin halaman lain. */
+	.product-card > .btn {
+		border-radius: 0;
 	}
 </style>
