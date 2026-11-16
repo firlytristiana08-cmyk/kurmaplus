@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { formatDateId, formatDateTimeId, formatRupiah, formatWeight } from '#lib/format';
-	import { STATUS_LABEL_ID } from '#lib/server/orders';
+	import { STATUS_LABEL_ID } from '#lib/order-status';
 	import PageFooter from '#lib/components/PageFooter.svelte';
 	import PageHeader from '#lib/components/PageHeader.svelte';
 	import type { OrderPageData } from './+page.server';

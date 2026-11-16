@@ -172,7 +172,7 @@ Semua pilihan punya paket gratis yang cukup untuk satu toko kecil. Untuk databas
 
 | Lapisan | Pilihan | Alasan |
 | --- | --- | --- |
-| Hosting | Vercel (atau host Node lain) lewat @sveltejs/adapter-auto | Gratis untuk toko kecil, pratinjau otomatis tiap perubahan, dan cocok dipasangkan dengan Supabase |
+| Hosting | Vercel (atau host Node lain) lewat @sveltejs/adapter-node | Gratis untuk toko kecil, pratinjau otomatis tiap perubahan, dan cocok dipasangkan dengan Supabase |
 | Framework | SvelteKit 2, Svelte 5, TypeScript strict | Ukuran JS kecil untuk HP lambat, form tetap jalan tanpa JS lewat form actions |
 | Database | Supabase (Postgres) | Gratis, SQL penuh, terhubung lewat URL basis data, dan siap dipakai portal admin nanti |
 | ORM dan migrasi | Drizzle ORM, drizzle-kit untuk membuat migrasi, `drizzle-kit migrate` atau `supabase db push` untuk menjalankannya | Ringan, kueri bertipe, migrasi berupa SQL yang bisa dibaca |
