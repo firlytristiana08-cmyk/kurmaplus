@@ -73,10 +73,12 @@
 						loading="lazy"
 					/>
 					<div class="cart-info">
-						<p class="name">{row.name}</p>
-						<p class="muted">
-							{formatWeight(row.weightGrams)} ·
-							<span class="tabular">{formatRupiah(row.priceIdr)}</span>
+						<div class="row-head">
+							<p class="name">{row.name}</p>
+							<p class="line-total tabular">{formatRupiah(row.priceIdr * row.item.qty)}</p>
+						</div>
+						<p class="unit muted tabular">
+							{formatWeight(row.weightGrams)} · {row.item.qty} × {formatRupiah(row.priceIdr)}
 						</p>
 						{#if row.stock < row.item.qty}
 							<p class="error-text">Stok tinggal {row.stock}, kurangi jumlahnya.</p>
@@ -105,7 +107,6 @@
 							>
 						</div>
 					</div>
-					<p class="line-total tabular">{formatRupiah(row.priceIdr * row.item.qty)}</p>
 				</li>
 			{/each}
 		</ul>
@@ -157,12 +158,31 @@
 
 	.cart-info {
 		min-width: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 0.375rem;
+	}
+
+	/* Nama dan total satu baris — mata langsung menghubungkan produk dengan
+	   harganya, dan kolom nominal sejajar lurus ke bawah antar-baris. */
+	.row-head {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: 0.75rem;
 	}
 
 	.name {
+		flex: 1 1 auto;
+		min-width: 0;
 		font-weight: 700;
 		margin: 0;
 		overflow-wrap: anywhere;
+	}
+
+	.unit {
+		margin: 0;
+		white-space: nowrap;
 	}
 
 	.row-actions {
@@ -215,8 +235,11 @@
 		text-decoration: underline;
 	}
 
+	/* Angka tabular + lebar minimum tetap: nominal tidak bergeser kiri-kanan
+	   saat jumlah ditekan, dan tepi kanan selalu sejajar dengan Subtotal. */
 	.line-total {
-		grid-column: 1 / -1;
+		flex: 0 0 auto;
+		min-width: 7.5rem;
 		text-align: right;
 		font-weight: 700;
 		white-space: nowrap;
