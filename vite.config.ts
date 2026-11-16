@@ -42,6 +42,11 @@ export default {};
 // diri, sehingga klik/tombol tidak pernah "mati" karena modul campuran.
 const DEV_RUN_ID = Date.now().toString(36);
 
+// Modul rute dinamis beralamat kurung ([slug], [kode]) dilaporkan gagal dimuat
+// di beberapa proksi pratinjau. Alamat modul ditulis tanpa kurung (@slug, @kode)
+// dan dipetakan kembali ke berkas aslinya sebelum diproses Vite.
+const ROUTE_SEGMENT_ALIAS_RE = /@([a-zA-Z_]+)/g;
+
 function devStableClient() {
   return {
     name: "kurmaplus-dev-stable-client",
@@ -51,7 +56,10 @@ function devStableClient() {
           fn: (
             req: { url?: string },
             res: {
-              setHeader: (k: string, v: string) => void;
+              setHeader: (k: string, v: string | number | string[]) => void;
+              getHeader: (k: string) => string | number | undefined;
+              removeHeader: (k: string) => void;
+              write: (chunk: string | Buffer, ...rest: unknown[]) => boolean;
               end: (body: string) => void;
             },
             next: () => void,
@@ -71,7 +79,43 @@ function devStableClient() {
           return originalSetHeader(key, value);
         };
         res.setHeader("Cache-Control", "no-store");
-        const url = req.url ?? "";
+
+        let url = req.url ?? "";
+        // @slug -> [slug] pada permintaan modul (lihat ROUTE_SEGMENT_ALIAS_RE).
+        if (url.includes("/src/routes/") && url.includes("@")) {
+          url = url.replace(ROUTE_SEGMENT_ALIAS_RE, "[$1]");
+          req.url = url;
+        }
+
+        // Tulis ulang alamat modul kurung di respons JS ([slug] -> @slug).
+        // Diagnostik disuntikkan lewat src/app.html, bukan lewat respons,
+        // agar tidak pernah menyentuh aliran body HTML.
+        const originalEnd = ((res.end as unknown) as (
+          body?: string | Buffer,
+          ...rest: unknown[]
+        ) => void).bind(res);
+        res.end = (body?: string | Buffer, ...rest: unknown[]) => {
+          try {
+            const type = String(res.getHeader("content-type") ?? "");
+            const tail =
+              typeof body === "string"
+                ? body
+                : Buffer.isBuffer(body)
+                  ? body.toString("utf8")
+                  : "";
+            if (type.includes("javascript") && tail.includes("/src/routes/")) {
+              res.removeHeader("content-length");
+              return originalEnd(
+                tail.replace(/(\/src\/routes\/[^"'\`?]*?)\[([a-zA-Z_]+)\]/g, "$1@$2"),
+                ...rest,
+              );
+            }
+          } catch {
+            /* penulisan ulang bersifat opsional; respons tetap dilanjutkan */
+          }
+          return originalEnd(body, ...rest);
+        };
+
         if (url.startsWith("/@vite/client")) {
           res.setHeader("Content-Type", "text/javascript; charset=utf-8");
           res.end(DEV_CLIENT_STUB);

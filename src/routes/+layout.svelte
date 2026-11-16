@@ -1,7 +1,15 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import '../app.css';
 
 	let { children } = $props();
+
+	onMount(() => {
+		// Penanda untuk panel diagnostik preview (lihat vite.config.ts).
+		if (import.meta.env.DEV) {
+			(window as typeof window & { __kurmaHydrated?: boolean }).__kurmaHydrated = true;
+		}
+	});
 
 	if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
 		if (import.meta.env.DEV) {

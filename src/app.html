@@ -11,5 +11,54 @@
 	</head>
 	<body data-sveltekit-preload-data="hover">
 		<div style="display: contents">%sveltekit.body%</div>
+		<script>
+			// Diagnostik preview pengembangan: mencatat kegagalan pemuatan modul
+			// dan keberhasilan hidrasi, lalu menampilkan ringkasannya di layar bila
+			// ada masalah. Hanya aktif pada server dev (bootstrap @sveltejs/kit).
+			(function () {
+				var devBootstrap = false;
+				for (var i = 0; i < document.scripts.length; i++) {
+					var s = document.scripts[i];
+					if (!s.src && s.textContent.indexOf('@sveltejs/kit') !== -1) {
+						devBootstrap = true;
+						break;
+					}
+				}
+				if (!devBootstrap) return;
+				var errs = [];
+				window.addEventListener(
+					'error',
+					function (e) {
+						var t = e.target;
+						if (t && (t.src || t.href)) {
+							errs.push('gagal memuat ' + (t.src || t.href));
+						} else if (e.message) {
+							errs.push(e.message + ' @' + (e.filename || '?') + ':' + (e.lineno || '?'));
+						}
+					},
+					true
+				);
+				window.addEventListener('unhandledrejection', function (e) {
+					var r = e.reason;
+					errs.push('async: ' + String((r && r.message) || r));
+				});
+				setTimeout(function () {
+					if (window.__kurmaHydrated && errs.length === 0) return;
+					var d = document.createElement('div');
+					d.setAttribute('role', 'status');
+					d.style.cssText =
+						'position:fixed;left:0;right:0;bottom:0;z-index:2147483647;background:#2D264B;color:#fff;font:12px/1.5 system-ui,sans-serif;padding:10px 12px';
+					d.textContent =
+						'Diagnostik preview — ' +
+						(window.__kurmaHydrated
+							? 'aplikasi jalan, tapi ada galat: ' + errs.slice(0, 2).join(' | ')
+							: 'aplikasi TIDAK berhasil dimulai. ' +
+								(errs.length
+									? errs.slice(0, 3).join(' | ')
+									: 'Tidak ada modul yang gagal tercatat — laporkan teks ini.'));
+					document.body.appendChild(d);
+				}, 5000);
+			})();
+		</script>
 	</body>
 </html>
