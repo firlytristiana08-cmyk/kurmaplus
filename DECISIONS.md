@@ -28,7 +28,7 @@ Aturan 5 PRD: dependensi baru hanya masuk bila alasannya dicatat di berkas ini.
 | `leaflet` | PRD: peta penandaan lokasi di checkout, tile OSM gratis. |
 | `vitest` | PRD: logika uang, jadwal, stok, signature wajib bertes. |
 | `@biomejs/biome` | PRD: lint dan format satu alat. |
-| SvelteKit, Svelte, adapter-cloudflare, vite, typescript, svelte-check | PRD: tumpukan inti. |
+| SvelteKit, Svelte, adapter-auto, vite, typescript, svelte-check | PRD: tumpukan inti (adapter-auto → Vercel/host Node; adapter-cloudflare dibuang karena menyalakan runtime workerd tambahan dan menyumbang port pratinjau ekstra). |
 
 ## Nilai sementara (tanda "(belum ditentukan)" di PRD — diisi pemilik lewat tabel settings sebelum rilis)
 
