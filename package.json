@@ -1,8 +1,11 @@
 {
   "name": "kurmaplus-portal",
   "private": true,
-  "version": "0.1.0",
-  "type": "module",
+	"version": "0.1.0",
+	"type": "module",
+	"imports": {
+		"#lib/*": "./src/lib/*"
+	},
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",
