@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import { formatRupiah, formatWeight } from '#lib/format';
 	import { cart } from '#lib/cart.svelte';
 	import PageFooter from '#lib/components/PageFooter.svelte';
@@ -9,7 +10,13 @@
 
 	let selectedVariantId = $state(0);
 	let qty = $state(1);
-	let added = $state(false);
+
+	// Galeri foto (slide) + tampilan foto penuh.
+	let galleryEl = $state<HTMLElement | null>(null);
+	let activeSlide = $state(0);
+	let lightbox = $state<number | null>(null);
+	let lightboxEl = $state<HTMLElement | null>(null);
+	let lightboxIndex = $state(0);
 
 	const product = $derived(data.product);
 	const selectedVariant = $derived(
@@ -23,16 +30,59 @@
 	function selectVariant(id: number): void {
 		selectedVariantId = id;
 		qty = 1;
-		added = false;
 	}
 
-	function addToCart(): void {
-		if (!selectedVariant || selectedVariant.stock < 1) {
-			return;
-		}
+	function addAndGoCart(): void {
+		if (!selectedVariant || selectedVariant.stock < 1) return;
 		cart.add(selectedVariant.id, qty);
-		added = true;
+		goto('/keranjang');
 	}
+
+	function buyNow(): void {
+		if (!selectedVariant || selectedVariant.stock < 1) return;
+		cart.add(selectedVariant.id, qty);
+		goto('/checkout');
+	}
+
+	function slideIndexOf(track: HTMLElement): number {
+		return Math.round(track.scrollLeft / (track.clientWidth || 1));
+	}
+
+	function onGalleryScroll(): void {
+		if (galleryEl) activeSlide = slideIndexOf(galleryEl);
+	}
+
+	function goToSlide(index: number): void {
+		galleryEl?.scrollTo({ left: index * (galleryEl.clientWidth || 1), behavior: 'smooth' });
+	}
+
+	function openLightbox(index: number): void {
+		lightboxIndex = index;
+		lightbox = index;
+	}
+
+	function closeLightbox(): void {
+		lightbox = null;
+	}
+
+	function onLightboxScroll(): void {
+		if (lightboxEl) lightboxIndex = slideIndexOf(lightboxEl);
+	}
+
+	function goLightboxSlide(index: number): void {
+		lightboxEl?.scrollTo({ left: index * (lightboxEl.clientWidth || 1), behavior: 'smooth' });
+	}
+
+	$effect(() => {
+		// Saat foto penuh tampil: kunci scroll halaman dan posisikan slide.
+		if (lightbox !== null && lightboxEl) {
+			document.body.style.overflow = 'hidden';
+			lightboxEl.scrollTo({ left: lightboxIndex * (lightboxEl.clientWidth || 1) });
+			return () => {
+				document.body.style.overflow = '';
+			};
+		}
+	});
 </script>
 
 <svelte:head>
@@ -44,13 +94,50 @@
 
 <main class="wrap">
 	<article>
-		<img
-			class="photo"
-			src={`/images/${product.photo}`}
-			alt={`Foto ${product.name}`}
-			width="430"
-			height="300"
-		/>
+		{#if data.photos.length > 1}
+			<div class="gallery-wrap">
+				<div
+					class="gallery"
+					role="group"
+					aria-label={`Foto ${product.name}`}
+					bind:this={galleryEl}
+					onscroll={onGalleryScroll}
+				>
+					{#each data.photos as photo, index (photo)}
+						<button type="button" class="slide" onclick={() => openLightbox(index)}>
+							<img
+								src={`/images/${photo}`}
+								alt={`Foto ${product.name} ${index + 1}`}
+								width="860"
+								height="600"
+								loading={index === 0 ? 'eager' : 'lazy'}
+							/>
+						</button>
+					{/each}
+				</div>
+				<div class="dots" role="group" aria-label="Pilih foto">
+					{#each data.photos as photo, index (photo)}
+						<button
+							type="button"
+							class="dot"
+							class:is-active={index === activeSlide}
+							aria-label={`Foto ${index + 1}`}
+							onclick={() => goToSlide(index)}
+						></button>
+					{/each}
+				</div>
+			</div>
+		{:else}
+			<button type="button" class="photo-btn" onclick={() => openLightbox(0)}>
+				<img
+					class="photo"
+					src={`/images/${product.photo}`}
+					alt={`Foto ${product.name}`}
+					width="430"
+					height="300"
+				/>
+			</button>
+		{/if}
 		<h1>{product.name}</h1>
 		<p class="description">{product.description}</p>
 
@@ -117,18 +204,64 @@
 
 {#if selectedVariant}
 	<div class="sticky-bar">
-		<div class="sticky-inner">
-			{#if added}
-				<a class="btn" href="/keranjang">Lihat keranjang ({cart.count} barang)</a>
-			{:else}
-				<button type="button" class="btn" onclick={addToCart} disabled={selectedVariant.stock < 1}>
-					<svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-						<path d="M7.3 8.7v-.4a4.7 4.7 0 0 1 9.4 0v.4h-2.3v-.4a2.4 2.4 0 0 0-4.8 0v.4H7.3Z" />
-						<rect x="4.5" y="8" width="15" height="13.7" rx="2.7" />
-					</svg>
-					Tambah ke keranjang · {formatRupiah(selectedVariant.priceIdr * qty)}
-				</button>
-			{/if}
+		<div class="sticky-inner two-buttons">
+			<button
+				type="button"
+				class="btn btn-secondary"
+				onclick={addAndGoCart}
+				disabled={selectedVariant.stock < 1}
+			>
+				<svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+					<path d="M7.3 8.7v-.4a4.7 4.7 0 0 1 9.4 0v.4h-2.3v-.4a2.4 2.4 0 0 0-4.8 0v.4H7.3Z" />
+					<rect x="4.5" y="8" width="15" height="13.7" rx="2.7" />
+				</svg>
+				Keranjang
+			</button>
+			<button type="button" class="btn" onclick={buyNow} disabled={selectedVariant.stock < 1}>
+				Beli langsung
+			</button>
+		</div>
+	</div>
+{/if}
+
+{#if lightbox !== null && data.photos.length > 0}
+	<div
+		class="lightbox"
+		role="dialog"
+		aria-modal="true"
+		aria-label={`Foto ${product.name}`}
+		tabindex="-1"
+		onclick={closeLightbox}
+		onkeydown={(event) => event.key === 'Escape' && closeLightbox()}
+	>
+		<button type="button" class="lightbox-close" onclick={closeLightbox} aria-label="Tutup foto">
+			<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true">
+				<path
+					d="M12 10.66 6.3 4.9 4.9 6.3l5.7 5.7-5.7 5.7 1.4 1.4 5.7-5.7 5.7 5.7 1.4-1.4-5.7-5.7 5.7-5.7-1.4-1.4-5.7 5.7Z"
+				/>
+			</svg>
+		</button>
+		<div
+			class="lightbox-track"
+			bind:this={lightboxEl}
+			onscroll={onLightboxScroll}
+			onclick={(event) => event.stopPropagation()}
+			role="presentation"
+		>
+			{#each data.photos as photo, index (photo)}
+				<img src={`/images/${photo}`} alt={`Foto ${product.name} ${index + 1}`} />
+			{/each}
+		</div>
+		<div class="dots" role="group" aria-label="Pilih foto">
+			{#each data.photos as photo, index (photo)}
+				<button
+					type="button"
+					class="dot"
+					class:is-active={index === lightboxIndex}
+					aria-label={`Foto ${index + 1}`}
+					onclick={() => goLightboxSlide(index)}
+				></button>
+			{/each}
 		</div>
 	</div>
 {/if}
@@ -245,5 +378,156 @@
 	.btn-icon {
 		width: 1.25rem;
 		height: 1.25rem;
+	}
+
+	/* Galeri foto yang bisa digeser. */
+	.gallery-wrap {
+		margin-bottom: 0.5rem;
+	}
+
+	.gallery {
+		display: flex;
+		overflow-x: auto;
+		scroll-snap-type: x mandatory;
+		border-radius: var(--radius-m);
+		-webkit-overflow-scrolling: touch;
+		scrollbar-width: none;
+	}
+
+	.gallery::-webkit-scrollbar {
+		display: none;
+	}
+
+	.slide {
+		flex: 0 0 100%;
+		scroll-snap-align: start;
+		padding: 0;
+		border: none;
+		background: none;
+		cursor: zoom-in;
+		display: block;
+	}
+
+	.slide img {
+		width: 100%;
+		aspect-ratio: 43 / 30;
+		object-fit: cover;
+		border-radius: var(--radius-m);
+		display: block;
+	}
+
+	.photo-btn {
+		padding: 0;
+		border: none;
+		background: none;
+		cursor: zoom-in;
+		display: block;
+		width: 100%;
+	}
+
+	.dots {
+		display: flex;
+		justify-content: center;
+		gap: 0.25rem;
+		margin-top: 0.5rem;
+	}
+
+	.dot {
+		width: 48px;
+		height: 48px;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		border: none;
+		background: none;
+		cursor: pointer;
+	}
+
+	.dot::before {
+		content: '';
+		width: 8px;
+		height: 8px;
+		border-radius: 50%;
+		background: color-mix(in srgb, var(--ink) 25%, var(--paper));
+	}
+
+	.dot.is-active::before {
+		width: 20px;
+		border-radius: 999px;
+		background: var(--rust);
+	}
+
+	/* Foto penuh (lightbox). */
+	.lightbox {
+		position: fixed;
+		inset: 0;
+		z-index: 80;
+		background: rgba(20, 16, 32, 0.92);
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 0.5rem;
+		padding: 1rem;
+	}
+
+	.lightbox-close {
+		position: absolute;
+		top: 0.75rem;
+		right: 0.75rem;
+		width: 48px;
+		height: 48px;
+		border: none;
+		border-radius: 50%;
+		background: rgba(255, 255, 255, 0.14);
+		color: #fff;
+		cursor: pointer;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.lightbox-track {
+		display: flex;
+		width: 100%;
+		max-width: 430px;
+		overflow-x: auto;
+		scroll-snap-type: x mandatory;
+		scrollbar-width: none;
+	}
+
+	.lightbox-track::-webkit-scrollbar {
+		display: none;
+	}
+
+	.lightbox-track img {
+		flex: 0 0 100%;
+		scroll-snap-align: start;
+		width: 100%;
+		max-height: 70vh;
+		object-fit: contain;
+	}
+
+	.lightbox .dots {
+		margin: 0;
+	}
+
+	.lightbox .dot::before {
+		background: rgba(255, 255, 255, 0.45);
+	}
+
+	.lightbox .dot.is-active::before {
+		background: #fff;
+	}
+
+	/* Tombol bawah: keranjang + beli langsung. */
+	.two-buttons {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 0.625rem;
+	}
+
+	.two-buttons .btn {
+		justify-content: center;
 	}
 </style>
