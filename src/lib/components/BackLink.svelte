@@ -30,7 +30,7 @@
 
 <style>
 	.back-bar {
-		max-width: 430px;
+		max-width: min(var(--admin-w, 430px), 100%);
 		margin: 0 auto;
 		padding: 10px 16px 0;
 	}

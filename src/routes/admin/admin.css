@@ -304,6 +304,7 @@ a.row:hover {
 	right: 0;
 	bottom: 0;
 	display: flex;
+	padding-inline: max(0px, calc((100% - var(--admin-w, 430px)) / 2));
 	background: var(--card);
 	border-top: 1px solid var(--sand);
 	padding-bottom: env(safe-area-inset-bottom);
@@ -406,16 +407,17 @@ a.row:hover {
 
 /* ===== Anti-geser: tata letak admin tidak pernah bergeser kanan-kiri. ===== */
 
-/* Spasi vertikal seragam untuk setiap box/card agar rapi (tidak menempel). */
-.surface {
+/* Spasi vertikal seragam untuk setiap box/card agar rapi (tidak menempel).
+   Ter-scope .admin-scope supaya tidak bocor ke halaman portal pelanggan. */
+.admin-scope .surface {
 	margin: 0.75rem 0;
 }
 
-.info-box {
+.admin-scope .info-box {
 	margin: 1rem 0;
 }
 
-.error-box {
+.admin-scope .error-box {
 	margin-top: 1rem;
 }
 
@@ -426,10 +428,26 @@ html {
 	scrollbar-gutter: stable;
 }
 
-.wrap,
-.wrap-wide,
-.admin-sticky .sticky-inner {
-	max-width: 100%;
+/* Lebar konten admin: HP/tablet = kolom 430px; layar lebar memuai sedang
+   (opsi C). --admin-w diwariskan ke semua bilah agar sejajar. */
+.admin-scope {
+	--admin-w: 430px;
+}
+
+@media (min-width: 900px) {
+	.admin-scope {
+		--admin-w: 720px;
+	}
+
+	.admin-scope.is-wide {
+		--admin-w: 860px;
+	}
+}
+
+.admin-scope .wrap,
+.admin-scope .wrap-wide,
+.admin-scope .admin-sticky .sticky-inner {
+	max-width: min(var(--admin-w), 100%);
 }
 
 /* Teks panjang (alamat, keterangan, nama varian) dibungkus, tidak melebar. */
@@ -545,7 +563,7 @@ h3,
 }
 
 .admin-top-inner {
-	max-width: 430px;
+	max-width: min(var(--admin-w), 100%);
 	margin: 0 auto;
 	padding: 10px 16px;
 	display: flex;
