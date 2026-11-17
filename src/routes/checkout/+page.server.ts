@@ -224,12 +224,8 @@ export const actions: Actions = {
           now,
         );
         await saveCheckoutUrl(code, payment.paymentUrl);
-        // SvelteKit melarang redirect() ke URL eksternal; browser cukup
-        // diarahkan dengan respons 303 + Location ke halaman bayar DOKU.
-        return new Response(null, {
-          status: 303,
-          headers: { Location: payment.paymentUrl },
-        });
+        // SvelteKit 3 mengizinkan redirect eksternal dengan { external: true }.
+        redirect(303, payment.paymentUrl, { external: true });
       } catch (err) {
         const detail = err instanceof Error ? err.message : "";
         return fail(502, {
