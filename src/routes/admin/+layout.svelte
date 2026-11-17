@@ -2,9 +2,60 @@
 	// Cangkang Portal Admin: bilah tab 5 tujuan di bawah (PRD — Halaman dan alur).
 	import './admin.css';
 	import { page } from '$app/state';
+	import { onMount } from 'svelte';
 	import type { Snippet } from 'svelte';
 
 	let { children }: { children: Snippet } = $props();
+
+	// Pratinjau/dev: bawa ?sesi=demo ke setiap navigasi admin (klik tautan,
+	// submit form) karena cookie bisa diblokir di dalam iframe pratinjau.
+	// Lihat src/hooks.server.ts. Tidak aktif di produksi.
+	onMount(() => {
+		if (!import.meta.env.DEV) return;
+		const addSesi = (raw: string): string | null => {
+			try {
+				const u = new URL(raw, location.href);
+				if (u.origin !== location.origin || !u.pathname.startsWith('/admin')) return null;
+				if (u.search.includes('sesi=demo')) return null;
+				u.search = `${u.search}${u.search ? '&' : '?'}sesi=demo`;
+				return `${u.pathname}${u.search}${u.hash}`;
+			} catch {
+				return null;
+			}
+		};
+		const onClick = (e: Event) => {
+			const target = e.target as HTMLElement | null;
+			const a = target?.closest?.('a[href]') as HTMLAnchorElement | null;
+			if (!a) return;
+			const next = addSesi(a.getAttribute('href') ?? '');
+			if (next) a.setAttribute('href', next);
+		};
+		const onSubmit = (e: Event) => {
+			const f = e.target as HTMLFormElement | null;
+			if (!f || typeof f.getAttribute !== 'function') return;
+			const method = (f.getAttribute('method') ?? 'get').toLowerCase();
+			if (method === 'get') {
+				// Form GET mengganti query dengan field — pakai input tersembunyi.
+				if (!f.querySelector('input[name="sesi"]')) {
+					const input = document.createElement('input');
+					input.type = 'hidden';
+					input.name = 'sesi';
+					input.value = 'demo';
+					f.appendChild(input);
+				}
+				return;
+			}
+			const action = f.getAttribute('action') ?? `${location.pathname}${location.search}`;
+			const next = addSesi(action);
+			if (next) f.setAttribute('action', next);
+		};
+		document.addEventListener('click', onClick, true);
+		document.addEventListener('submit', onSubmit, true);
+		return () => {
+			document.removeEventListener('click', onClick, true);
+			document.removeEventListener('submit', onSubmit, true);
+		};
+	});
 
 	const path = $derived(page.url.pathname);
 	const tabs = [

@@ -20,7 +20,7 @@ export const actions: Actions = {
   demo: async ({ cookies }) => {
     if (!import.meta.env.DEV) return fail(403, { message: "Tidak tersedia di produksi." });
     setDevSession(cookies);
-    redirect(303, "/admin");
+    redirect(303, "/admin?sesi=demo");
   },
   masuk: async ({ cookies, request }) => {
     const form = await request.formData();

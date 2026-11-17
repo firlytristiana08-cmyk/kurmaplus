@@ -88,7 +88,8 @@ export function setDevSession(cookies: Cookies): void {
   cookies.set(ADMIN_COOKIE, DEV_TOKEN, {
     path: "/",
     httpOnly: true,
-    sameSite: "lax",
+    sameSite: "none",
+    secure: true,
     maxAge: 60 * 60 * 8,
   });
 }
