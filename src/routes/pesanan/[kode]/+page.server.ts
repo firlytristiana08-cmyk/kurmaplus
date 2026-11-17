@@ -1,4 +1,4 @@
-import { type Actions, error, redirect } from "@sveltejs/kit";
+import { type Actions, error, fail, redirect } from "@sveltejs/kit";
 import {
   expireStaleOrders,
   getOrderByCode,
@@ -66,26 +66,36 @@ export const actions: Actions = {
     if (!dokuConfig) {
       redirect(303, `/pesanan/${order.code}`);
     }
-    const payment = await createCheckoutPayment(dokuConfig, {
-      invoiceNumber: order.code,
-      amountIdr: order.totalIdr,
-      paymentDueMinutes: Number((await getSettings()).payment_timeout_minutes),
-      customer: {
-        name: order.customerName,
-        phone: order.customerPhone,
-        address: order.address,
-        city: order.city,
-      },
-      callbackUrl: `${url.origin}/pesanan/${order.code}`,
-      lineItems: order.items.map((item) => ({
-        name: item.name,
-        quantity: item.qty,
-        price: item.priceIdr,
-      })),
-    });
-    await saveCheckoutUrl(order.code, payment.paymentUrl);
-    // SvelteKit 3 mengizinkan redirect eksternal dengan { external: true }.
-    redirect(303, payment.paymentUrl, { external: true });
+    let paymentUrl: string;
+    try {
+      const payment = await createCheckoutPayment(dokuConfig, {
+        invoiceNumber: order.code,
+        amountIdr: order.totalIdr,
+        paymentDueMinutes: Number((await getSettings()).payment_timeout_minutes),
+        customer: {
+          name: order.customerName,
+          phone: order.customerPhone,
+          address: order.address,
+          city: order.city,
+        },
+        callbackUrl: `${url.origin}/pesanan/${order.code}`,
+        lineItems: order.items.map((item) => ({
+          name: item.name,
+          quantity: item.qty,
+          price: item.priceIdr,
+        })),
+      });
+      await saveCheckoutUrl(order.code, payment.paymentUrl);
+      paymentUrl = payment.paymentUrl;
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : "";
+      return fail(502, {
+        message: `Halaman bayar DOKU belum bisa dibuka${detail === "" ? "" : ` (${detail})`}. Coba lagi dari halaman ini.`,
+      });
+    }
+    // Penting: redirect() di SvelteKit MELEMPAR exception kontrol alur —
+    // wajib di luar try/catch supaya tidak ikut tertangkap dan diubah jadi fail().
+    redirect(303, paymentUrl, { external: true });
   },
 
   // Pratinjau tanpa kunci DOKU: status sukses diset lewat jalur yang sama
