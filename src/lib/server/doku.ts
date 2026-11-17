@@ -128,6 +128,14 @@ export interface DokuCheckoutPayload {
   lineItems: { name: string; quantity: number; price: number }[];
 }
 
+// Format nomor telepon DOKU: {kode_negara}{nomor}, contoh 6281122334455.
+export function normalizeDokuPhone(phone: string): string {
+  const digits = phone.replace(/\D/g, "");
+  if (digits.startsWith("0")) return `62${digits.slice(1)}`;
+  if (digits.startsWith("62")) return digits;
+  return `62${digits}`;
+}
+
 // Membuat sesi DOKU Checkout (FR-11): invoice = kode pesanan.
 export async function createCheckoutPayment(
   config: DokuConfig,
@@ -155,7 +163,7 @@ export async function createCheckoutPayment(
     },
     customer: {
       name: payload.customer.name,
-      phone: payload.customer.phone,
+      phone: normalizeDokuPhone(payload.customer.phone),
       address: payload.customer.address,
       city: payload.customer.city,
       country: "ID",
@@ -168,14 +176,21 @@ export async function createCheckoutPayment(
     headers,
     body,
   });
-  const data = (await response.json()) as {
+  const data = (await response.json().catch(() => ({}))) as {
     message?: unknown;
     response?: { payment?: { url?: string; expired_date?: string } };
   };
   const paymentUrl = data.response?.payment?.url;
   const expiredDate = data.response?.payment?.expired_date;
   if (!response.ok || !paymentUrl || !expiredDate) {
-    throw new Error(`DOKU menolak permintaan pembayaran (HTTP ${response.status})`);
+    const detail = Array.isArray(data.message)
+      ? data.message.map(String).join("; ")
+      : typeof data.message === "string"
+        ? data.message
+        : "";
+    throw new Error(
+      `DOKU menolak permintaan pembayaran (HTTP ${response.status})${detail === "" ? "" : `: ${detail}`}`,
+    );
   }
   return { paymentUrl, expiredDate };
 }

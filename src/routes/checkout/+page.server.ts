@@ -225,10 +225,10 @@ export const actions: Actions = {
         );
         await saveCheckoutUrl(code, payment.paymentUrl);
         redirect(303, payment.paymentUrl);
-      } catch {
+      } catch (err) {
+        const detail = err instanceof Error ? err.message : "";
         return fail(502, {
-          message:
-            "Halaman bayar DOKU belum bisa dibuka. Pesanan Anda tersimpan — coba bayar dari halaman pesanan.",
+          message: `Halaman bayar DOKU belum bisa dibuka${detail === "" ? "" : ` (${detail})`}. Pesanan Anda tersimpan — coba bayar dari halaman pesanan.`,
           code,
         });
       }
