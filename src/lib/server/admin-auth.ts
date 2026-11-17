@@ -28,7 +28,7 @@ interface SupabaseEnv {
   anonKey: string;
 }
 
-function supabaseEnv(): SupabaseEnv | null {
+export function supabaseEnv(): SupabaseEnv | null {
   const url =
     process.env.SUPABASE_URL ??
     (process.env.SUPABASE_PROJECT_REF
