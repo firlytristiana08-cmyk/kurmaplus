@@ -357,6 +357,60 @@
 	flex: 1 1 100%;
 }
 
+/* ===== Anti-geser: tata letak admin tidak pernah bergeser kanan-kiri. ===== */
+
+/* Konten yang lebih lebar dari layar tidak membuat halaman bisa digeser
+   ke samping; scrollbar muncul/hilang tidak menggeser kolom. */
+html {
+	overflow-x: clip;
+	scrollbar-gutter: stable;
+}
+
+.wrap,
+.wrap-wide,
+.admin-sticky .sticky-inner {
+	max-width: 100%;
+}
+
+/* Teks panjang (alamat, keterangan, nama varian) dibungkus, tidak melebar. */
+p,
+li,
+h1,
+h2,
+h3,
+.info-box,
+.error-box,
+.row-l1,
+.label {
+	overflow-wrap: break-word;
+}
+
+/* Pasangan label-angka (rekap, judul bagian) tidak saling mendorong keluar. */
+.section-head h2,
+.recap-line .day,
+.recap-line .sum,
+.group-head {
+	min-width: 0;
+}
+
+.section-head a,
+.section-head .aside {
+	flex: none;
+}
+
+.recap-line .sum,
+.group-head {
+	overflow-wrap: anywhere;
+}
+
+/* Kolom isian di .field selalu pas dengan lebar kartu. */
+.field input,
+.field select,
+.field textarea {
+	width: 100%;
+	max-width: 100%;
+}
+
 /* Area cetak A4 (AD-17): hitam putih, tanpa navigasi. */
 .print-area {
 	background: #fff;
