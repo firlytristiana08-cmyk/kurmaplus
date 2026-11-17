@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { enhance } from '$app/forms';
 
 	let { data } = $props();
 </script>
@@ -46,7 +45,7 @@
 		</a>
 	</div>
 
-	<form method="POST" action="/admin/masuk?/keluar" use:enhance>
+	<form method="POST" action="/admin/masuk?/keluar">
 		<button class="btn btn-secondary" type="submit">Keluar</button>
 	</form>
 </main>

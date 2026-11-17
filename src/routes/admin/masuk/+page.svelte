@@ -1,6 +1,5 @@
 <script lang="ts">
 	// Gerbang masuk pemilik (PRD Portal Admin — Autentikasi).
-	import { enhance } from '$app/forms';
 
 	let { data, form } = $props();
 	const needsMfa = $derived(form?.needsMfa === true);
@@ -26,7 +25,7 @@
 			<p style="margin: 0 0 0.75rem">
 				Anda sudah masuk sebagai <strong>{data.session.label}</strong>.
 			</p>
-			<form method="POST" action="?/keluar" use:enhance>
+			<form method="POST" action="?/keluar">
 				<button class="btn btn-secondary" type="submit">Keluar</button>
 			</form>
 		</div>
@@ -36,12 +35,12 @@
 				Mode pengembangan — masuk memakai sesi demo pemilik. Login Supabase Auth (email,
 				password, kode authenticator) aktif di produksi.
 			</p>
-			<form method="POST" action="?/demo" use:enhance>
+			<form method="POST" action="?/demo">
 				<button class="btn" type="submit">Masuk sebagai pemilik (demo)</button>
 			</form>
 		</div>
 	{:else}
-		<form class="surface" method="POST" action="?/masuk" use:enhance>
+		<form class="surface" method="POST" action="?/masuk">
 			{#if needsMfa}
 				<p class="info-box">Masukkan kode 6 digit dari aplikasi authenticator Anda.</p>
 				<div class="field">
