@@ -454,6 +454,8 @@ export async function adminAdjustStock(
 // ---------- Produk & varian (AD-18, BA-09) ----------
 
 export interface VariantPatch {
+  label?: string;
+  weightGrams?: number;
   priceIdr?: number;
   isActive?: boolean;
 }
@@ -464,60 +466,255 @@ export async function adminUpdateVariant(
   actor: string,
   now = new Date(),
 ): Promise<AdminResult> {
+  if (patch.label !== undefined && patch.label.trim() === "") {
+    return fail("Nama ukuran wajib diisi.");
+  }
+  if (
+    patch.weightGrams !== undefined &&
+    (!Number.isInteger(patch.weightGrams) || patch.weightGrams <= 0)
+  ) {
+    return fail("Berat harus bilangan bulat lebih dari nol (gram).");
+  }
   if (patch.priceIdr !== undefined && (!Number.isInteger(patch.priceIdr) || patch.priceIdr <= 0)) {
     return fail("Harga harus rupiah bulat lebih dari nol.");
   }
   const db = await getDb();
   const at = now.toISOString();
   return db.transaction(async (tx) => {
-    const row = await tx.get<{ id: number; price_idr: number; is_active: number }>(
-      "SELECT id, price_idr, is_active FROM variants WHERE id = ?",
-      [variantId],
-    );
-    if (!row) return fail("Varian tidak ditemukan.");
-    const nextPrice = patch.priceIdr ?? row.price_idr;
-    const nextActive = patch.isActive === undefined ? row.is_active : patch.isActive ? 1 : 0;
-    await tx.run("UPDATE variants SET price_idr = ?, is_active = ? WHERE id = ?", [
-      nextPrice,
-      nextActive,
+    const row = await tx.get<{
+      id: number;
+      label: string;
+      weight_grams: number;
+      price_idr: number;
+      is_active: number;
+    }>("SELECT id, label, weight_grams, price_idr, is_active FROM variants WHERE id = ?", [
       variantId,
     ]);
+    if (!row) return fail("Varian tidak ditemukan.");
+    const after = {
+      label: patch.label?.trim() ?? row.label,
+      weight_grams: patch.weightGrams ?? row.weight_grams,
+      price_idr: patch.priceIdr ?? row.price_idr,
+      is_active: patch.isActive === undefined ? row.is_active : patch.isActive ? 1 : 0,
+    };
+    await tx.run(
+      "UPDATE variants SET label = ?, weight_grams = ?, price_idr = ?, is_active = ? WHERE id = ?",
+      [after.label, after.weight_grams, after.price_idr, after.is_active, variantId],
+    );
     await writeAudit(tx, {
       actor,
       entity: "variant",
       entityId: String(variantId),
       action: "variant_updated",
-      before: { price_idr: row.price_idr, is_active: row.is_active },
-      after: { price_idr: nextPrice, is_active: nextActive },
+      before: {
+        label: row.label,
+        weight_grams: row.weight_grams,
+        price_idr: row.price_idr,
+        is_active: row.is_active,
+      },
+      after,
       at,
     });
     return { ok: true as const };
   });
 }
 
-export async function adminUpdateProduct(
+// ---------- Tambah & hapus varian (tugas 90) ----------
+
+export interface NewVariantInput {
+  label: string;
+  weightGrams: number;
+  priceIdr: number;
+  stock: number;
+}
+
+export async function adminCreateVariant(
   productId: number,
-  patch: { isActive?: boolean },
+  input: NewVariantInput,
+  actor: string,
+  now = new Date(),
+): Promise<AdminResult> {
+  if (input.label.trim() === "") return fail("Nama ukuran wajib diisi.");
+  if (!Number.isInteger(input.weightGrams) || input.weightGrams <= 0) {
+    return fail("Berat harus bilangan bulat lebih dari nol (gram).");
+  }
+  if (!Number.isInteger(input.priceIdr) || input.priceIdr <= 0) {
+    return fail("Harga harus rupiah bulat lebih dari nol.");
+  }
+  if (!Number.isInteger(input.stock) || input.stock < 0) {
+    return fail("Stok awal tidak boleh negatif.");
+  }
+  const db = await getDb();
+  const at = now.toISOString();
+  return db.transaction(async (tx) => {
+    const product = await tx.get<{ id: number }>("SELECT id FROM products WHERE id = ?", [
+      productId,
+    ]);
+    if (!product) return fail("Produk tidak ditemukan.");
+    // id dibuat dari MAX(id)+1 agar aman di SQLite maupun Postgres.
+    const created = await tx.get<{ id: number }>(
+      "SELECT COALESCE(MAX(id), 0) + 1 AS id FROM variants",
+      [],
+    );
+    const variantId = created?.id ?? 1;
+    await tx.run(
+      "INSERT INTO variants (id, product_id, label, weight_grams, price_idr, stock, is_active) VALUES (?, ?, ?, ?, ?, ?, 1)",
+      [variantId, productId, input.label.trim(), input.weightGrams, input.priceIdr, input.stock],
+    );
+    if (input.stock > 0) {
+      await tx.run(
+        "INSERT INTO stock_movements (id, variant_id, delta, reason, order_id, actor, created_at) VALUES (?, ?, ?, 'stock_initial', NULL, ?, ?)",
+        [crypto.randomUUID(), variantId, input.stock, actor, at],
+      );
+    }
+    await writeAudit(tx, {
+      actor,
+      entity: "variant",
+      entityId: String(variantId),
+      action: "variant_created",
+      before: null,
+      after: {
+        product_id: productId,
+        label: input.label.trim(),
+        weight_grams: input.weightGrams,
+        price_idr: input.priceIdr,
+        stock: input.stock,
+      },
+      at,
+    });
+    return { ok: true as const };
+  });
+}
+
+export async function adminDeleteVariant(
+  variantId: number,
   actor: string,
   now = new Date(),
 ): Promise<AdminResult> {
   const db = await getDb();
   const at = now.toISOString();
   return db.transaction(async (tx) => {
-    const row = await tx.get<{ id: number; is_active: number }>(
-      "SELECT id, is_active FROM products WHERE id = ?",
+    const row = await tx.get<{ id: number; product_id: number; label: string; stock: number }>(
+      "SELECT id, product_id, label, stock FROM variants WHERE id = ?",
+      [variantId],
+    );
+    if (!row) return fail("Varian tidak ditemukan.");
+    const used = await tx.get<{ orders: number; moves: number }>(
+      `SELECT
+        (SELECT COUNT(*) FROM order_items WHERE variant_id = ?) AS orders,
+        (SELECT COUNT(*) FROM stock_movements WHERE variant_id = ?) AS moves`,
+      [variantId, variantId],
+    );
+    if ((used?.orders ?? 0) > 0 || (used?.moves ?? 0) > 0) {
+      return fail(
+        "Varian sudah punya riwayat pesanan atau stok — arsip harus tetap utuh, gunakan Nonaktifkan.",
+      );
+    }
+    await tx.run("DELETE FROM variants WHERE id = ?", [variantId]);
+    await writeAudit(tx, {
+      actor,
+      entity: "variant",
+      entityId: String(variantId),
+      action: "variant_deleted",
+      before: { product_id: row.product_id, label: row.label, stock: row.stock },
+      after: null,
+      at,
+    });
+    return { ok: true as const };
+  });
+}
+
+export interface ProductPatch {
+  isActive?: boolean;
+  name?: string;
+  description?: string;
+  photo?: string | null;
+  photo2?: string | null;
+  photo3?: string | null;
+  sortOrder?: number;
+  isBestSeller?: boolean;
+}
+
+export async function adminUpdateProduct(
+  productId: number,
+  patch: ProductPatch,
+  actor: string,
+  now = new Date(),
+): Promise<AdminResult> {
+  if (patch.name !== undefined && patch.name.trim() === "") return fail("Nama produk wajib diisi.");
+  if (patch.description !== undefined && patch.description.trim() === "") {
+    return fail("Deskripsi wajib diisi.");
+  }
+  for (const value of [patch.photo, patch.photo2, patch.photo3]) {
+    if (value !== undefined && value !== null && value.length > 200) {
+      return fail("Nama berkas foto maksimal 200 karakter.");
+    }
+  }
+  if (
+    patch.sortOrder !== undefined &&
+    (!Number.isInteger(patch.sortOrder) || patch.sortOrder < 0)
+  ) {
+    return fail("Urutan tampil harus bilangan bulat tidak negatif.");
+  }
+  const db = await getDb();
+  const at = now.toISOString();
+  return db.transaction(async (tx) => {
+    const row = await tx.get<{
+      id: number;
+      name: string;
+      description: string;
+      photo: string | null;
+      photo_2: string | null;
+      photo_3: string | null;
+      sort_order: number;
+      is_active: number;
+      is_best_seller: number;
+    }>(
+      "SELECT id, name, description, photo, photo_2, photo_3, sort_order, is_active, is_best_seller FROM products WHERE id = ?",
       [productId],
     );
     if (!row) return fail("Produk tidak ditemukan.");
-    const nextActive = patch.isActive === undefined ? row.is_active : patch.isActive ? 1 : 0;
-    await tx.run("UPDATE products SET is_active = ? WHERE id = ?", [nextActive, productId]);
+    const after = {
+      name: patch.name?.trim() ?? row.name,
+      description: patch.description?.trim() ?? row.description,
+      photo: patch.photo === undefined ? row.photo : patch.photo?.trim() || null,
+      photo_2: patch.photo2 === undefined ? row.photo_2 : patch.photo2?.trim() || null,
+      photo_3: patch.photo3 === undefined ? row.photo_3 : patch.photo3?.trim() || null,
+      sort_order: patch.sortOrder ?? row.sort_order,
+      is_active: patch.isActive === undefined ? row.is_active : patch.isActive ? 1 : 0,
+      is_best_seller:
+        patch.isBestSeller === undefined ? row.is_best_seller : patch.isBestSeller ? 1 : 0,
+    };
+    await tx.run(
+      "UPDATE products SET name = ?, description = ?, photo = ?, photo_2 = ?, photo_3 = ?, sort_order = ?, is_active = ?, is_best_seller = ? WHERE id = ?",
+      [
+        after.name,
+        after.description,
+        after.photo,
+        after.photo_2,
+        after.photo_3,
+        after.sort_order,
+        after.is_active,
+        after.is_best_seller,
+        productId,
+      ],
+    );
     await writeAudit(tx, {
       actor,
       entity: "product",
       entityId: String(productId),
       action: "product_updated",
-      before: { is_active: row.is_active },
-      after: { is_active: nextActive },
+      before: {
+        name: row.name,
+        description: row.description,
+        photo: row.photo,
+        photo_2: row.photo_2,
+        photo_3: row.photo_3,
+        sort_order: row.sort_order,
+        is_active: row.is_active,
+        is_best_seller: row.is_best_seller,
+      },
+      after,
       at,
     });
     return { ok: true as const };
