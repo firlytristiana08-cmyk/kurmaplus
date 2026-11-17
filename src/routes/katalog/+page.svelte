@@ -1,10 +1,35 @@
 <script lang="ts">
-	import { formatDateId, formatRupiah } from '#lib/format';
+	import { formatRupiah } from '#lib/format';
 	import PageFooter from '#lib/components/PageFooter.svelte';
 	import PageHeader from '#lib/components/PageHeader.svelte';
 	import type { KatalogData } from './+page.server';
 
 	let { data }: { data: KatalogData } = $props();
+
+	const BULAN_PENDEK = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+
+	// "Sabtu & Minggu, 21–22 Nov" — versi pendek tanggal kirim terdekat.
+	function ringkasTanggal(options: { date: string; weekdayName: string }[]): string {
+		if (options.length === 0) return '—';
+		const parsed = options.map((option) => {
+			const d = new Date(`${option.date}T00:00:00`);
+			return {
+				day: d.getDate(),
+				month: d.getMonth(),
+				year: d.getFullYear(),
+				weekday: option.weekdayName
+			};
+		});
+		const weekdays = parsed.map((d) => d.weekday).join(' & ');
+		const sameMonth = parsed.every((d) => d.month === parsed[0].month && d.year === parsed[0].year);
+		if (sameMonth) {
+			const nums = parsed.map((d) => d.day);
+			const berurutan = parsed.length === 2 && nums[1] === nums[0] + 1;
+			const angka = berurutan ? `${nums[0]}–${nums[1]}` : nums.join(' & ');
+			return `${weekdays}, ${angka} ${BULAN_PENDEK[parsed[0].month]}`;
+		}
+		return parsed.map((d) => `${d.weekday} ${d.day} ${BULAN_PENDEK[d.month]}`).join(' & ');
+	}
 </script>
 
 <svelte:head>
@@ -16,19 +41,15 @@
 
 <main class="wrap">
 	<section class="intro">
-		<h1>Kurma pilihan, dikirim akhir pekan</h1>
-		<p class="muted">
-			Sukari, ajwa, dan tunisia — dijual per ukuran dengan harga yang sama untuk semua pembeli.
-		</p>
+		<h1>Kurma enak untuk tiap hari — dikirim tiap akhir pekan.</h1>
 		<div class="info-box">
 			<strong>Pengiriman terdekat:</strong>
-			{#each data.deliveryDates as option, index (option.date)}
-				{index > 0 ? ' dan ' : ' '}
-				{option.weekdayName}, {formatDateId(option.date)}
-			{#if option.isFull}<span class="badge badge-off">Penuh</span>{/if}
-			{/each}
+			{ringkasTanggal(data.deliveryDates)}
+			{#if data.deliveryDates.some((option) => option.isFull)}
+				<span class="badge badge-off">Sebagian penuh</span>
+			{/if}
 			<br />
-			Kurir Grab atau Gojek, ongkir dibayar pemesan di luar total pesanan.
+			Ongkir Grab/Gojek — dibayar langsung ke kurir.
 		</div>
 	</section>
 
