@@ -41,7 +41,7 @@
 							src={`/images/${product.photo}`}
 							alt={`Foto ${product.name}`}
 							width="430"
-							height="300"
+							height="430"
 							loading="lazy"
 						/>
 						{#if product.bestSeller}
@@ -111,6 +111,7 @@
 
 	.product-photo img {
 		width: 100%;
+		height: auto;
 		aspect-ratio: 1 / 1;
 		object-fit: cover;
 		display: block;
