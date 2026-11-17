@@ -1,6 +1,7 @@
 import { json, type RequestHandler } from "@sveltejs/kit";
-import { markPaidByInvoice, recordWebhookEvent } from "#lib/server/db";
+import { getOrderByCode, getSettings, markPaidByInvoice, recordWebhookEvent } from "#lib/server/db";
 import { loadDokuConfig, verifyNotificationSignature } from "#lib/server/doku";
+import { notifyOwnerPaid } from "#lib/server/notify";
 
 // Notifikasi DOKU (FR-12): signature diverifikasi dari isi mentah, event
 // ganda hanya diproses sekali, balasan 200 segera.
@@ -46,7 +47,26 @@ export const POST: RequestHandler = async ({ request }) => {
   // Hanya status SUCCESS yang mengubah pesanan; FAILED diabaikan karena
   // pembeli boleh mengganti metode bayar di Checkout.
   if (payload.transaction?.status === "SUCCESS" && payload.order?.invoice_number) {
-    await markPaidByInvoice(payload.order.invoice_number, now);
+    const paid = await markPaidByInvoice(payload.order.invoice_number, now);
+    if (paid) {
+      // AD-23: beri tahu pemilik setelah 200 — kegagalan kirim tidak boleh
+      // menggagalkan pemrosesan pembayaran, dan tanpa data pribadi.
+      const code = payload.order.invoice_number;
+      Promise.all([getOrderByCode(code), getSettings()])
+        .then(([order, settings]) => {
+          if (!order) return false;
+          return notifyOwnerPaid(
+            {
+              code,
+              itemCount: order.items.reduce((n, item) => n + item.qty, 0),
+              deliveryDate: order.deliveryDate,
+            },
+            settings.notify_chat_id ?? "",
+            process.env.TELEGRAM_BOT_TOKEN,
+          );
+        })
+        .catch(() => false);
+    }
   }
 
   return json({ message: "OK" });

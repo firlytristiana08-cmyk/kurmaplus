@@ -1,0 +1,19 @@
+{
+	"name": "KURMAPLUS Admin",
+	"short_name": "KURMA Admin",
+	"description": "Portal kerja pemilik KURMAPLUS — pesanan, kemasan, pengiriman, stok.",
+	"start_url": "/admin",
+	"scope": "/admin",
+	"display": "standalone",
+	"background_color": "#f4ede0",
+	"theme_color": "#f4ede0",
+	"lang": "id",
+	"icons": [
+		{
+			"src": "/favicon.png",
+			"sizes": "192x192",
+			"type": "image/png",
+			"purpose": "any"
+		}
+	]
+}

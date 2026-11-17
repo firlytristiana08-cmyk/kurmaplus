@@ -1,0 +1,408 @@
+/* Gaya khusus Portal Admin — melengkapi token & komponen global (src/app.css)
+   dengan pola yang disetujui pada mockup 390 px (PRD Portal Admin — Arah desain):
+   daftar baris dua tingkat, status teks + bentuk penanda, bilah tab bawah,
+   satu tombol utama menempel, cetak A4 hitam putih. */
+
+/* Baris daftar kerja: dua tingkat informasi, tinggi minimal 56 px. */
+.row {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	min-height: 56px;
+	padding: 0.625rem 0;
+	border-bottom: 1px solid var(--sand);
+	text-decoration: none;
+	color: inherit;
+}
+
+.row:last-child {
+	border-bottom: none;
+	padding-bottom: 0.25rem;
+}
+
+.row:first-child {
+	padding-top: 0.25rem;
+}
+
+.row-main {
+	flex: 1;
+	min-width: 0;
+}
+
+.row-l1 {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	flex-wrap: wrap;
+	font-size: 0.9375rem;
+	font-weight: 700;
+}
+
+.row-l2 {
+	font-size: 0.8125rem;
+	color: color-mix(in srgb, var(--ink) 62%, var(--paper));
+	margin-top: 0.125rem;
+	overflow-wrap: anywhere;
+}
+
+.row-side {
+	flex: none;
+	text-align: right;
+	font-size: 0.875rem;
+	font-weight: 700;
+}
+
+/* Tajuk bagian dengan tautan kecil di kanan. */
+.section-head {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 0.75rem;
+	margin: 1.25rem 0 0.5rem;
+}
+
+.section-head h2 {
+	margin: 0;
+}
+
+.section-head a,
+.section-head .aside {
+	font-size: 0.875rem;
+	font-weight: 700;
+	text-decoration: none;
+}
+
+/* Bentuk penanda status (terbaca tanpa warna). */
+.mk {
+	display: block;
+	flex: none;
+	width: 11px;
+	height: 11px;
+}
+
+/* Pilihan tunggal (kurir, tanggal, filter): hanya yang aktif berbingkai bata. */
+.chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.375rem;
+	min-height: 44px;
+	padding: 0.4375rem 0.875rem;
+	border: 1.5px solid var(--sand);
+	border-radius: 0.8125rem;
+	background: var(--card);
+	color: var(--ink);
+	font-family: inherit;
+	font-size: 0.875rem;
+	font-weight: 700;
+	text-decoration: none;
+	cursor: pointer;
+}
+
+.chip.is-active {
+	border-color: var(--rust);
+	color: var(--rust);
+}
+
+.chip-row {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+	margin: 0.625rem 0 0.25rem;
+}
+
+/* Tombol mini untuk aksi baris (ukuran kartu, bukan lebar penuh). */
+.btn-mini {
+	display: inline-flex;
+	width: auto;
+	min-height: 44px;
+	align-items: center;
+	justify-content: center;
+	gap: 0.375rem;
+	padding: 0.5rem 0.875rem;
+	border-radius: 0.6875rem;
+	font-size: 0.875rem;
+	font-weight: 700;
+	text-decoration: none;
+	cursor: pointer;
+	background: transparent;
+	color: var(--ink);
+	border: 1.5px solid var(--ink);
+	font-family: inherit;
+}
+
+.btn-mini.is-rust {
+	border-color: var(--rust);
+	color: var(--rust);
+}
+
+.btn-mini.is-danger {
+	border-color: var(--brick);
+	color: var(--brick);
+}
+
+.btn-mini:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+.btn-row {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+	margin: 0.75rem 0;
+}
+
+/* Rantai status ongkir (BA-06). */
+.stepchain {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.375rem 0.5rem;
+	margin: 0.5rem 0 0.75rem;
+	font-size: 0.8125rem;
+	font-weight: 700;
+}
+
+.stepchain .step {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.3125rem;
+	color: color-mix(in srgb, var(--ink) 55%, var(--paper));
+}
+
+.stepchain .step.is-done {
+	color: var(--olive);
+}
+
+.stepchain .step.is-current {
+	color: var(--rust);
+}
+
+.stepchain .sep {
+	color: color-mix(in srgb, var(--ink) 35%, var(--paper));
+}
+
+/* Riwayat perubahan. */
+.timeline {
+	list-style: none;
+	margin: 0.5rem 0 0;
+	padding: 0;
+}
+
+.timeline li {
+	position: relative;
+	padding: 0 0 0.75rem 1.125rem;
+	font-size: 0.875rem;
+	border-left: 2px solid var(--sand);
+	margin-left: 0.3125rem;
+	overflow-wrap: anywhere;
+}
+
+.timeline li:last-child {
+	padding-bottom: 0.125rem;
+}
+
+.timeline li::before {
+	content: '';
+	position: absolute;
+	left: -5px;
+	top: 0.375rem;
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: var(--ink);
+}
+
+.timeline .when {
+	display: block;
+	font-size: 0.75rem;
+	color: color-mix(in srgb, var(--ink) 62%, var(--paper));
+}
+
+/* Ringkasan angka padat (bukan kartu statistik). */
+.recap-line {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 0.75rem;
+	padding: 0.5rem 0;
+	border-bottom: 1px solid var(--sand);
+	font-size: 0.9375rem;
+}
+
+.recap-line:last-child {
+	border-bottom: none;
+}
+
+.recap-line .day {
+	font-weight: 700;
+}
+
+.recap-line .sum {
+	color: color-mix(in srgb, var(--ink) 62%, var(--paper));
+	font-size: 0.8125rem;
+	text-align: right;
+}
+
+/* Grup daftar antar (per kurir, lalu per kota). */
+.group-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.5rem;
+	margin: 1rem 0 0.25rem;
+	font-size: 0.9375rem;
+	font-weight: 800;
+}
+
+.group-sub {
+	font-size: 0.8125rem;
+	font-weight: 700;
+	color: color-mix(in srgb, var(--ink) 62%, var(--paper));
+	margin: 0.625rem 0 0;
+}
+
+/* Bilah tab bawah (5 tujuan, ikon padat). */
+.tabbar {
+	position: fixed;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	display: flex;
+	background: var(--card);
+	border-top: 1px solid var(--sand);
+	padding-bottom: env(safe-area-inset-bottom);
+	z-index: 30;
+}
+
+.tab {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 0.1875rem;
+	min-height: 62px;
+	padding: 0.5rem 0.25rem;
+	text-decoration: none;
+	color: color-mix(in srgb, var(--ink) 62%, var(--paper));
+	font-size: 0.6875rem;
+	font-weight: 700;
+}
+
+.tab svg {
+	display: block;
+	width: 22px;
+	height: 22px;
+	fill: currentColor;
+}
+
+.tab.is-active {
+	color: var(--rust);
+}
+
+.page-foot-space {
+	height: 96px;
+}
+
+/* Tombol utama menempel di atas bilah tab. */
+.admin-sticky {
+	position: sticky;
+	bottom: 84px;
+	background: color-mix(in srgb, var(--paper) 92%, transparent);
+	backdrop-filter: blur(8px);
+	border-top: 1px solid var(--sand);
+	padding: 12px 16px;
+	z-index: 20;
+}
+
+.admin-sticky .sticky-hint {
+	font-size: 0.75rem;
+	color: color-mix(in srgb, var(--ink) 62%, var(--paper));
+	text-align: center;
+	margin: 0.375rem 0 0;
+}
+
+/* Tajuk halaman admin. */
+.admin-head {
+	padding: 14px 0 10px;
+}
+
+.admin-head .wordmark {
+	font-family: 'Young Serif', Georgia, serif;
+	font-size: 0.9375rem;
+	color: var(--ink);
+	letter-spacing: 0.02em;
+	margin: 0 0 0.5rem;
+}
+
+.admin-head .wordmark .plus {
+	color: var(--rust);
+}
+
+.admin-head .page-sub {
+	margin: -0.25rem 0 0;
+}
+
+/* Saringan daftar pesanan. */
+.filters {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+	margin: 0.5rem 0 0.875rem;
+}
+
+.filters .field {
+	margin: 0;
+	flex: 1 1 100%;
+}
+
+/* Area cetak A4 (AD-17): hitam putih, tanpa navigasi. */
+.print-area {
+	background: #fff;
+	color: #000;
+}
+
+@media print {
+	body {
+		background: #fff;
+	}
+
+	.no-print,
+	.tabbar,
+	.admin-sticky,
+	.mock-flag {
+		display: none !important;
+	}
+
+	.print-area {
+		max-width: none;
+		padding: 0;
+	}
+
+	.print-area .surface {
+		border: 1px solid #000;
+		border-radius: 0;
+		background: #fff;
+		break-inside: avoid;
+	}
+
+	.print-area h1,
+	.print-area h2,
+	.print-area h3,
+	.print-area .row-l1,
+	.print-area .row-l2,
+	.print-area .muted {
+		color: #000;
+	}
+
+	.print-title {
+		font-size: 1.25rem;
+		margin: 0 0 0.25rem;
+	}
+
+	@page {
+		size: A4;
+		margin: 14mm;
+	}
+}

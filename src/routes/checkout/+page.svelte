@@ -164,6 +164,13 @@
 			<div class="error-box" role="alert">{form.message}</div>
 		{/if}
 
+		{#if !data.storeOpen}
+			<div class="error-box" role="alert">
+				Maaf, toko sedang tutup sementara sehingga pesanan baru belum bisa dibuat. Silakan
+				kembali lagi nanti.
+			</div>
+		{/if}
+
 		<form id="form-checkout" method="POST" onsubmit={handleSubmit} oninvalidcapture={handleInvalid} oninputcapture={clearInvalid}>
 			<input type="hidden" name="items" value={itemsJson} />
 			<input type="hidden" name="lat" value={latValue} />
@@ -256,8 +263,12 @@
 					</label>
 				</div>
 				<div class="info-box">
-					Ongkir {courierValue} dibayar pemesan saat kurir datang, tidak termasuk total ini. Toko
-					tidak menghitung tarif ongkir.
+					Ongkir {courierValue} dibayar pemesan saat kurir datang, tidak termasuk total ini.
+					{#if data.shippingInfoText}
+						{data.shippingInfoText}
+					{:else}
+						Toko tidak menghitung tarif ongkir.
+					{/if}
 				</div>
 			</section>
 
@@ -315,8 +326,8 @@
 {#if rows.length > 0}
 	<div class="sticky-bar">
 		<div class="sticky-inner">
-			<button type="submit" form="form-checkout" class="btn">
-				Bayar {formatRupiah(subtotal)}
+			<button type="submit" form="form-checkout" class="btn" disabled={!data.storeOpen}>
+				{data.storeOpen ? `Bayar ${formatRupiah(subtotal)}` : 'Toko sedang tutup'}
 			</button>
 		</div>
 	</div>

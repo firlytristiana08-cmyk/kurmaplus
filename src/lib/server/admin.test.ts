@@ -1,0 +1,228 @@
+// Tes pintu tulis tunggal Portal Admin (PRD — aturan kode #1..#4):
+// perpindahan status, invarian stok & uang, jejak audit, dan validasi.
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+
+const tempDir = mkdtempSync(path.join(tmpdir(), "kurmaplus-admin-test-"));
+process.env.KURMAPLUS_DATA_DIR = tempDir;
+process.env.KURMAPLUS_DB = "sqlite";
+
+const db = await import("./db");
+const admin = await import("./admin");
+
+const now = new Date("2026-11-16T10:00:00Z");
+
+async function newOrder(code: string, variantId: number, qty: number): Promise<void> {
+  const result = await db.createOrder({
+    code,
+    customerName: "Tes Admin",
+    customerPhone: "081200000001",
+    address: "Jalan Tes No. 1",
+    city: "Jakarta Selatan",
+    lat: -6.2,
+    lng: 106.8,
+    courier: "Grab",
+    deliveryDate: "2026-11-21",
+    note: null,
+    items: [{ variantId, qty }],
+    now,
+    paymentTimeoutMinutes: 60,
+  });
+  if (!result.ok) throw new Error("gagal membuat pesanan tes");
+}
+
+async function auditFor(code: string): Promise<unknown[]> {
+  return admin
+    .adminLogList({ entity: "order" })
+    .then((entries) => entries.filter((entry) => entry.entityId === code));
+}
+
+describe("admin: perpindahan status (BA-01..BA-05)", () => {
+  beforeAll(async () => {
+    await db.getDb();
+    await newOrder("TESTAAAA", 1, 1);
+  });
+
+  it("menolak lompatan yang tidak sah (pending_payment → packed)", async () => {
+    const result = await admin.adminChangeStatus("TESTAAAA", "packed", { actor: "tes" });
+    expect(result.ok).toBe(false);
+  });
+
+  it("menandai bayar manual wajib beralasan (BA-02)", async () => {
+    const noReason = await admin.adminManualPaid("TESTAAAA", "   ", "tes");
+    expect(noReason.ok).toBe(false);
+    const ok = await admin.adminManualPaid("TESTAAAA", "transfer diterima", "tes");
+    expect(ok.ok).toBe(true);
+    const detail = await admin.adminOrderDetail("TESTAAAA");
+    expect(detail?.status).toBe("paid");
+    expect(detail?.manualPaidReason).toBe("transfer diterima");
+  });
+
+  it("maju satu langkah dan mencatat waktu + audit", async () => {
+    const result = await admin.adminChangeStatus("TESTAAAA", "packed", {
+      actor: "tes",
+      now,
+    });
+    expect(result.ok).toBe(true);
+    const detail = await admin.adminOrderDetail("TESTAAAA");
+    expect(detail?.status).toBe("packed");
+    expect(detail?.packedAt).toBe(now.toISOString());
+    const audit = await auditFor("TESTAAAA");
+    expect(audit.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("koreksi mundur wajib beralasan (BA-01)", async () => {
+    const noReason = await admin.adminChangeStatus("TESTAAAA", "paid", { actor: "tes" });
+    expect(noReason.ok).toBe(false);
+    const ok = await admin.adminChangeStatus("TESTAAAA", "paid", {
+      actor: "tes",
+      reason: "salah klik",
+    });
+    expect(ok.ok).toBe(true);
+    const detail = await admin.adminOrderDetail("TESTAAAA");
+    expect(detail?.status).toBe("paid");
+    expect(detail?.packedAt).toBeNull();
+  });
+
+  it("membatalkan dari dikemas mengembalikan stok (BA-03)", async () => {
+    const before = await db.getSettings();
+    expect(before).toBeTruthy();
+    await admin.adminChangeStatus("TESTAAAA", "packed", { actor: "tes", now });
+    const stockBefore = await variantStock(1);
+    const result = await admin.adminChangeStatus("TESTAAAA", "cancelled", {
+      actor: "tes",
+      reason: "pembeli batal",
+      restoreStock: true,
+    });
+    expect(result.ok).toBe(true);
+    const stockAfter = await variantStock(1);
+    expect(stockAfter).toBe(stockBefore + 1);
+    const detail = await admin.adminOrderDetail("TESTAAAA");
+    expect(detail?.status).toBe("cancelled");
+    expect(detail?.cancelledReason).toBe("pembeli batal");
+  });
+
+  it("menolak pembatalan dari status dikirim (BA-05)", async () => {
+    await newOrder("TESTBBBB", 1, 1);
+    await admin.adminManualPaid("TESTBBBB", "tes", "tes");
+    await admin.adminChangeStatus("TESTBBBB", "packed", { actor: "tes" });
+    await admin.adminChangeStatus("TESTBBBB", "shipped", { actor: "tes" });
+    const result = await admin.adminChangeStatus("TESTBBBB", "cancelled", {
+      actor: "tes",
+      reason: "coba",
+    });
+    expect(result.ok).toBe(false);
+    const detail = await admin.adminOrderDetail("TESTBBBB");
+    expect(detail?.status).toBe("shipped");
+  });
+});
+
+async function variantStock(variantId: number): Promise<number> {
+  const dbi = await db.getDb();
+  const row = await dbi.get<{ stock: number }>("SELECT stock FROM variants WHERE id = ?", [
+    variantId,
+  ]);
+  return row?.stock ?? -1;
+}
+
+describe("admin: stok, ongkir, tanggal, pengaturan", () => {
+  beforeAll(async () => {
+    await db.getDb();
+  });
+
+  // Penghapusan direktori tes hanya sekali di akhir berkas — menghapus di
+  // tengah membuat koneksi SQLite tersisa menjadi read-only.
+  afterAll(() => {
+    rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  it("penyesuaian stok bercatatan dan tidak pernah negatif (BA-08)", async () => {
+    const noReason = await admin.adminAdjustStock(2, 5, "  ", "tes");
+    expect(noReason.ok).toBe(false);
+    const tooMuch = await admin.adminAdjustStock(2, -100000, "habis semua", "tes");
+    expect(tooMuch.ok).toBe(false);
+    const stockBefore = await variantStock(2);
+    const ok = await admin.adminAdjustStock(2, -2, "koreksi opname", "tes");
+    expect(ok.ok).toBe(true);
+    expect(await variantStock(2)).toBe(stockBefore - 2);
+  });
+
+  it("ongkir: nominal divalidasi dan status berubah (BA-06)", async () => {
+    await newOrder("TESTCCCC", 1, 1);
+    const badAmount = await admin.adminSetShipping("TESTCCCC", { shippingActualIdr: -5 }, "tes");
+    expect(badAmount.ok).toBe(false);
+    const ok = await admin.adminSetShipping(
+      "TESTCCCC",
+      { shippingActualIdr: 25000, courierBooked: true, shippingStatus: "booked" },
+      "tes",
+    );
+    expect(ok.ok).toBe(true);
+    const detail = await admin.adminOrderDetail("TESTCCCC");
+    expect(detail?.shippingStatus).toBe("booked");
+    expect(detail?.shippingActualIdr).toBe(25000);
+    expect(detail?.courierBookedAt).toBeTruthy();
+  });
+
+  it("pindah tanggal hanya Sabtu/Minggu dengan catatan (BA-07)", async () => {
+    const weekday = await admin.adminMoveDelivery("TESTCCCC", "2026-11-18", "rabu", "tes");
+    expect(weekday.ok).toBe(false);
+    const noNote = await admin.adminMoveDelivery("TESTCCCC", "2026-11-22", "", "tes");
+    expect(noNote.ok).toBe(false);
+    const ok = await admin.adminMoveDelivery("TESTCCCC", "2026-11-22", "permintaan pembeli", "tes");
+    expect(ok.ok).toBe(true);
+    const detail = await admin.adminOrderDetail("TESTCCCC");
+    expect(detail?.deliveryDate).toBe("2026-11-22");
+  });
+
+  it("pengaturan tervalidasi dan tercatat di audit (AD-20, BA-12)", async () => {
+    const badTemplate = await admin.adminUpdateSettings(
+      { wa_templates: '{"konfirmasi":42}' },
+      "tes",
+    );
+    expect(badTemplate.ok).toBe(false);
+    const ok = await admin.adminUpdateSettings(
+      {
+        low_stock_threshold: "12",
+        wa_templates: JSON.stringify({
+          konfirmasi: "Halo {nama}",
+          tagih_ongkir: "Ongkir {nominal}",
+          pindah_tanggal: "Pindah {tanggal}",
+        }),
+      },
+      "tes",
+    );
+    expect(ok.ok).toBe(true);
+    const settings = await db.getSettings();
+    expect(settings.low_stock_threshold).toBe("12");
+  });
+
+  it("tutup toko menonaktifkan checkout (BA-10)", async () => {
+    const ok = await admin.adminToggleStore(false, "tes");
+    expect(ok.ok).toBe(true);
+    const settings = await db.getSettings();
+    expect(settings.store_open).toBe("0");
+    await admin.adminToggleStore(true, "tes");
+  });
+
+  it("beranda: stok menipis memakai ambang pengaturan (AD-03)", async () => {
+    const today = await admin.adminToday(new Date("2026-11-16T02:00:00Z"));
+    expect(today.threshold).toBe(12);
+    expect(today.lowStock.length).toBeGreaterThan(0);
+    expect(today.lowStock.every((row) => row.stock < 12)).toBe(true);
+  });
+
+  it("daftar kemas menjumlahkan kemasan per varian (AD-15)", async () => {
+    const list = await admin.adminPackingList("2026-11-21");
+    expect(list.orderCount).toBeGreaterThan(0);
+    const total = list.lines.reduce((n, line) => n + line.qty, 0);
+    expect(total).toBe(list.packageCount);
+  });
+
+  it("laporan menghitung omzet tanpa ongkir (AD-21, BA-06)", async () => {
+    const report = await admin.adminReport("2026-11-01", "2026-11-30");
+    expect(report.orderCount).toBeGreaterThan(0);
+    expect(report.omzetIdr).toBeGreaterThan(0);
+  });
+});
