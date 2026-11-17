@@ -380,6 +380,19 @@
 
 /* ===== Anti-geser: tata letak admin tidak pernah bergeser kanan-kiri. ===== */
 
+/* Spasi vertikal seragam untuk setiap box/card agar rapi (tidak menempel). */
+.surface {
+	margin: 0.75rem 0;
+}
+
+.info-box {
+	margin: 1rem 0;
+}
+
+.error-box {
+	margin-top: 1rem;
+}
+
 /* Konten yang lebih lebar dari layar tidak membuat halaman bisa digeser
    ke samping; scrollbar muncul/hilang tidak menggeser kolom. */
 html {
