@@ -237,7 +237,7 @@
 						required
 						bind:value={phoneValue}
 					/>
-					<p class="hint">Dipakai untuk konfirmasi pengiriman dan halaman lacak.</p>
+					<p class="hint">Dipakai untuk konfirmasi pengiriman dan melacak pesanan.</p>
 				</div>
 			</section>
 
