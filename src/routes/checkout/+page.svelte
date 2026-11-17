@@ -4,6 +4,7 @@
 	import { cart } from '#lib/cart.svelte';
 	import PageFooter from '#lib/components/PageFooter.svelte';
 	import PageHeader from '#lib/components/PageHeader.svelte';
+	import ProsesLoader from '#lib/components/ProsesLoader.svelte';
 	import { clearInvalid, handleInvalid } from '#lib/validation';
 	import type { CheckoutData } from './+page.server';
 
@@ -18,6 +19,7 @@
 	let dateValue = $state('');
 	let latValue = $state('');
 	let lngValue = $state('');
+	let loading = $state(false);
 	let pinSet = $state(false);
 	let mapMessage = $state('');
 
@@ -61,10 +63,18 @@
 		if (!pinSet) {
 			event.preventDefault();
 			mapMessage = 'Pasang titik tujuan di peta dulu — ketuk peta atau pakai tombol Lokasi saya.';
+			return;
 		}
+		// Formulir dikirim (navigasi penuh): tampilkan overlay proses pembayaran.
+		loading = true;
 	}
 
 	onMount(() => {
+		// Kembali dari cache (mis. tombol back setelah halaman bayar): sembunyikan overlay.
+		const onPageShow = (): void => {
+			loading = false;
+		};
+		window.addEventListener('pageshow', onPageShow);
 		let cleanup = () => {};
 		void (async () => {
 			const leaflet = await import('leaflet');
@@ -142,7 +152,10 @@
 				map.remove();
 			};
 		})();
-		return () => cleanup();
+		return () => {
+			window.removeEventListener('pageshow', onPageShow);
+			cleanup();
+		};
 	});
 </script>
 
@@ -326,12 +339,14 @@
 {#if rows.length > 0}
 	<div class="sticky-bar">
 		<div class="sticky-inner">
-			<button type="submit" form="form-checkout" class="btn" disabled={!data.storeOpen}>
+			<button type="submit" form="form-checkout" class="btn" disabled={!data.storeOpen} aria-busy={loading}>
 				{data.storeOpen ? `Bayar ${formatRupiah(subtotal)}` : 'Toko sedang tutup'}
 			</button>
 		</div>
 	</div>
 {/if}
+
+<ProsesLoader show={loading} />
 
 <PageFooter />
 

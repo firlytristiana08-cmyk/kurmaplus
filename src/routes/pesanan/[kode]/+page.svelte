@@ -1,8 +1,9 @@
 <script lang="ts">
-	import { formatDateId, formatDateTimeId, formatRupiah, formatWeight } from '#lib/format';
-	import { STATUS_LABEL_ID } from '#lib/order-status';
+	import { formatDateId, formatDateTimeId, formatRupiah } from '#lib/format';
+	import { STATUS_LABEL_ID, type OrderStatus } from '#lib/order-status';
 	import PageFooter from '#lib/components/PageFooter.svelte';
 	import PageHeader from '#lib/components/PageHeader.svelte';
+	import ProsesLoader from '#lib/components/ProsesLoader.svelte';
 	import type { OrderPageData } from './+page.server';
 
 	let { data }: { data: OrderPageData } = $props();
@@ -20,8 +21,44 @@
 					: 'badge-off'
 	);
 
-	// Alamat tidak pernah ditampilkan penuh (PRD: data pribadi).
-	const maskedAddress = $derived(`${order.address.slice(0, 15)}…`);
+	// Penanda bentuk (PRD desain: status = teks + bentuk, warna hanya penguat).
+	const STATUS_MARK: Record<OrderStatus, string> = {
+		pending_payment: '○',
+		paid: '●',
+		packed: '■',
+		shipped: '▲',
+		done: '★',
+		expired: '◇',
+		cancelled: '✕',
+	};
+
+	const modalText = $derived(
+		order.status === 'paid' || order.status === 'done'
+			? 'Pembayaran Anda sudah kami terima. Terima kasih!'
+			: isPending
+				? 'Pesanan ini belum dibayar. Selesaikan pembayaran lewat halaman bayar DOKU.'
+				: order.status === 'expired'
+					? 'Batas waktu pembayaran berakhir. Silakan buat pesanan baru bila masih ingin memesan.'
+					: order.status === 'cancelled'
+						? 'Pesanan ini dibatalkan. Hubungi kami lewat WhatsApp bila ada yang ingin ditanyakan.'
+						: order.status === 'packed'
+							? 'Pesanan sedang dikemas dan akan segera dikirim.'
+							: 'Pesanan sedang dalam perjalanan ke alamat Anda.'
+	);
+
+	const modalTitle = $derived(
+		order.status === 'paid' || order.status === 'done'
+			? 'Terbayar'
+			: isPending
+				? 'Menunggu pembayaran'
+				: order.status === 'expired'
+					? 'Batas waktu berakhir'
+					: order.status === 'cancelled'
+						? 'Pesanan dibatalkan'
+						: order.status === 'packed'
+							? 'Sedang dikemas'
+							: 'Sedang dikirim'
+	);
 
 	const whatsappText = $derived(
 		encodeURIComponent(
@@ -29,6 +66,17 @@
 		)
 	);
 	const whatsappUrl = $derived(`https://wa.me/${data.whatsappOwner}?text=${whatsappText}`);
+
+	let loading = $state(false);
+	let showModal = $state(false);
+	// svelte-ignore state_referenced_locally -- modal status tampil sekali saat render pertama.
+	if (data.showStatusModal) {
+		showModal = true;
+	}
+
+	function closeModal(): void {
+		showModal = false;
+	}
 </script>
 
 <svelte:head>
@@ -52,7 +100,7 @@
 			{#if order.checkoutUrl}
 				<a class="btn" href={order.checkoutUrl}>Lanjutkan pembayaran</a>
 			{:else if data.previewPayment}
-				<form method="POST" action="?/simulasi">
+				<form method="POST" action="?/simulasi" onsubmit={() => (loading = true)}>
 					<button type="submit" class="btn">Simulasikan pembayaran (pratinjau)</button>
 				</form>
 				<p class="hint">
@@ -60,7 +108,7 @@
 					dengan notifikasi pembayaran sungguhan.
 				</p>
 			{:else}
-				<form method="POST" action="?/bayar">
+				<form method="POST" action="?/bayar" onsubmit={() => (loading = true)}>
 					<button type="submit" class="btn">Buat halaman bayar baru</button>
 				</form>
 			{/if}
@@ -85,20 +133,38 @@
 	</section>
 
 	<section class="surface" aria-labelledby="kirim-heading">
-		<h2 id="kirim-heading">Pengiriman</h2>
+		<h2 id="kirim-heading">Detail pengiriman</h2>
 		<dl class="detail-list">
 			<div>
-				<dt>Tanggal kirim</dt>
-				<dd>{formatDateId(order.deliveryDate)}</dd>
+				<dt>Penerima</dt>
+				<dd>{order.customerName}</dd>
+			</div>
+			<div>
+				<dt>Nomor WhatsApp</dt>
+				<dd>{order.customerPhone}</dd>
+			</div>
+			<div>
+				<dt>Alamat</dt>
+				<dd>{order.address}</dd>
+			</div>
+			<div>
+				<dt>Kota</dt>
+				<dd>{order.city}</dd>
 			</div>
 			<div>
 				<dt>Kurir</dt>
 				<dd>{order.courier}</dd>
 			</div>
 			<div>
-				<dt>Tujuan</dt>
-				<dd>{order.city} · {maskedAddress}</dd>
+				<dt>Tanggal kirim</dt>
+				<dd>{formatDateId(order.deliveryDate)}</dd>
 			</div>
+			{#if order.note}
+				<div>
+					<dt>Catatan</dt>
+					<dd>{order.note}</dd>
+				</div>
+			{/if}
 		</dl>
 		<div class="info-box">
 			Ongkir {order.courier} dibayar pemesan saat kurir datang, tidak termasuk total pesanan ini.
@@ -117,6 +183,47 @@
 </main>
 
 <PageFooter />
+
+{#if showModal}
+	<div
+		class="modal-backdrop"
+		role="presentation"
+		onclick={closeModal}
+		onkeydown={(event) => event.key === 'Escape' && closeModal()}
+	>
+		<div
+			class="modal"
+			role="dialog"
+			aria-modal="true"
+			aria-labelledby="modal-status-title"
+			tabindex="-1"
+			onclick={(event) => event.stopPropagation()}
+			onkeydown={(event) => event.key === 'Escape' && closeModal()}
+		>
+			<span class={`modal-mark ${badgeClass}`} aria-hidden="true">{STATUS_MARK[order.status]}</span>
+			<h2 id="modal-status-title">{modalTitle}</h2>
+			<p class={`badge ${badgeClass}`}>{statusLabel}</p>
+			<p class="modal-text">{modalText}</p>
+			{#if isPending}
+				<p class="hint">
+					Baru saja membayar? Status bisa membutuhkan beberapa saat — ketuk “Perbarui status”.
+				</p>
+			{/if}
+			<div class="modal-actions">
+				{#if isPending}
+					<button class="btn btn-secondary" type="button" onclick={() => window.location.reload()}>
+						Perbarui status
+					</button>
+				{/if}
+				<button class="btn" type="button" onclick={closeModal}>
+					{isPending ? 'Tutup' : 'Mengerti'}
+				</button>
+			</div>
+		</div>
+	</div>
+{/if}
+
+<ProsesLoader show={loading} />
 
 <style>
 	.status-head {
@@ -188,5 +295,66 @@
 	.hint {
 		font-size: 0.8125rem;
 		color: color-mix(in srgb, var(--ink) 62%, var(--paper));
+	}
+
+	.modal-backdrop {
+		position: fixed;
+		inset: 0;
+		background: color-mix(in srgb, var(--ink) 45%, transparent);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 1.5rem;
+		z-index: 50;
+	}
+
+	.modal {
+		background: var(--paper);
+		border: 1px solid color-mix(in srgb, var(--ink) 18%, var(--paper));
+		border-radius: 12px;
+		padding: 1.5rem;
+		max-width: 22rem;
+		width: 100%;
+		text-align: center;
+	}
+
+	.modal-mark {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 3rem;
+		height: 3rem;
+		border-radius: 50%;
+		font-size: 1.5rem;
+		border: 2px solid currentColor;
+		margin-bottom: 0.625rem;
+	}
+
+	.modal-mark.badge-ok {
+		color: var(--rust);
+	}
+
+	.modal-mark.badge-wait {
+		color: color-mix(in srgb, var(--ink) 70%, var(--paper));
+	}
+
+	.modal-mark.badge-alert {
+		color: var(--rust-press);
+	}
+
+	.modal h2 {
+		margin: 0 0 0.375rem;
+		font-size: 1.25rem;
+	}
+
+	.modal-text {
+		margin: 0.625rem 0 0;
+	}
+
+	.modal-actions {
+		display: flex;
+		flex-direction: column;
+		gap: 0.625rem;
+		margin-top: 1.125rem;
 	}
 </style>
