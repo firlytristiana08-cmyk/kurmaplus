@@ -65,7 +65,7 @@
 			<h2>Daftar kemas</h2>
 			<span class="aside muted tabular">{packing.orderCount} pesanan · {packing.packageCount} kemasan</span>
 		</div>
-		<div class="surface">
+		<div class="surface is-plain">
 			{#if packing.lines.length === 0}
 				<p class="muted" style="margin: 0">Belum ada pesanan dikemas untuk tanggal ini.</p>
 			{:else}

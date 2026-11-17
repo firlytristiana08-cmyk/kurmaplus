@@ -326,10 +326,10 @@
 	height: 96px;
 }
 
-/* Tombol utama menempel di atas bilah tab. */
+/* Tombol utama menempel di atas bilah tab (rapat, tanpa celah). */
 .admin-sticky {
 	position: sticky;
-	bottom: 84px;
+	bottom: calc(62px + env(safe-area-inset-bottom));
 	background: color-mix(in srgb, var(--paper) 92%, transparent);
 	backdrop-filter: blur(8px);
 	border-top: 1px solid var(--sand);
@@ -434,8 +434,17 @@ h3,
 
 /* Area cetak A4 (AD-17): hitam putih, tanpa navigasi. */
 .print-area {
-	background: #fff;
+	/* Layar: transparan (warna kertas). Cetak: putih (lihat @media print). */
+	background: transparent;
 	color: #000;
+}
+
+/* Daftar kemas tanpa latar putih di layar; kotaknya hanya muncul saat cetak. */
+.surface.is-plain {
+	background: none;
+	border: none;
+	border-radius: 0;
+	padding: 0;
 }
 
 @media print {
@@ -453,6 +462,7 @@ h3,
 	.print-area {
 		max-width: none;
 		padding: 0;
+		background: #fff;
 	}
 
 	.print-area .surface {
@@ -460,6 +470,10 @@ h3,
 		border-radius: 0;
 		background: #fff;
 		break-inside: avoid;
+	}
+
+	.print-area .surface.is-plain {
+		padding: 0.75rem;
 	}
 
 	.print-area h1,
