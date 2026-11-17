@@ -108,7 +108,7 @@
 							<img
 								src={`/images/${photo}`}
 								alt={`Foto ${product.name} ${index + 1}`}
-								width="860"
+								width="600"
 								height="600"
 								loading={index === 0 ? 'eager' : 'lazy'}
 							/>
@@ -134,7 +134,7 @@
 					src={`/images/${product.photo}`}
 					alt={`Foto ${product.name}`}
 					width="430"
-					height="300"
+					height="430"
 				/>
 			</button>
 		{/if}
@@ -194,10 +194,6 @@
 					</button>
 				</div>
 			</div>
-			<p class="muted">
-				Stok {formatWeight(selectedVariant.weightGrams)}: {selectedVariant.stock} paket tersedia.
-				Harga dan stok dikunci ulang oleh server saat checkout.
-			</p>
 		{/if}
 	</article>
 </main>
@@ -272,7 +268,8 @@
 	/* Foto mengikuti margin kiri-kanan yang sama seperti halaman lain. */
 	.photo {
 		width: 100%;
-		aspect-ratio: 43 / 30;
+		height: auto;
+		aspect-ratio: 1 / 1;
 		object-fit: cover;
 		border-radius: var(--radius-m);
 	}
@@ -410,7 +407,8 @@
 
 	.slide img {
 		width: 100%;
-		aspect-ratio: 43 / 30;
+		height: auto;
+		aspect-ratio: 1 / 1;
 		object-fit: cover;
 		border-radius: var(--radius-m);
 		display: block;
