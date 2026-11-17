@@ -58,13 +58,22 @@
 			<li>
 				<a class="product-card" href={`/kurma/${product.slug}`}>
 					<div class="product-photo">
-						<img
-							src={`/images/${product.photo}`}
-							alt={`Foto ${product.name}`}
-							width="430"
-							height="430"
-							loading="lazy"
-						/>
+						{#if product.photo}
+							<img
+								src={`/images/${product.photo}`}
+								alt={`Foto ${product.name}`}
+								width="430"
+								height="430"
+								loading="lazy"
+							/>
+						{:else}
+							<div class="photo-placeholder" role="img" aria-label="Foto belum tersedia">
+								<svg viewBox="0 0 24 24" width="40" height="40" fill="currentColor" aria-hidden="true">
+									<path d="M7.3 8.7v-.4a4.7 4.7 0 0 1 9.4 0v.4h-2.3v-.4a2.4 2.4 0 0 0-4.8 0v.4H7.3Z" />
+									<rect x="4.5" y="8" width="15" height="13.7" rx="2.7" />
+								</svg>
+							</div>
+						{/if}
 						{#if product.bestSeller}
 							<span class="best-badge">Best seller</span>
 						{/if}
@@ -128,6 +137,17 @@
 
 	.product-photo {
 		position: relative;
+	}
+
+	.photo-placeholder {
+		width: 100%;
+		aspect-ratio: 1 / 1;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: color-mix(in srgb, var(--sand) 55%, var(--card));
+		border-radius: var(--radius-m);
+		color: color-mix(in srgb, var(--ink) 35%, var(--paper));
 	}
 
 	.product-photo img {

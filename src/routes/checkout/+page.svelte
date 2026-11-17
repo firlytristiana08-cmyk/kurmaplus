@@ -4,7 +4,6 @@
 	import {
 		backupCart,
 		cart,
-		clearDirectBuy,
 		readDirectBuy,
 		restoreCartBackup,
 		type CartItem
@@ -30,11 +29,13 @@
 	let pinSet = $state(false);
 	let mapMessage = $state('');
 	// Item checkout: daftar "beli langsung" bila ada, selain itu isi keranjang.
-	let directBuy = $state<CartItem[] | null>(null);
+	let directBuy = $state<CartItem[] | null | undefined>(undefined);
 
 	$effect(() => {
 		cart.hydrate();
-		directBuy = readDirectBuy();
+		// Mode beli langsung hanya berlaku bila dibuka lewat tombol "Beli
+		// langsung" (?beli=1) — tanpa parameter, checkout memakai keranjang.
+		directBuy = data.directMode ? readDirectBuy() : null;
 	});
 
 	$effect(() => {
@@ -54,7 +55,7 @@
 			qty: number;
 			stock: number;
 		}[] = [];
-		for (const item of directBuy ?? cart.items) {
+		for (const item of data.directMode ? (directBuy ?? []) : cart.items) {
 			for (const product of data.products) {
 				const variant = product.variants.find((candidate) => candidate.id === item.variantId);
 				if (variant) {
@@ -77,6 +78,10 @@
 	const itemsJson = $derived(JSON.stringify(rows.map((row) => ({ variantId: row.variantId, qty: row.qty }))));
 
 	function handleSubmit(event: SubmitEvent): void {
+		if (loading) {
+			event.preventDefault();
+			return;
+		}
 		if (!pinSet) {
 			event.preventDefault();
 			mapMessage = 'Pasang titik tujuan di peta dulu — ketuk peta atau pakai tombol Lokasi saya.';
@@ -86,7 +91,6 @@
 		// terbeli dua kali), dengan cadangan bila ternyata pesanan ditolak.
 		backupCart(cart.items);
 		cart.redeemPurchased(rows.map((row) => ({ variantId: row.variantId, qty: row.qty })));
-		clearDirectBuy();
 		// Formulir dikirim (navigasi penuh): tampilkan overlay proses pembayaran.
 		loading = true;
 	}
@@ -192,7 +196,13 @@
 	<h1>Checkout</h1>
 
 	{#if rows.length === 0}
-		<p class="muted">Keranjang masih kosong.</p>
+		{#if data.directMode && directBuy === null}
+			<p class="muted">
+				Sesi beli langsung sudah berakhir — pilih produknya lagi untuk membeli langsung.
+			</p>
+		{:else}
+			<p class="muted">Keranjang masih kosong.</p>
+		{/if}
 		<a class="btn" href="/katalog">Pilih kurma</a>
 	{:else}
 		{#if form?.message}
@@ -356,7 +366,11 @@
 {#if rows.length > 0}
 	<div class="sticky-bar">
 		<div class="sticky-inner">
-			<button type="submit" form="form-checkout" class="btn" disabled={!data.storeOpen} aria-busy={loading}>
+			<button
+				type="submit"
+				form="form-checkout"
+				class="btn"
+				disabled={!data.storeOpen || loading} aria-busy={loading}>
 				{data.storeOpen ? `Bayar ${formatRupiah(subtotal)}` : 'Toko sedang tutup'}
 			</button>
 		</div>

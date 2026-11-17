@@ -44,7 +44,7 @@
 		// Beli langsung: checkout hanya item ini — keranjang tidak ikut dan
 		// tidak disentuh.
 		setDirectBuy([{ variantId: selectedVariant.id, qty }]);
-		goto('/checkout');
+		goto('/checkout?beli=1');
 	}
 
 	function slideIndexOf(track: HTMLElement): number {
@@ -130,7 +130,7 @@
 					{/each}
 				</div>
 			</div>
-		{:else}
+		{:else if product.photo}
 			<button type="button" class="photo-btn" onclick={() => openLightbox(0)}>
 				<img
 					class="photo"
@@ -140,6 +140,13 @@
 					height="430"
 				/>
 			</button>
+		{:else}
+			<div class="photo-placeholder" role="img" aria-label="Foto belum tersedia">
+				<svg viewBox="0 0 24 24" width="40" height="40" fill="currentColor" aria-hidden="true">
+					<path d="M7.3 8.7v-.4a4.7 4.7 0 0 1 9.4 0v.4h-2.3v-.4a2.4 2.4 0 0 0-4.8 0v.4H7.3Z" />
+					<rect x="4.5" y="8" width="15" height="13.7" rx="2.7" />
+				</svg>
+			</div>
 		{/if}
 		<h1>{product.name}</h1>
 		<p class="description">{product.description}</p>
@@ -440,6 +447,17 @@
 		object-fit: cover;
 		border-radius: var(--radius-m);
 		display: block;
+	}
+
+	.photo-placeholder {
+		width: 100%;
+		aspect-ratio: 1 / 1;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: color-mix(in srgb, var(--sand) 55%, var(--card));
+		border-radius: var(--radius-m);
+		color: color-mix(in srgb, var(--ink) 35%, var(--paper));
 	}
 
 	.photo-btn {
