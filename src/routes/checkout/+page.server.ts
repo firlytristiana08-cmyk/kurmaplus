@@ -219,7 +219,7 @@ export const actions: Actions = {
               address: parsed.output.address,
               city: parsed.output.city,
             },
-            callbackUrl: `${url.origin}/pesanan/${code}`,
+            callbackUrl: `${url.origin}/pesanan/${code}?dari=pembayaran`,
             lineItems,
           },
           now,

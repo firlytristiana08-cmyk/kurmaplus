@@ -1234,3 +1234,56 @@ export async function adminLogList(filter: {
     createdAt: h.created_at,
   }));
 }
+
+// ---------- Log transaksi pembayaran ----------
+
+export interface TransactionEntry {
+  invoiceNumber: string;
+  paymentStatus: string;
+  checkoutUrl: string | null;
+  createdAt: string;
+  orderCode: string;
+  customerName: string;
+  totalIdr: number;
+  orderStatus: string;
+  paidAt: string | null;
+}
+
+// Riwayat pembayaran (tabel payments) digabung pesanan — hanya-baca.
+export async function adminTransactionList(filter: {
+  paymentStatus?: string;
+}): Promise<TransactionEntry[]> {
+  const db = await getDb();
+  const where: string[] = [];
+  const params: (string | number)[] = [];
+  if (filter.paymentStatus) {
+    where.push("p.status = ?");
+    params.push(filter.paymentStatus);
+  }
+  const clause = where.length > 0 ? `WHERE ${where.join(" AND ")}` : "";
+  const rows = await db.all<{
+    invoice_number: string;
+    payment_status: string;
+    checkout_url: string | null;
+    created_at: string;
+    order_code: string;
+    customer_name: string;
+    total_idr: number;
+    order_status: string;
+    paid_at: string | null;
+  }>(
+    `SELECT p.invoice_number, p.status AS payment_status, p.checkout_url, p.created_at, o.code AS order_code, o.customer_name, o.total_idr, o.status AS order_status, o.paid_at FROM payments p JOIN orders o ON o.id = p.order_id ${clause} ORDER BY p.created_at DESC LIMIT 200`,
+    params,
+  );
+  return rows.map((r) => ({
+    invoiceNumber: r.invoice_number,
+    paymentStatus: r.payment_status,
+    checkoutUrl: r.checkout_url,
+    createdAt: r.created_at,
+    orderCode: r.order_code,
+    customerName: r.customer_name,
+    totalIdr: r.total_idr,
+    orderStatus: r.order_status,
+    paidAt: r.paid_at,
+  }));
+}

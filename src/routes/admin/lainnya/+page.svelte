@@ -36,6 +36,13 @@
 			</div>
 			<div class="row-side" aria-hidden="true">›</div>
 		</a>
+		<a class="row" href="/admin/transaksi">
+			<div class="row-main">
+				<div class="row-l1">Log transaksi</div>
+				<div class="row-l2">Riwayat pembayaran DOKU per pesanan — hanya bisa dibaca</div>
+			</div>
+			<div class="row-side" aria-hidden="true">›</div>
+		</a>
 		<a class="row" href="/">
 			<div class="row-main">
 				<div class="row-l1">Buka portal pelanggan</div>

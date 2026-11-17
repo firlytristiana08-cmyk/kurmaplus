@@ -14,9 +14,10 @@ export interface OrderPageData {
   previewPayment: boolean;
   whatsappOwner: string;
   paymentDueMinutes: number;
+  showStatusModal: boolean;
 }
 
-export const load = async ({ params }): Promise<OrderPageData> => {
+export const load = async ({ params, url }): Promise<OrderPageData> => {
   const now = new Date();
   await expireStaleOrders(now);
   const order = await getOrderByCode(params.kode);
@@ -45,6 +46,8 @@ export const load = async ({ params }): Promise<OrderPageData> => {
     previewPayment: dokuConfig === null,
     whatsappOwner: settings.whatsapp_owner ?? "6281234567890",
     paymentDueMinutes: Number(settings.payment_timeout_minutes),
+    // Kembali dari halaman bayar DOKU (?dari=pembayaran): tampilkan modal status.
+    showStatusModal: url.searchParams.has("dari") || url.searchParams.has("status"),
   };
 };
 
@@ -78,7 +81,7 @@ export const actions: Actions = {
           address: order.address,
           city: order.city,
         },
-        callbackUrl: `${url.origin}/pesanan/${order.code}`,
+        callbackUrl: `${url.origin}/pesanan/${order.code}?dari=pembayaran`,
         lineItems: order.items.map((item) => ({
           name: item.name,
           quantity: item.qty,
