@@ -1,4 +1,5 @@
 <script lang="ts">
+	import BackLink from '#lib/components/BackLink.svelte';
 	// Laporan sederhana: angka dalam tabel, tanpa grafik (PRD — laporan versi 1).
 	import { enhance } from '$app/forms';
 	import { STATUS_LABEL_ID } from '#lib/order-status';
@@ -11,6 +12,8 @@
 <svelte:head>
 	<title>Laporan · KURMAPLUS Admin</title>
 </svelte:head>
+
+<BackLink href="/admin/lainnya" />
 
 <main class="wrap">
 	<header class="admin-head">

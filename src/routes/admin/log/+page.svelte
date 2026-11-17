@@ -1,4 +1,5 @@
 <script lang="ts">
+	import BackLink from '#lib/components/BackLink.svelte';
 	// Log audit — "daftar bisa disaring per jenis dan tanggal, tidak ada tombol
 	// ubah atau hapus" (AD-22).
 	import { formatDateTimeId } from '#lib/format';
@@ -41,6 +42,8 @@
 <svelte:head>
 	<title>Log audit · KURMAPLUS Admin</title>
 </svelte:head>
+
+<BackLink href="/admin/lainnya" />
 
 <main class="wrap">
 	<header class="admin-head">

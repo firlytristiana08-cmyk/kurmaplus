@@ -1,5 +1,7 @@
 <script lang="ts">
 	// Tombol teks "Kembali" dengan ikon di awal, berada di luar navbar.
+	// `href` = tujuan cadangan bila tidak ada riwayat peramban (mis. halaman anak admin).
+	let { href = '/' }: { href?: string } = $props();
 	function goBack(event: MouseEvent): void {
 		if (window.history.length > 1) {
 			event.preventDefault();
@@ -9,7 +11,7 @@
 </script>
 
 <div class="back-bar">
-	<a class="back-link" href="/" onclick={goBack}>
+	<a class="back-link" {href} onclick={goBack}>
 		<svg
 			width="20"
 			height="20"
