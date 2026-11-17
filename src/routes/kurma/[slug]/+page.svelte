@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { formatRupiah, formatWeight } from '#lib/format';
-	import { cart } from '#lib/cart.svelte';
+	import { cart, setDirectBuy } from '#lib/cart.svelte';
 	import PageFooter from '#lib/components/PageFooter.svelte';
 	import PageHeader from '#lib/components/PageHeader.svelte';
 	import type { ProductData } from './+page.server';
@@ -40,7 +40,9 @@
 
 	function buyNow(): void {
 		if (!selectedVariant || selectedVariant.stock < 1) return;
-		cart.add(selectedVariant.id, qty);
+		// Beli langsung: checkout hanya item ini — keranjang tidak ikut dan
+		// tidak disentuh.
+		setDirectBuy([{ variantId: selectedVariant.id, qty }]);
 		goto('/checkout');
 	}
 

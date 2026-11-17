@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { formatRupiah, formatWeight } from '#lib/format';
-	import { cart, type CartItem } from '#lib/cart.svelte';
+	import { cart, clearDirectBuy, type CartItem } from '#lib/cart.svelte';
 	import PageFooter from '#lib/components/PageFooter.svelte';
 	import PageHeader from '#lib/components/PageHeader.svelte';
 	import type { CartData } from './+page.server';
@@ -9,6 +9,8 @@
 
 	$effect(() => {
 		cart.hydrate();
+		// Halaman keranjang = alur keranjang: buang sisa mode beli langsung.
+		clearDirectBuy();
 	});
 
 	interface CartRow {

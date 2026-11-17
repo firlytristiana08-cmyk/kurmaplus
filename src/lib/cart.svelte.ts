@@ -8,23 +8,24 @@ export interface CartItem {
 
 const STORAGE_KEY = "kurmaplus-cart";
 
+function sanitizeItems(parsed: unknown): CartItem[] | null {
+  if (!Array.isArray(parsed)) {
+    return null;
+  }
+  const items = parsed.filter(
+    (item): item is CartItem =>
+      typeof item === "object" &&
+      item !== null &&
+      typeof (item as CartItem).variantId === "number" &&
+      typeof (item as CartItem).qty === "number",
+  );
+  return items.length > 0 ? items : null;
+}
+
 function readStorage(): CartItem[] {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) {
-      return [];
-    }
-    const parsed: unknown = JSON.parse(raw);
-    if (!Array.isArray(parsed)) {
-      return [];
-    }
-    return parsed.filter(
-      (item): item is CartItem =>
-        typeof item === "object" &&
-        item !== null &&
-        typeof (item as CartItem).variantId === "number" &&
-        typeof (item as CartItem).qty === "number",
-    );
+    return sanitizeItems(JSON.parse(raw || "null")) ?? [];
   } catch {
     return [];
   }
@@ -80,6 +81,19 @@ class CartState {
     this.setItems(this.items.filter((item) => item.variantId !== variantId));
   }
 
+  redeemPurchased(purchased: CartItem[]): void {
+    // Item yang sudah dibeli dikeluarkan dari keranjang (cegah terbeli dua kali).
+    const remaining = this.items
+      .map((item) => {
+        const bought = purchased
+          .filter((entry) => entry.variantId === item.variantId)
+          .reduce((sum, entry) => sum + entry.qty, 0);
+        return { variantId: item.variantId, qty: item.qty - bought };
+      })
+      .filter((item) => item.qty > 0);
+    this.setItems(remaining);
+  }
+
   clear(): void {
     this.setItems([]);
   }
@@ -90,3 +104,59 @@ class CartState {
 }
 
 export const cart = new CartState();
+
+// Pembelian langsung (tombol "Beli langsung"): daftar item terpisah dari
+// keranjang, dipakai untuk satu kali checkout lalu dibuang.
+const DIRECT_KEY = "kurmaplus-direct-buy";
+const BACKUP_KEY = "kurmaplus-cart-backup";
+
+export function readDirectBuy(): CartItem[] | null {
+  try {
+    if (typeof window === "undefined") {
+      return null;
+    }
+    return sanitizeItems(JSON.parse(window.sessionStorage.getItem(DIRECT_KEY) ?? "null"));
+  } catch {
+    return null;
+  }
+}
+
+export function setDirectBuy(items: CartItem[]): void {
+  try {
+    window.sessionStorage.setItem(DIRECT_KEY, JSON.stringify(items));
+  } catch {
+    /* penyimpanan ditolak: checkout akan memakai isi keranjang */
+  }
+}
+
+export function clearDirectBuy(): void {
+  try {
+    window.sessionStorage.removeItem(DIRECT_KEY);
+  } catch {
+    /* tidak ada yang perlu dilakukan */
+  }
+}
+
+export function backupCart(items: CartItem[]): void {
+  try {
+    window.sessionStorage.setItem(BACKUP_KEY, JSON.stringify(items));
+  } catch {
+    /* tanpa cadangan: pemulihan tidak tersedia */
+  }
+}
+
+export function restoreCartBackup(): void {
+  try {
+    const raw = window.sessionStorage.getItem(BACKUP_KEY);
+    if (!raw) {
+      return;
+    }
+    window.sessionStorage.removeItem(BACKUP_KEY);
+    const items = sanitizeItems(JSON.parse(raw));
+    if (items) {
+      cart.setItems(items);
+    }
+  } catch {
+    /* abaikan */
+  }
+}

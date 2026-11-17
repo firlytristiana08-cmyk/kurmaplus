@@ -1,7 +1,14 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { formatDateId, formatRupiah, formatWeight } from '#lib/format';
-	import { cart } from '#lib/cart.svelte';
+	import {
+		backupCart,
+		cart,
+		clearDirectBuy,
+		readDirectBuy,
+		restoreCartBackup,
+		type CartItem
+	} from '#lib/cart.svelte';
 	import PageFooter from '#lib/components/PageFooter.svelte';
 	import PageHeader from '#lib/components/PageHeader.svelte';
 	import ProsesLoader from '#lib/components/ProsesLoader.svelte';
@@ -22,9 +29,19 @@
 	let loading = $state(false);
 	let pinSet = $state(false);
 	let mapMessage = $state('');
+	// Item checkout: daftar "beli langsung" bila ada, selain itu isi keranjang.
+	let directBuy = $state<CartItem[] | null>(null);
 
 	$effect(() => {
 		cart.hydrate();
+		directBuy = readDirectBuy();
+	});
+
+	$effect(() => {
+		// Pesanan ditolak server: kembalikan keranjang seperti sebelum dikirim.
+		if (form?.message) {
+			restoreCartBackup();
+		}
 	});
 
 	const rows = $derived.by(() => {
@@ -37,7 +54,7 @@
 			qty: number;
 			stock: number;
 		}[] = [];
-		for (const item of cart.items) {
+		for (const item of directBuy ?? cart.items) {
 			for (const product of data.products) {
 				const variant = product.variants.find((candidate) => candidate.id === item.variantId);
 				if (variant) {
@@ -65,6 +82,11 @@
 			mapMessage = 'Pasang titik tujuan di peta dulu — ketuk peta atau pakai tombol Lokasi saya.';
 			return;
 		}
+		// Pesanan akan dibuat: item yang dibeli keluar dari keranjang (cegah
+		// terbeli dua kali), dengan cadangan bila ternyata pesanan ditolak.
+		backupCart(cart.items);
+		cart.redeemPurchased(rows.map((row) => ({ variantId: row.variantId, qty: row.qty })));
+		clearDirectBuy();
 		// Formulir dikirim (navigasi penuh): tampilkan overlay proses pembayaran.
 		loading = true;
 	}
@@ -313,6 +335,11 @@
 
 			<section aria-labelledby="ringkasan-heading">
 				<h2 id="ringkasan-heading">Ringkasan</h2>
+				{#if directBuy}
+					<p class="mode-note">
+						Beli langsung — hanya item di bawah yang dibeli. Isi keranjang tidak ikut.
+					</p>
+				{/if}
 				<ul class="summary-list">
 					{#each rows as row (row.variantId)}
 						<li>
@@ -423,5 +450,10 @@
 		font-size: 1.125rem;
 		padding-top: 0.5rem;
 		border-top: 1px solid var(--sand);
+	}
+	.mode-note {
+		margin: 0 0 0.75rem;
+		font-size: 0.875rem;
+		color: color-mix(in srgb, var(--ink) 70%, var(--paper));
 	}
 </style>
