@@ -69,7 +69,7 @@
 						src={`/images/${row.photo}`}
 						alt=""
 						width="72"
-						height="54"
+						height="72"
 						loading="lazy"
 					/>
 					<div class="cart-info">
@@ -151,7 +151,7 @@
 
 	.thumb {
 		width: 72px;
-		height: 54px;
+		height: 72px;
 		object-fit: cover;
 		border-radius: var(--radius-s);
 	}
