@@ -17,6 +17,7 @@
 	let lightbox = $state<number | null>(null);
 	let lightboxEl = $state<HTMLElement | null>(null);
 	let lightboxIndex = $state(0);
+	let cartDialog = $state(false);
 
 	const product = $derived(data.product);
 	const selectedVariant = $derived(
@@ -32,10 +33,10 @@
 		qty = 1;
 	}
 
-	function addAndGoCart(): void {
+	function addToCart(): void {
 		if (!selectedVariant || selectedVariant.stock < 1) return;
 		cart.add(selectedVariant.id, qty);
-		goto('/keranjang');
+		cartDialog = true;
 	}
 
 	function buyNow(): void {
@@ -206,7 +207,7 @@
 			<button
 				type="button"
 				class="btn btn-secondary"
-				onclick={addAndGoCart}
+				onclick={addToCart}
 				disabled={selectedVariant.stock < 1}
 			>
 				<svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -260,6 +261,31 @@
 					onclick={() => goLightboxSlide(index)}
 				></button>
 			{/each}
+		</div>
+	</div>
+{/if}
+
+{#if cartDialog && selectedVariant}
+	<div
+		class="cart-dialog"
+		role="dialog"
+		aria-modal="true"
+		aria-labelledby="cart-dialog-title"
+		tabindex="-1"
+		onclick={() => (cartDialog = false)}
+		onkeydown={(event) => event.key === 'Escape' && (cartDialog = false)}
+	>
+		<div class="dialog-box" role="presentation" onclick={(event) => event.stopPropagation()}>
+			<h2 id="cart-dialog-title">Berhasil dimasukkan ke keranjang</h2>
+			<p class="dialog-item">
+				{product.name} · {formatWeight(selectedVariant.weightGrams)} × {qty}
+			</p>
+			<div class="dialog-actions">
+				<button type="button" class="btn btn-secondary" onclick={() => (cartDialog = false)}>
+					Lanjut belanja
+				</button>
+				<a class="btn" href="/keranjang">Lihat keranjang</a>
+			</div>
 		</div>
 	</div>
 {/if}
@@ -518,6 +544,51 @@
 
 	.lightbox .dot.is-active::before {
 		background: #fff;
+	}
+
+	/* Dialog berhasil masuk keranjang. */
+	.cart-dialog {
+		position: fixed;
+		inset: 0;
+		z-index: 90;
+		background: rgba(20, 16, 32, 0.55);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 1.25rem;
+	}
+
+	.dialog-box {
+		width: 100%;
+		max-width: 320px;
+		background: var(--card);
+		border-radius: var(--radius-m);
+		padding: 1.25rem;
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+	}
+
+	.dialog-box h2 {
+		margin: 0;
+		font-size: 1.0625rem;
+	}
+
+	.dialog-item {
+		margin: 0;
+		font-size: 0.9375rem;
+		color: color-mix(in srgb, var(--ink) 78%, var(--paper));
+	}
+
+	.dialog-actions {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 0.625rem;
+	}
+
+	.dialog-actions .btn {
+		justify-content: center;
+		text-align: center;
 	}
 
 	/* Tombol bawah: keranjang + beli langsung. */

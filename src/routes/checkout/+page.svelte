@@ -298,11 +298,10 @@
 					</label>
 				</div>
 				<div class="info-box">
-					Ongkir {courierValue} dibayar pemesan saat kurir datang, tidak termasuk total ini.
 					{#if data.shippingInfoText}
 						{data.shippingInfoText}
 					{:else}
-						Toko tidak menghitung tarif ongkir.
+						Ongkir mengikuti tarif kurir, dibayar langsung ke kurir — di luar total ini.
 					{/if}
 				</div>
 			</section>
@@ -335,11 +334,6 @@
 
 			<section aria-labelledby="ringkasan-heading">
 				<h2 id="ringkasan-heading">Ringkasan</h2>
-				{#if directBuy}
-					<p class="mode-note">
-						Beli langsung — hanya item di bawah yang dibeli. Isi keranjang tidak ikut.
-					</p>
-				{/if}
 				<ul class="summary-list">
 					{#each rows as row (row.variantId)}
 						<li>
@@ -352,10 +346,6 @@
 					<span>Total</span>
 					<strong class="tabular">{formatRupiah(subtotal)}</strong>
 				</div>
-				<p class="hint">
-					Kurir {courierValue}, dikirim {dateValue ? formatDateId(dateValue) : '(pilih tanggal)'}.
-					Ongkir dibayar pemesan di luar total ini.
-				</p>
 			</section>
 
 		</form>
@@ -450,10 +440,5 @@
 		font-size: 1.125rem;
 		padding-top: 0.5rem;
 		border-top: 1px solid var(--sand);
-	}
-	.mode-note {
-		margin: 0 0 0.75rem;
-		font-size: 0.875rem;
-		color: color-mix(in srgb, var(--ink) 70%, var(--paper));
 	}
 </style>
