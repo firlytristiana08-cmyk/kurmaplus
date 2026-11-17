@@ -1,9 +1,10 @@
-// Gerbang masuk Portal Admin (PRD: Supabase Auth — email, password, MFA TOTP).
+// Gerbang masuk Portal Admin (PRD: Supabase Auth — email + password).
 // Aturan:
 // - Pratinjau/pengembangan: sesi demo khusus dev (tidak pernah aktif di produksi
 //   karena bergantung pada import.meta.env.DEV yang selalu false di build produksi).
 // - Produksi: GAGAL-TERTUTUP — hanya sesi Supabase yang terverifikasi server-side,
-//   dengan MFA (aal2) dan email terdaftar di tabel admin_users.
+//   dengan email terdaftar di tabel admin_users.
+// - MFA/authenticator TIDAK dipakai (permintaan pemilik 17 Nov 2026).
 
 import type { Cookies } from "@sveltejs/kit";
 import { redirect } from "@sveltejs/kit";
@@ -39,7 +40,7 @@ export function supabaseEnv(): SupabaseEnv | null {
   return { url, anonKey };
 }
 
-// Isi JWT (klaim aal) dibaca setelah tanda tangannya diverifikasi oleh GoTrue
+// Isi JWT (klaim email) dibaca setelah tanda tangannya diverifikasi oleh GoTrue
 // lewat auth.getUser — token palsu tidak akan lolos verifikasi.
 function jwtClaims(token: string): { aal?: string; email?: string } | null {
   const parts = token.split(".");
@@ -67,8 +68,6 @@ async function verifySupabaseToken(token: string): Promise<AdminSession | null> 
     const client = createClient(env.url, env.anonKey, { auth: { persistSession: false } });
     const { data, error } = await client.auth.getUser(token);
     if (error || !data.user?.email) return null;
-    const claims = jwtClaims(token);
-    if (claims?.aal !== "aal2") return null; // MFA wajib (PRD: sesi aal2).
     if (!(await isRegisteredAdmin(data.user.email))) return null;
     return { email: data.user.email, label: "Pemilik", mode: "supabase" };
   } catch {
@@ -108,16 +107,9 @@ export async function requireAdmin(cookies: Cookies): Promise<AdminSession> {
 export interface SignInResult {
   ok: boolean;
   error?: string;
-  needsMfa?: boolean;
-  needsEnroll?: boolean;
-  email?: string;
-  qrSvg?: string;
-  secret?: string;
 }
 
-// Masuk produksi langkah 1: email + password. Hasil: sesi langsung (bila MFA
-// sudah terlewati), tantangan MFA (needsMfa), atau aktivasi MFA pertama kali
-// (needsEnroll) untuk akun yang belum punya faktor authenticator.
+// Masuk produksi: email + password (Supabase Auth), tanpa MFA.
 export async function adminSignIn(
   email: string,
   password: string,
@@ -143,116 +135,18 @@ export async function adminSignIn(
       return { ok: false, error: "Email atau password salah." };
     }
     const claims = jwtClaims(data.session.access_token);
-    if (claims?.aal === "aal2") {
-      return finishLogin(data.session.access_token, email, cookies);
+    const emailClaim = claims?.email ?? email;
+    if (!(await isRegisteredAdmin(emailClaim))) {
+      return { ok: false, error: "Email ini tidak terdaftar sebagai admin." };
     }
-    // Sesi aal1 disimpan sementara (5–10 menit) untuk langkah verifikasi MFA.
-    const tokens = `${data.session.access_token}:${data.session.refresh_token}`;
-    const { data: factors } = await client.auth.mfa.listFactors();
-    const totp = factors?.totp?.[0];
-    if (!totp) {
-      // Aktivasi MFA pertama kali: daftarkan faktor TOTP untuk akun ini.
-      const { data: enrolled, error: enrollError } = await client.auth.mfa.enroll({
-        factorType: "totp",
-        friendlyName: "Authenticator",
-      });
-      if (enrollError || !enrolled || !("totp" in enrolled) || !enrolled.totp) {
-        return { ok: false, error: "Gagal menyiapkan aktivasi authenticator." };
-      }
-      cookies.set(ADMIN_COOKIE, `aktivasi:${enrolled.id}:${tokens}`, {
-        path: "/",
-        httpOnly: true,
-        sameSite: "lax",
-        maxAge: 600,
-      });
-      return {
-        ok: true,
-        needsEnroll: true,
-        email,
-        qrSvg: enrolled.totp.qr_code ?? "",
-        secret: enrolled.totp.secret ?? "",
-      };
-    }
-    cookies.set(ADMIN_COOKIE, `mfa:${totp.id}:${tokens}`, {
+    cookies.set(ADMIN_COOKIE, data.session.access_token, {
       path: "/",
       httpOnly: true,
       sameSite: "lax",
-      maxAge: 300,
+      maxAge: 60 * 60 * 8,
     });
-    return { ok: true, needsMfa: true, email };
+    return { ok: true };
   } catch {
     return { ok: false, error: "Login gagal — periksa koneksi dan konfigurasi Supabase Auth." };
   }
-}
-
-// Langkah 2: verifikasi kode authenticator — berlaku untuk faktor yang sudah
-// terdaftar (mfa:) maupun aktivasi pertama (aktivasi:).
-export async function adminVerifyMfa(code: string, cookies: Cookies): Promise<SignInResult> {
-  const env = supabaseEnv();
-  if (!env) {
-    return { ok: false, error: "Supabase Auth belum dikonfigurasi di server." };
-  }
-  const raw = cookies.get(ADMIN_COOKIE) ?? "";
-  const parts = raw.split(":");
-  const factorId = parts[1] ?? "";
-  const accessToken = parts[2] ?? "";
-  const refreshToken = parts[3] ?? "";
-  if (!raw.startsWith("mfa:") && !raw.startsWith("aktivasi:")) {
-    return { ok: false, error: "Sesi MFA kedaluwarsa — masuk ulang." };
-  }
-  if (!factorId || !accessToken || !refreshToken) {
-    return { ok: false, error: "Sesi MFA kedaluwarsa — masuk ulang." };
-  }
-  try {
-    const { createClient } = await import("@supabase/supabase-js");
-    const client = createClient(env.url, env.anonKey, { auth: { persistSession: false } });
-    // Pasang sesi singkat dari langkah 1 supaya verifikasi terotentikasi.
-    const { error: sessionError } = await client.auth.setSession({
-      access_token: accessToken,
-      refresh_token: refreshToken,
-    });
-    if (sessionError) {
-      return { ok: false, error: "Sesi MFA kedaluwarsa — masuk ulang." };
-    }
-    const { data: challenge, error: challengeError } = await client.auth.mfa.challenge({
-      factorId,
-    });
-    if (challengeError || !challenge) {
-      return { ok: false, error: "Gagal membuat tantangan MFA." };
-    }
-    const { data: verified, error: verifyError } = await client.auth.mfa.verify({
-      factorId,
-      challengeId: challenge.id,
-      code,
-    });
-    if (verifyError || !verified?.access_token) {
-      return { ok: false, error: "Kode authenticator salah." };
-    }
-    return finishLogin(verified.access_token, "", cookies);
-  } catch {
-    return { ok: false, error: "Verifikasi MFA gagal — periksa koneksi." };
-  }
-}
-
-// Penutup bersama: wajib aal2 + email terdaftar di admin_users → sesi 8 jam.
-async function finishLogin(
-  accessToken: string,
-  fallbackEmail: string,
-  cookies: Cookies,
-): Promise<SignInResult> {
-  const claims = jwtClaims(accessToken);
-  const emailClaim = claims?.email ?? fallbackEmail;
-  if (claims?.aal !== "aal2") {
-    return { ok: false, error: "Sesi belum melewati MFA (wajib aal2)." };
-  }
-  if (!(await isRegisteredAdmin(emailClaim))) {
-    return { ok: false, error: "Email ini tidak terdaftar sebagai admin." };
-  }
-  cookies.set(ADMIN_COOKIE, accessToken, {
-    path: "/",
-    httpOnly: true,
-    sameSite: "lax",
-    maxAge: 60 * 60 * 8,
-  });
-  return { ok: true };
 }

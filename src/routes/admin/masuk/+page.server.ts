@@ -1,11 +1,10 @@
 // Halaman masuk admin. Pratinjau/dev: tombol sesi demo. Produksi: Supabase
-// Auth (email + password + kode authenticator), gagal-tertutup bila belum
-// dikonfigurasi. Lihat src/lib/server/admin-auth.ts.
+// Auth (email + password), gagal-tertutup bila belum dikonfigurasi.
+// Lihat src/lib/server/admin-auth.ts.
 
 import { fail, redirect } from "@sveltejs/kit";
 import {
   adminSignIn,
-  adminVerifyMfa,
   clearAdminSession,
   readAdminSession,
   setDevSession,
@@ -27,26 +26,11 @@ export const actions: Actions = {
     const form = await request.formData();
     const email = String(form.get("email") ?? "").trim();
     const password = String(form.get("password") ?? "");
-    const totpRaw = String(form.get("totp") ?? "").trim();
-    if (totpRaw !== "") {
-      // Langkah 2: verifikasi kode authenticator (mfa: / aktivasi: di cookie).
-      const result = await adminVerifyMfa(totpRaw, cookies);
-      if (!result.ok) return fail(400, { message: result.error ?? "Gagal verifikasi." });
-      redirect(303, "/admin");
-    }
     if (email === "" || password === "") {
       return fail(400, { message: "Email dan password wajib diisi." });
     }
     const result = await adminSignIn(email, password, cookies);
     if (!result.ok) return fail(400, { message: result.error ?? "Gagal masuk." });
-    if (result.needsMfa) return { needsMfa: true, email };
-    if (result.needsEnroll) {
-      return {
-        needsEnroll: true,
-        qrSvg: result.qrSvg ?? "",
-        secret: result.secret ?? "",
-      };
-    }
     redirect(303, "/admin");
   },
   keluar: async ({ cookies }) => {
