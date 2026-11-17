@@ -103,5 +103,42 @@ export const load: PageServerLoad = async () => {
     detail: "Penerima notifikasi siap di /api/webhook/doku (verifikasi tanda tangan aktif).",
   });
 
+  // 5) Login admin (Supabase Auth) — kunci publishable + email terdaftar.
+  try {
+    const { supabaseEnv } = await import("#lib/server/admin-auth");
+    if (supabaseEnv() === null) {
+      checks.push({
+        name: "Login admin (Supabase Auth)",
+        ok: false,
+        detail: "SUPABASE_PUBLISHABLE_KEY (atau SUPABASE_ANON_KEY) belum terisi di lingkungan ini.",
+        action:
+          "Tambahkan kunci publishable Supabase di Vercel → Environment Variables, lalu Redeploy.",
+      });
+    } else {
+      const db = await getDb();
+      const row = await db.get<{ n: number }>("SELECT COUNT(*) AS n FROM admin_users", []);
+      const count = row?.n ?? 0;
+      checks.push({
+        name: "Login admin (Supabase Auth)",
+        ok: count > 0,
+        detail:
+          count > 0
+            ? `Konfigurasi lengkap — ${count} email terdaftar di admin_users.`
+            : "Konfigurasi lengkap, tetapi belum ada email di tabel admin_users.",
+        action:
+          count > 0
+            ? undefined
+            : "Buat akun di Supabase Authentication lalu daftarkan emailnya ke tabel admin_users (lihat panduan login admin).",
+      });
+    }
+  } catch (err) {
+    checks.push({
+      name: "Login admin (Supabase Auth)",
+      ok: false,
+      detail: `Gagal: ${err instanceof Error ? err.message : String(err)}`,
+      action: "Hubungi pengembang.",
+    });
+  }
+
   return { checks, needsAction: checks.some((c) => !c.ok) };
 };
