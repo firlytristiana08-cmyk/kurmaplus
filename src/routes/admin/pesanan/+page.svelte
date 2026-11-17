@@ -44,7 +44,7 @@
 			<label for="q">Cari kode, nama, atau nomor WhatsApp</label>
 			<input id="q" name="q" type="text" value={filter.q ?? ''} placeholder="mis. DEMO4455 atau Budi" />
 		</div>
-		<div class="chip-row">
+		<div class="chip-scroll">
 			<a class="chip" class:is-active={!filter.status} href={pageUrl({ status: null })}>Semua</a>
 			{#each statuses as status (status)}
 				<a class="chip" class:is-active={filter.status === status} href={pageUrl({ status, hal: null })}>
@@ -52,7 +52,7 @@
 				</a>
 			{/each}
 		</div>
-		<div class="chip-row">
+		<div class="chip-scroll">
 			<a class="chip" class:is-active={!filter.shippingStatus} href={pageUrl({ ongkir: null })}>Ongkir: semua</a>
 			<a class="chip" class:is-active={filter.shippingStatus === 'not_booked'} href={pageUrl({ ongkir: 'not_booked', hal: null })}>Belum dipesan</a>
 			<a class="chip" class:is-active={filter.shippingStatus === 'booked'} href={pageUrl({ ongkir: 'booked', hal: null })}>Kurir dipesan</a>
