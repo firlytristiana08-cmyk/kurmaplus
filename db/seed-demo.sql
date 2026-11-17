@@ -53,3 +53,6 @@ INSERT INTO payments (id, order_id, invoice_number, checkout_url, status, create
   (5, 5, 'DEMO3344', NULL, 'success', '2026-11-13T09:00:00.000Z'),
   (6, 6, 'DEMO7788', NULL, 'pending', '2026-11-14T08:00:00.000Z'),
   (7, 7, 'DEMO5599', NULL, 'success', '2026-11-15T15:00:00.000Z');
+
+-- Tanda Best seller demo (tugas 90): diatur admin, bukan hitungan otomatis.
+UPDATE products SET is_best_seller = 1 WHERE id = 1;

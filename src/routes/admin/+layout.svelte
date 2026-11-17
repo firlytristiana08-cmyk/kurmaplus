@@ -58,6 +58,12 @@
 	});
 
 	const path = $derived(page.url.pathname);
+	// Halaman data-padat (tabel/laporan) boleh lebih lebar di layar besar (opsi C).
+	const isWide = $derived(
+		path.startsWith('/admin/transaksi') ||
+			path.startsWith('/admin/log') ||
+			path.startsWith('/admin/laporan')
+	);
 	const tabs = [
 		{ href: '/admin', label: 'Hari ini', exact: true },
 		{ href: '/admin/pesanan', label: 'Pesanan', exact: false },
@@ -86,6 +92,18 @@
 	<meta name="theme-color" content="#f4ede0" />
 </svelte:head>
 
+<div class="admin-scope" class:is-wide={isWide}>
+{#if !path.startsWith('/admin/masuk')}
+	<header class="admin-top no-print">
+		<div class="admin-top-inner">
+			<p class="top-mark">KURMAPLUS <span>Admin</span></p>
+			{#if page.data.session?.email}
+				<p class="top-user">{page.data.session.email}</p>
+			{/if}
+		</div>
+	</header>
+{/if}
+
 {@render children()}
 
 <nav class="tabbar no-print" aria-label="Navigasi admin">
@@ -106,3 +124,4 @@
 		</a>
 	{/each}
 </nav>
+</div>

@@ -19,26 +19,27 @@
 	<section class="surface">
 		<h2>Data yang kami ambil</h2>
 		<p>
-			Nama, nomor WhatsApp, alamat, catatan patokan, dan titik koordinat tujuan hanya dipakai untuk
-			mengirim pesanan Anda. Data ini disimpan bersama rincian pesanan.
+			Nama, nomor WhatsApp, alamat, catatan patokan, dan titik koordinat tujuan dipakai untuk
+			mengirim pesanan Anda dan disimpan bersama rincian pesanan. Keranjang belanja hanya
+			tersimpan di perangkat Anda, bukan di server kami.
 		</p>
 	</section>
 
 	<section class="surface">
 		<h2>Cara kami memakainya</h2>
 		<p>
-			Data pengiriman dibagikan kepada kurir (Grab atau Gojek) yang Anda pilih dan kepada penyedia
-			pembayaran DOKU sebatas yang dibutuhkan untuk memproses pembayaran. Kami tidak menjual data
-			pribadi Anda.
+			Data pengiriman dibagikan kepada kurir (Grab atau Gojek) yang Anda pilih, dan data
+			pembayaran diproses penyedia pembayaran DOKU. Kami memakai nomor WhatsApp Anda untuk
+			konfirmasi pengiriman dan membantu melacak pesanan. Kami tidak menjual data pribadi Anda.
 		</p>
 	</section>
 
 	<section class="surface">
-		<h2>Keamanan dan masa simpan</h2>
+		<h2>Akses ke pesanan Anda</h2>
 		<p>
-			Halaman lacak hanya menemukan pesanan Anda dengan kode pesanan dan 4 digit terakhir nomor
-			WhatsApp. Halaman status tidak pernah menampilkan alamat lengkap. Data pesanan lama akan
-			dianonimkan setelah masa simpan yang ditentukan pemilik toko.
+			Lacak pesanan hanya menemukan pesanan dengan kode pesanan dan 4 digit terakhir nomor
+			WhatsApp. Halaman pesanan memuat rincian pengiriman lengkap, jadi jangan bagikan tautan
+			pesanan Anda ke sembarang orang.
 		</p>
 	</section>
 

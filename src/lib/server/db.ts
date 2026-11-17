@@ -392,6 +392,9 @@ export interface ProductView {
   name: string;
   description: string;
   photo: string | null;
+  photo2: string | null;
+  photo3: string | null;
+  isBestSeller: boolean;
   variants: VariantView[];
   minPriceIdr: number;
   allOutOfStock: boolean;
@@ -408,7 +411,7 @@ interface VariantRow {
 
 async function variantsOf(db: Db, productId: number): Promise<VariantView[]> {
   const rows = await db.all<VariantRow>(
-    "SELECT id, product_id, label, weight_grams, price_idr, stock FROM variants WHERE product_id = ? AND is_active = TRUE ORDER BY weight_grams",
+    "SELECT id, product_id, label, weight_grams, price_idr, stock FROM variants WHERE product_id = ? AND is_active = 1 ORDER BY weight_grams",
     [productId],
   );
   return rows.map((row) => ({
@@ -426,6 +429,9 @@ interface ProductRow {
   name: string;
   description: string;
   photo: string | null;
+  photo_2: string | null;
+  photo_3: string | null;
+  is_best_seller: number;
 }
 
 async function toProductView(db: Db, row: ProductRow): Promise<ProductView> {
@@ -437,6 +443,9 @@ async function toProductView(db: Db, row: ProductRow): Promise<ProductView> {
     name: row.name,
     description: row.description,
     photo: row.photo,
+    photo2: row.photo_2,
+    photo3: row.photo_3,
+    isBestSeller: row.is_best_seller === 1,
     variants,
     minPriceIdr: prices.length > 0 ? Math.min(...prices) : 0,
     allOutOfStock: variants.every((variant) => variant.stock <= 0),
@@ -446,7 +455,7 @@ async function toProductView(db: Db, row: ProductRow): Promise<ProductView> {
 export async function listProducts(): Promise<ProductView[]> {
   const db = await getDb();
   const rows = await db.all<ProductRow>(
-    "SELECT id, slug, name, description, photo FROM products WHERE is_active = TRUE ORDER BY sort_order",
+    "SELECT id, slug, name, description, photo, photo_2, photo_3, is_best_seller FROM products WHERE is_active = 1 ORDER BY sort_order",
   );
   const products: ProductView[] = [];
   for (const row of rows) {
@@ -455,10 +464,21 @@ export async function listProducts(): Promise<ProductView[]> {
   return products;
 }
 
+// Jumlah terjual per produk (pesanan berstatus lunas s/d selesai) — untuk
+// label "Best seller" dan angka "Terjual" di katalog.
+export async function productSoldCounts(): Promise<Map<number, number>> {
+  const db = await getDb();
+  const rows = await db.all<{ product_id: number; sold: number | string }>(
+    `SELECT v.product_id AS product_id, SUM(oi.qty) AS sold FROM order_items oi JOIN variants v ON v.id = oi.variant_id JOIN orders o ON o.id = oi.order_id WHERE o.status IN ('paid', 'packed', 'shipped', 'done') GROUP BY v.product_id`,
+    [],
+  );
+  return new Map(rows.map((row) => [row.product_id, Number(row.sold)]));
+}
+
 export async function getProductBySlug(slug: string): Promise<ProductView | null> {
   const db = await getDb();
   const row = await db.get<ProductRow>(
-    "SELECT id, slug, name, description, photo FROM products WHERE slug = ? AND is_active = TRUE",
+    "SELECT id, slug, name, description, photo, photo_2, photo_3, is_best_seller FROM products WHERE slug = ? AND is_active = 1",
     [slug],
   );
   return row ? toProductView(db, row) : null;
@@ -528,7 +548,7 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
           price_idr: number;
           product_name: string;
         }>(
-          "SELECT v.id, v.label, v.stock, v.price_idr, p.name AS product_name FROM variants v JOIN products p ON p.id = v.product_id WHERE v.id = ? AND v.is_active = TRUE",
+          "SELECT v.id, v.label, v.stock, v.price_idr, p.name AS product_name FROM variants v JOIN products p ON p.id = v.product_id WHERE v.id = ? AND v.is_active = 1",
           [item.variantId],
         );
         if (!variant || variant.stock < item.qty) {

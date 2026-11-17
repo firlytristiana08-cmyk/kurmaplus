@@ -132,12 +132,6 @@ describe("admin: stok, ongkir, tanggal, pengaturan", () => {
     await db.getDb();
   });
 
-  // Penghapusan direktori tes hanya sekali di akhir berkas — menghapus di
-  // tengah membuat koneksi SQLite tersisa menjadi read-only.
-  afterAll(() => {
-    rmSync(tempDir, { recursive: true, force: true });
-  });
-
   it("penyesuaian stok bercatatan dan tidak pernah negatif (BA-08)", async () => {
     const noReason = await admin.adminAdjustStock(2, 5, "  ", "tes");
     expect(noReason.ok).toBe(false);
@@ -224,5 +218,111 @@ describe("admin: stok, ongkir, tanggal, pengaturan", () => {
     const report = await admin.adminReport("2026-11-01", "2026-11-30");
     expect(report.orderCount).toBeGreaterThan(0);
     expect(report.omzetIdr).toBeGreaterThan(0);
+  });
+});
+
+describe("admin: manajemen detail produk & varian (tugas 90)", () => {
+  beforeAll(async () => {
+    await db.getDb();
+  });
+
+  // Penghapusan direktori tes hanya sekali di akhir berkas — menghapus di
+  // tengah membuat koneksi SQLite tersisa menjadi read-only.
+  afterAll(() => {
+    rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  it("detail produk keseluruhan bisa diubah dan tercatat di audit", async () => {
+    const ok = await admin.adminUpdateProduct(
+      1,
+      {
+        name: "Kurma Sukari Premium",
+        description: "Deskripsi baru hasil suntingan admin.",
+        photo: "sukari-new.webp",
+        photo2: "sukari-new-2.webp",
+        photo3: null,
+        sortOrder: 7,
+        isBestSeller: true,
+      },
+      "tes",
+      now,
+    );
+    expect(ok.ok).toBe(true);
+    const dbi = await db.getDb();
+    const row = await dbi.get<{
+      name: string;
+      description: string;
+      photo: string | null;
+      photo_2: string | null;
+      photo_3: string | null;
+      sort_order: number;
+      is_best_seller: number;
+    }>(
+      "SELECT name, description, photo, photo_2, photo_3, sort_order, is_best_seller FROM products WHERE id = 1",
+      [],
+    );
+    expect(row?.name).toBe("Kurma Sukari Premium");
+    expect(row?.photo).toBe("sukari-new.webp");
+    expect(row?.photo_2).toBe("sukari-new-2.webp");
+    expect(row?.photo_3).toBeNull();
+    expect(row?.sort_order).toBe(7);
+    expect(row?.is_best_seller).toBe(1);
+    const invalid = await admin.adminUpdateProduct(1, { name: "  " }, "tes", now);
+    expect(invalid.ok).toBe(false);
+  });
+
+  it("nama dan berat varian bisa diubah", async () => {
+    const ok = await admin.adminUpdateVariant(
+      1,
+      { label: "500 gram", weightGrams: 550 },
+      "tes",
+      now,
+    );
+    expect(ok.ok).toBe(true);
+    const dbi = await db.getDb();
+    const row = await dbi.get<{ label: string; weight_grams: number }>(
+      "SELECT label, weight_grams FROM variants WHERE id = 1",
+      [],
+    );
+    expect(row?.label).toBe("500 gram");
+    expect(row?.weight_grams).toBe(550);
+    const bad = await admin.adminUpdateVariant(1, { weightGrams: 0 }, "tes", now);
+    expect(bad.ok).toBe(false);
+  });
+
+  it("varian baru bisa ditambah; hapus terlindungi bila ada riwayat", async () => {
+    const created = await admin.adminCreateVariant(
+      2,
+      { label: "2 kg", weightGrams: 2000, priceIdr: 500000, stock: 3 },
+      "tes",
+      now,
+    );
+    expect(created.ok).toBe(true);
+    const dbi = await db.getDb();
+    const row = await dbi.get<{ id: number; stock: number }>(
+      "SELECT id, stock FROM variants WHERE product_id = 2 AND label = '2 kg'",
+      [],
+    );
+    expect(row?.stock).toBe(3);
+    // Varian yang sudah punya riwayat pesanan tidak boleh dihapus.
+    const blockedOrder = await admin.adminDeleteVariant(1, "tes", now);
+    expect(blockedOrder.ok).toBe(false);
+    // Varian baru dengan stok awal punya riwayat pergerakan — juga dilindungi.
+    const blockedMove = await admin.adminDeleteVariant(row?.id ?? -1, "tes", now);
+    expect(blockedMove.ok).toBe(false);
+    // Varian tanpa riwayat apa pun boleh dihapus bersih.
+    const clean = await admin.adminCreateVariant(
+      2,
+      { label: "Uji bersih", weightGrams: 1, priceIdr: 1000, stock: 0 },
+      "tes",
+      now,
+    );
+    expect(clean.ok).toBe(true);
+    const cleanRow = await dbi.get<{ id: number }>(
+      "SELECT id FROM variants WHERE product_id = 2 AND label = 'Uji bersih'",
+      [],
+    );
+    const deleted = await admin.adminDeleteVariant(cleanRow?.id ?? -1, "tes", now);
+    expect(deleted.ok).toBe(true);
   });
 });

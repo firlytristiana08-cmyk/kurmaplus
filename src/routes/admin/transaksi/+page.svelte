@@ -1,4 +1,5 @@
 <script lang="ts">
+	import BackLink from '#lib/components/BackLink.svelte';
 	// Log transaksi pembayaran (DOKU) per pesanan — hanya bisa dibaca.
 	import { formatDateTimeId, formatRupiah } from '#lib/format';
 	import { STATUS_LABEL_ID, type OrderStatus } from '#lib/order-status';
@@ -31,9 +32,10 @@
 	<title>Log transaksi · KURMAPLUS Admin</title>
 </svelte:head>
 
+<BackLink href="/admin/lainnya" />
+
 <main class="wrap">
 	<header class="admin-head">
-		<p class="wordmark">KURMAPLUS <span class="plus">Admin</span></p>
 		<h1>Log transaksi</h1>
 		<p class="muted page-sub">
 			Riwayat pembayaran DOKU per pesanan. Hanya-baca — tidak bisa diubah atau dihapus.

@@ -31,6 +31,7 @@ export interface CheckoutData {
   previewPayment: boolean;
   storeOpen: boolean;
   shippingInfoText: string;
+  directMode: boolean;
 }
 
 function closedDatesOf(settings: Record<string, string>): string[] {
@@ -42,7 +43,7 @@ function closedDatesOf(settings: Record<string, string>): string[] {
   }
 }
 
-export const load = async (): Promise<CheckoutData> => {
+export const load = async ({ url }): Promise<CheckoutData> => {
   const settings = await getSettings();
   const closedDates = closedDatesOf(settings);
   const deliveryDates = upcomingDeliveryDates(new Date(), {
@@ -59,6 +60,7 @@ export const load = async (): Promise<CheckoutData> => {
     previewPayment: loadDokuConfig(process.env) === null,
     storeOpen: settings.store_open !== "0",
     shippingInfoText: settings.shipping_info_text ?? "",
+    directMode: url.searchParams.has("beli"),
   };
 };
 

@@ -1,10 +1,35 @@
 <script lang="ts">
-	import { formatDateId, formatRupiah, formatWeight } from '#lib/format';
+	import { formatRupiah } from '#lib/format';
 	import PageFooter from '#lib/components/PageFooter.svelte';
 	import PageHeader from '#lib/components/PageHeader.svelte';
 	import type { KatalogData } from './+page.server';
 
 	let { data }: { data: KatalogData } = $props();
+
+	const BULAN_PENDEK = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+
+	// "Sabtu & Minggu, 21–22 Nov" — versi pendek tanggal kirim terdekat.
+	function ringkasTanggal(options: { date: string; weekdayName: string }[]): string {
+		if (options.length === 0) return '—';
+		const parsed = options.map((option) => {
+			const d = new Date(`${option.date}T00:00:00`);
+			return {
+				day: d.getDate(),
+				month: d.getMonth(),
+				year: d.getFullYear(),
+				weekday: option.weekdayName
+			};
+		});
+		const weekdays = parsed.map((d) => d.weekday).join(' & ');
+		const sameMonth = parsed.every((d) => d.month === parsed[0].month && d.year === parsed[0].year);
+		if (sameMonth) {
+			const nums = parsed.map((d) => d.day);
+			const berurutan = parsed.length === 2 && nums[1] === nums[0] + 1;
+			const angka = berurutan ? `${nums[0]}–${nums[1]}` : nums.join(' & ');
+			return `${weekdays}, ${angka} ${BULAN_PENDEK[parsed[0].month]}`;
+		}
+		return parsed.map((d) => `${d.weekday} ${d.day} ${BULAN_PENDEK[d.month]}`).join(' & ');
+	}
 </script>
 
 <svelte:head>
@@ -16,50 +41,55 @@
 
 <main class="wrap">
 	<section class="intro">
-		<h1>Kurma pilihan, dikirim akhir pekan</h1>
-		<p class="muted">
-			Sukari, ajwa, dan tunisia — dijual per ukuran dengan harga yang sama untuk semua pembeli.
-		</p>
+		<h1>Kurma enak untuk tiap hari — dikirim tiap akhir pekan.</h1>
 		<div class="info-box">
 			<strong>Pengiriman terdekat:</strong>
-			{#each data.deliveryDates as option, index (option.date)}
-				{index > 0 ? ' dan ' : ' '}
-				{option.weekdayName}, {formatDateId(option.date)}
-			{#if option.isFull}<span class="badge badge-off">Penuh</span>{/if}
-			{/each}
+			{ringkasTanggal(data.deliveryDates)}
+			{#if data.deliveryDates.some((option) => option.isFull)}
+				<span class="badge badge-off">Sebagian penuh</span>
+			{/if}
 			<br />
-			Kurir Grab atau Gojek, ongkir dibayar pemesan di luar total pesanan.
+			Ongkir Grab/Gojek — dibayar langsung ke kurir.
 		</div>
 	</section>
 
 	<ul class="product-list">
 		{#each data.products as product (product.id)}
 			<li>
-				<article class="product-card">
-					<a class="product-photo" href={`/kurma/${product.slug}`}>
-						<img
-							src={`/images/${product.photo}`}
-							alt={`Foto ${product.name}`}
-							width="430"
-							height="300"
-							loading="lazy"
-						/>
-					</a>
+				<a class="product-card" href={`/kurma/${product.slug}`}>
+					<div class="product-photo">
+						{#if product.photo}
+							<img
+								src={`/images/${product.photo}`}
+								alt={`Foto ${product.name}`}
+								width="430"
+								height="430"
+								loading="lazy"
+							/>
+						{:else}
+							<div class="photo-placeholder" role="img" aria-label="Foto belum tersedia">
+								<svg viewBox="0 0 24 24" width="40" height="40" fill="currentColor" aria-hidden="true">
+									<path d="M7.3 8.7v-.4a4.7 4.7 0 0 1 9.4 0v.4h-2.3v-.4a2.4 2.4 0 0 0-4.8 0v.4H7.3Z" />
+									<rect x="4.5" y="8" width="15" height="13.7" rx="2.7" />
+								</svg>
+							</div>
+						{/if}
+						{#if product.bestSeller}
+							<span class="best-badge">Best seller</span>
+						{/if}
+					</div>
 					<div class="product-body">
-						<h2><a href={`/kurma/${product.slug}`}>{product.name}</a></h2>
+						<h2>{product.name}</h2>
 						{#if product.allOutOfStock}
 							<p class="badge badge-off">Habis</p>
 						{:else}
-							<p class="price tabular">
-								Mulai {formatRupiah(product.minPriceIdr)}
-								<span class="muted">
-									· {product.variants.map((variant) => formatWeight(variant.weightGrams)).join(' / ')}
-								</span>
-							</p>
+							<p class="price tabular">Mulai {formatRupiah(product.minPriceIdr)}</p>
 						{/if}
-						<a class="btn" href={`/kurma/${product.slug}`}>Lihat ukuran</a>
+						{#if product.sold > 0}
+							<p class="sold">Terjual {product.sold}</p>
+						{/if}
 					</div>
-				</article>
+				</a>
 			</li>
 		{/each}
 	</ul>
@@ -81,38 +111,89 @@
 		margin: 1.25rem 0 0;
 		padding: 0;
 		display: grid;
-		gap: 1.5rem;
+		grid-template-columns: 1fr 1fr;
+		gap: 0.75rem;
 	}
 
 	.product-card {
+		display: block;
+		height: 100%;
 		background: var(--card);
 		border: 1px solid var(--sand);
 		border-radius: var(--radius-l);
 		overflow: hidden;
-	}
-
-	.product-photo img {
-		width: 100%;
-		aspect-ratio: 43 / 30;
-		object-fit: cover;
-	}
-
-	.product-body {
-		padding: 1rem 1.125rem 1.125rem;
-	}
-
-	.product-body h2 {
-		margin-bottom: 0.25rem;
-	}
-
-	.product-body h2 a {
 		color: var(--ink);
 		text-decoration: none;
 	}
 
+	.product-card:hover {
+		border-color: var(--rust);
+	}
+
+	.product-card:focus-visible {
+		outline: 2px solid var(--rust);
+		outline-offset: 2px;
+	}
+
+	.product-photo {
+		position: relative;
+	}
+
+	.photo-placeholder {
+		width: 100%;
+		aspect-ratio: 1 / 1;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: color-mix(in srgb, var(--sand) 55%, var(--card));
+		border-radius: var(--radius-m);
+		color: color-mix(in srgb, var(--ink) 35%, var(--paper));
+	}
+
+	.product-photo img {
+		width: 100%;
+		height: auto;
+		aspect-ratio: 1 / 1;
+		object-fit: cover;
+		display: block;
+	}
+
+	.best-badge {
+		position: absolute;
+		top: 0.5rem;
+		left: 0.5rem;
+		background: var(--rust);
+		color: #fff;
+		font-size: 0.75rem;
+		font-weight: 700;
+		padding: 0.1875rem 0.5rem;
+		border-radius: 999px;
+	}
+
+	.product-body {
+		padding: 0.625rem 0.75rem 0.875rem;
+	}
+
+	.product-body h2 {
+		font-size: 1rem;
+		margin: 0 0 0.125rem;
+	}
+
 	.price {
-		margin: 0 0 0.875rem;
+		margin: 0;
+		font-size: 0.9375rem;
 		font-weight: 700;
 		color: var(--rust);
+	}
+
+	.sold {
+		margin: 0.25rem 0 0;
+		font-size: 0.8125rem;
+		color: color-mix(in srgb, var(--ink) 62%, var(--card));
+	}
+
+	.product-body .badge {
+		display: inline-block;
+		margin: 0;
 	}
 </style>

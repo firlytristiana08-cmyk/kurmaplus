@@ -57,7 +57,7 @@ CREATE INDEX IF NOT EXISTS idx_audit_created ON audit_log(created_at);
 INSERT INTO settings (key, value) VALUES ('store_open', '1') ON CONFLICT (key) DO NOTHING;
 INSERT INTO settings (key, value) VALUES ('closed_dates', '[]') ON CONFLICT (key) DO NOTHING;
 INSERT INTO settings (key, value) VALUES ('shop_whatsapp', '6281234567890') ON CONFLICT (key) DO NOTHING;
-INSERT INTO settings (key, value) VALUES ('shipping_info_text', 'Ongkir mengikuti tarif aplikasi kurir (Grab/Gojek) dan dibayar langsung ke kurir saat paket dikirim.') ON CONFLICT (key) DO NOTHING;
+INSERT INTO settings (key, value) VALUES ('shipping_info_text', 'Ongkir mengikuti tarif Grab/Gojek — dibayar langsung ke kurir saat paket dikirim, di luar total ini.') ON CONFLICT (key) DO NOTHING;
 INSERT INTO settings (key, value) VALUES ('low_stock_threshold', '10') ON CONFLICT (key) DO NOTHING;
 INSERT INTO settings (key, value) VALUES ('wa_templates', '{"konfirmasi":"Halo {nama}, pesanan {kode} Anda sudah kami terima. Kami siapkan untuk dikirim {tanggal}.","tagih_ongkir":"Halo {nama}, ongkir pesanan {kode} sebesar {nominal}. Mohon dibayar ke kurir saat paket diterima, ya.","pindah_tanggal":"Halo {nama}, pesanan {kode} kami pindah ke tanggal {tanggal}. Mohon kabari bila tidak cocok."}') ON CONFLICT (key) DO NOTHING;
 INSERT INTO settings (key, value) VALUES ('notify_chat_id', '') ON CONFLICT (key) DO NOTHING;

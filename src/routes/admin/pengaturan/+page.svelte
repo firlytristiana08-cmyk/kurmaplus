@@ -1,4 +1,5 @@
 <script lang="ts">
+	import BackLink from '#lib/components/BackLink.svelte';
 	// Pengaturan toko — dibaca oleh checkout pelanggan (AD-20).
 	import { enhance } from '$app/forms';
 
@@ -19,9 +20,10 @@
 	<title>Pengaturan · KURMAPLUS Admin</title>
 </svelte:head>
 
+<BackLink href="/admin/lainnya" />
+
 <main class="wrap">
 	<header class="admin-head">
-		<p class="wordmark">KURMAPLUS <span class="plus">Admin</span></p>
 		<h1>Pengaturan toko</h1>
 		<p class="muted page-sub">
 			Perubahan berlaku untuk pesanan baru (BA-10, BA-11) dan langsung dibaca checkout pelanggan.

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { clearDirectBuy } from '#lib/cart.svelte';
 	import { formatDateId, formatDateTimeId, formatRupiah } from '#lib/format';
 	import { STATUS_LABEL_ID, type OrderStatus } from '#lib/order-status';
 	import PageFooter from '#lib/components/PageFooter.svelte';
@@ -10,6 +11,11 @@
 
 	const order = $derived(data.order);
 	const isPending = $derived(order.status === 'pending_payment');
+
+	$effect(() => {
+		// Pesanan berhasil dibuat / dilihat: sesi beli langsung tidak dipakai lagi.
+		clearDirectBuy();
+	});
 	const statusLabel = $derived(STATUS_LABEL_ID[order.status]);
 	const badgeClass = $derived(
 		order.status === 'paid' || order.status === 'done'

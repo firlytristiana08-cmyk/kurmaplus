@@ -89,9 +89,7 @@
 	<title>Pesanan {order.code} · KURMAPLUS Admin</title>
 </svelte:head>
 
-<div class="wrap">
-	<BackLink />
-</div>
+<BackLink href="/admin/pesanan" />
 
 <main class="wrap">
 	<header class="admin-head">

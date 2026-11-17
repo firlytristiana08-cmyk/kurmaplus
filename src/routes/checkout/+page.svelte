@@ -1,7 +1,13 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { formatDateId, formatRupiah, formatWeight } from '#lib/format';
-	import { cart } from '#lib/cart.svelte';
+	import {
+		backupCart,
+		cart,
+		readDirectBuy,
+		restoreCartBackup,
+		type CartItem
+	} from '#lib/cart.svelte';
 	import PageFooter from '#lib/components/PageFooter.svelte';
 	import PageHeader from '#lib/components/PageHeader.svelte';
 	import ProsesLoader from '#lib/components/ProsesLoader.svelte';
@@ -22,9 +28,21 @@
 	let loading = $state(false);
 	let pinSet = $state(false);
 	let mapMessage = $state('');
+	// Item checkout: daftar "beli langsung" bila ada, selain itu isi keranjang.
+	let directBuy = $state<CartItem[] | null | undefined>(undefined);
 
 	$effect(() => {
 		cart.hydrate();
+		// Mode beli langsung hanya berlaku bila dibuka lewat tombol "Beli
+		// langsung" (?beli=1) — tanpa parameter, checkout memakai keranjang.
+		directBuy = data.directMode ? readDirectBuy() : null;
+	});
+
+	$effect(() => {
+		// Pesanan ditolak server: kembalikan keranjang seperti sebelum dikirim.
+		if (form?.message) {
+			restoreCartBackup();
+		}
 	});
 
 	const rows = $derived.by(() => {
@@ -37,7 +55,7 @@
 			qty: number;
 			stock: number;
 		}[] = [];
-		for (const item of cart.items) {
+		for (const item of data.directMode ? (directBuy ?? []) : cart.items) {
 			for (const product of data.products) {
 				const variant = product.variants.find((candidate) => candidate.id === item.variantId);
 				if (variant) {
@@ -60,11 +78,19 @@
 	const itemsJson = $derived(JSON.stringify(rows.map((row) => ({ variantId: row.variantId, qty: row.qty }))));
 
 	function handleSubmit(event: SubmitEvent): void {
+		if (loading) {
+			event.preventDefault();
+			return;
+		}
 		if (!pinSet) {
 			event.preventDefault();
 			mapMessage = 'Pasang titik tujuan di peta dulu — ketuk peta atau pakai tombol Lokasi saya.';
 			return;
 		}
+		// Pesanan akan dibuat: item yang dibeli keluar dari keranjang (cegah
+		// terbeli dua kali), dengan cadangan bila ternyata pesanan ditolak.
+		backupCart(cart.items);
+		cart.redeemPurchased(rows.map((row) => ({ variantId: row.variantId, qty: row.qty })));
 		// Formulir dikirim (navigasi penuh): tampilkan overlay proses pembayaran.
 		loading = true;
 	}
@@ -170,7 +196,13 @@
 	<h1>Checkout</h1>
 
 	{#if rows.length === 0}
-		<p class="muted">Keranjang masih kosong.</p>
+		{#if data.directMode && directBuy === null}
+			<p class="muted">
+				Sesi beli langsung sudah berakhir — pilih produknya lagi untuk membeli langsung.
+			</p>
+		{:else}
+			<p class="muted">Keranjang masih kosong.</p>
+		{/if}
 		<a class="btn" href="/katalog">Pilih kurma</a>
 	{:else}
 		{#if form?.message}
@@ -215,7 +247,7 @@
 						required
 						bind:value={phoneValue}
 					/>
-					<p class="hint">Dipakai untuk konfirmasi pengiriman dan halaman lacak.</p>
+					<p class="hint">Dipakai untuk konfirmasi pengiriman dan melacak pesanan.</p>
 				</div>
 			</section>
 
@@ -276,11 +308,10 @@
 					</label>
 				</div>
 				<div class="info-box">
-					Ongkir {courierValue} dibayar pemesan saat kurir datang, tidak termasuk total ini.
 					{#if data.shippingInfoText}
 						{data.shippingInfoText}
 					{:else}
-						Toko tidak menghitung tarif ongkir.
+						Ongkir mengikuti tarif kurir, dibayar langsung ke kurir — di luar total ini.
 					{/if}
 				</div>
 			</section>
@@ -325,10 +356,6 @@
 					<span>Total</span>
 					<strong class="tabular">{formatRupiah(subtotal)}</strong>
 				</div>
-				<p class="hint">
-					Kurir {courierValue}, dikirim {dateValue ? formatDateId(dateValue) : '(pilih tanggal)'}.
-					Ongkir dibayar pemesan di luar total ini.
-				</p>
 			</section>
 
 		</form>
@@ -339,7 +366,11 @@
 {#if rows.length > 0}
 	<div class="sticky-bar">
 		<div class="sticky-inner">
-			<button type="submit" form="form-checkout" class="btn" disabled={!data.storeOpen} aria-busy={loading}>
+			<button
+				type="submit"
+				form="form-checkout"
+				class="btn"
+				disabled={!data.storeOpen || loading} aria-busy={loading}>
 				{data.storeOpen ? `Bayar ${formatRupiah(subtotal)}` : 'Toko sedang tutup'}
 			</button>
 		</div>

@@ -9,7 +9,10 @@
 	align-items: center;
 	gap: 0.75rem;
 	min-height: 56px;
-	padding: 0.625rem 0;
+	padding: 0.625rem;
+	margin-inline: -0.625rem;
+	border-radius: var(--radius-s);
+	transition: background-color 150ms ease-out;
 	border-bottom: 1px solid var(--sand);
 	text-decoration: none;
 	color: inherit;
@@ -50,6 +53,10 @@
 	text-align: right;
 	font-size: 0.875rem;
 	font-weight: 700;
+}
+
+a.row:hover {
+	background: color-mix(in srgb, var(--ink) 4%, transparent);
 }
 
 /* Tajuk bagian dengan tautan kecil di kanan. */
@@ -101,6 +108,7 @@
 .chip.is-active {
 	border-color: var(--rust);
 	color: var(--rust);
+	background: color-mix(in srgb, var(--rust) 7%, var(--card));
 }
 
 .chip-row {
@@ -153,7 +161,13 @@
 
 .btn-mini.is-rust {
 	border-color: var(--rust);
-	color: var(--rust);
+	background: var(--rust);
+	color: #fffdf8;
+	box-shadow: 0 6px 12px -8px rgb(171 55 16 / 0.85);
+}
+
+.btn-mini:active {
+	transform: scale(0.975);
 }
 
 .btn-mini.is-danger {
@@ -231,7 +245,7 @@
 	width: 8px;
 	height: 8px;
 	border-radius: 50%;
-	background: var(--ink);
+	background: var(--rust);
 }
 
 .timeline .when {
@@ -290,6 +304,7 @@
 	right: 0;
 	bottom: 0;
 	display: flex;
+	padding-inline: max(0px, calc((100% - var(--admin-w, 430px)) / 2));
 	background: var(--card);
 	border-top: 1px solid var(--sand);
 	padding-bottom: env(safe-area-inset-bottom);
@@ -297,6 +312,7 @@
 }
 
 .tab {
+	position: relative;
 	flex: 1;
 	display: flex;
 	flex-direction: column;
@@ -322,6 +338,16 @@
 	color: var(--rust);
 }
 
+.tab.is-active::after {
+	content: '';
+	position: absolute;
+	top: 0;
+	width: 22px;
+	height: 3px;
+	border-radius: 0 0 3px 3px;
+	background: var(--rust);
+}
+
 .page-foot-space {
 	height: 96px;
 }
@@ -333,6 +359,7 @@
 	background: color-mix(in srgb, var(--paper) 92%, transparent);
 	backdrop-filter: blur(8px);
 	border-top: 1px solid var(--sand);
+	box-shadow: 0 -10px 20px -14px rgb(45 38 75 / 0.28);
 	padding: 12px 16px;
 	z-index: 20;
 }
@@ -346,7 +373,7 @@
 
 /* Tajuk halaman admin. */
 .admin-head {
-	padding: 14px 0 10px;
+	padding: 6px 0 12px;
 }
 
 .admin-head .wordmark {
@@ -380,16 +407,17 @@
 
 /* ===== Anti-geser: tata letak admin tidak pernah bergeser kanan-kiri. ===== */
 
-/* Spasi vertikal seragam untuk setiap box/card agar rapi (tidak menempel). */
-.surface {
+/* Spasi vertikal seragam untuk setiap box/card agar rapi (tidak menempel).
+   Ter-scope .admin-scope supaya tidak bocor ke halaman portal pelanggan. */
+.admin-scope .surface {
 	margin: 0.75rem 0;
 }
 
-.info-box {
+.admin-scope .info-box {
 	margin: 1rem 0;
 }
 
-.error-box {
+.admin-scope .error-box {
 	margin-top: 1rem;
 }
 
@@ -400,10 +428,26 @@ html {
 	scrollbar-gutter: stable;
 }
 
-.wrap,
-.wrap-wide,
-.admin-sticky .sticky-inner {
-	max-width: 100%;
+/* Lebar konten admin: HP/tablet = kolom 430px; layar lebar memuai sedang
+   (opsi C). --admin-w diwariskan ke semua bilah agar sejajar. */
+.admin-scope {
+	--admin-w: 430px;
+}
+
+@media (min-width: 900px) {
+	.admin-scope {
+		--admin-w: 720px;
+	}
+
+	.admin-scope.is-wide {
+		--admin-w: 860px;
+	}
+}
+
+.admin-scope .wrap,
+.admin-scope .wrap-wide,
+.admin-scope .admin-sticky .sticky-inner {
+	max-width: min(var(--admin-w), 100%);
 }
 
 /* Teks panjang (alamat, keterangan, nama varian) dibungkus, tidak melebar. */
@@ -507,4 +551,47 @@ h3,
 		size: A4;
 		margin: 14mm;
 	}
+}
+
+/* ===== Tajuk atas portal admin — senada navbar portal pelanggan. ===== */
+.admin-top {
+	position: sticky;
+	top: 0;
+	z-index: 30;
+	background: var(--card);
+	border-bottom: 1px solid var(--sand);
+}
+
+.admin-top-inner {
+	max-width: min(var(--admin-w), 100%);
+	margin: 0 auto;
+	padding: 10px 16px;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.75rem;
+	min-height: 48px;
+}
+
+.admin-top .top-mark {
+	font-family: 'Young Serif', Georgia, serif;
+	font-size: 1rem;
+	letter-spacing: 0.02em;
+	color: var(--ink);
+	margin: 0;
+}
+
+.admin-top .top-mark span {
+	color: var(--rust);
+}
+
+.admin-top .top-user {
+	margin: 0;
+	font-size: 0.75rem;
+	font-weight: 700;
+	color: color-mix(in srgb, var(--ink) 62%, var(--paper));
+	max-width: 55%;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
 }

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import BackLink from '#lib/components/BackLink.svelte';
 	// Laporan sederhana: angka dalam tabel, tanpa grafik (PRD — laporan versi 1).
 	import { enhance } from '$app/forms';
 	import { STATUS_LABEL_ID } from '#lib/order-status';
@@ -12,9 +13,10 @@
 	<title>Laporan · KURMAPLUS Admin</title>
 </svelte:head>
 
+<BackLink href="/admin/lainnya" />
+
 <main class="wrap">
 	<header class="admin-head">
-		<p class="wordmark">KURMAPLUS <span class="plus">Admin</span></p>
 		<h1>Laporan</h1>
 		<p class="muted page-sub">
 			{report.from} sampai {report.to} · omzet dihitung dari pesanan dibayar sampai selesai,
