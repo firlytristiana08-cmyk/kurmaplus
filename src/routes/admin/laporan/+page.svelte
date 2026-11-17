@@ -14,7 +14,6 @@
 
 <main class="wrap">
 	<header class="admin-head">
-		<p class="wordmark">KURMAPLUS <span class="plus">Admin</span></p>
 		<h1>Laporan</h1>
 		<p class="muted page-sub">
 			{report.from} sampai {report.to} · omzet dihitung dari pesanan dibayar sampai selesai,

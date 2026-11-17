@@ -34,7 +34,6 @@
 
 <main class="wrap">
 	<header class="admin-head">
-		<p class="wordmark">KURMAPLUS <span class="plus">Admin</span></p>
 		<h1>Pesanan</h1>
 		<p class="muted page-sub">{list.total} pesanan cocok dengan saringan.</p>
 	</header>

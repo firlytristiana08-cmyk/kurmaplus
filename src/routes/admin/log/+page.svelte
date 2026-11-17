@@ -44,7 +44,6 @@
 
 <main class="wrap">
 	<header class="admin-head">
-		<p class="wordmark">KURMAPLUS <span class="plus">Admin</span></p>
 		<h1>Log audit</h1>
 		<p class="muted page-sub">
 			Siapapun mengubah apa dan kapan. Hanya-tambah — tidak bisa diubah atau dihapus (BA-12).

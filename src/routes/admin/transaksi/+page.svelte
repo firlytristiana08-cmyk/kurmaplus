@@ -33,7 +33,6 @@
 
 <main class="wrap">
 	<header class="admin-head">
-		<p class="wordmark">KURMAPLUS <span class="plus">Admin</span></p>
 		<h1>Log transaksi</h1>
 		<p class="muted page-sub">
 			Riwayat pembayaran DOKU per pesanan. Hanya-baca — tidak bisa diubah atau dihapus.

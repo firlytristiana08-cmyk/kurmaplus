@@ -37,7 +37,6 @@
 
 <main class="wrap">
 	<header class="admin-head">
-		<p class="wordmark">KURMAPLUS <span class="plus">Admin</span></p>
 		<h1>Produk &amp; stok</h1>
 		<p class="muted page-sub">
 			Harga baru hanya untuk pesanan baru (BA-09). Stok disesuaikan dengan alasan, tidak pernah

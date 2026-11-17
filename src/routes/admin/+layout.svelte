@@ -86,6 +86,17 @@
 	<meta name="theme-color" content="#f4ede0" />
 </svelte:head>
 
+{#if !path.startsWith('/admin/masuk')}
+	<header class="admin-top no-print">
+		<div class="admin-top-inner">
+			<p class="top-mark">KURMAPLUS <span>Admin</span></p>
+			{#if page.data.session?.email}
+				<p class="top-user">{page.data.session.email}</p>
+			{/if}
+		</div>
+	</header>
+{/if}
+
 {@render children()}
 
 <nav class="tabbar no-print" aria-label="Navigasi admin">

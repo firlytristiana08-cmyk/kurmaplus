@@ -9,7 +9,6 @@
 
 <main class="wrap">
 	<header class="admin-head">
-		<p class="wordmark">KURMAPLUS <span class="plus">Admin</span></p>
 		<h1>Lainnya</h1>
 		<p class="muted page-sub">Masuk sebagai {data.session.label}.</p>
 	</header>

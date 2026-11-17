@@ -21,7 +21,6 @@
 
 <main class="wrap">
 	<header class="admin-head">
-		<p class="wordmark">KURMAPLUS <span class="plus">Admin</span></p>
 		<h1>Pengaturan toko</h1>
 		<p class="muted page-sub">
 			Perubahan berlaku untuk pesanan baru (BA-10, BA-11) dan langsung dibaca checkout pelanggan.
