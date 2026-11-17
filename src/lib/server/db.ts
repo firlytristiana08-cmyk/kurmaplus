@@ -455,6 +455,17 @@ export async function listProducts(): Promise<ProductView[]> {
   return products;
 }
 
+// Jumlah terjual per produk (pesanan berstatus lunas s/d selesai) — untuk
+// label "Best seller" dan angka "Terjual" di katalog.
+export async function productSoldCounts(): Promise<Map<number, number>> {
+  const db = await getDb();
+  const rows = await db.all<{ product_id: number; sold: number | string }>(
+    `SELECT v.product_id AS product_id, SUM(oi.qty) AS sold FROM order_items oi JOIN variants v ON v.id = oi.variant_id JOIN orders o ON o.id = oi.order_id WHERE o.status IN ('paid', 'packed', 'shipped', 'done') GROUP BY v.product_id`,
+    [],
+  );
+  return new Map(rows.map((row) => [row.product_id, Number(row.sold)]));
+}
+
 export async function getProductBySlug(slug: string): Promise<ProductView | null> {
   const db = await getDb();
   const row = await db.get<ProductRow>(
