@@ -64,8 +64,7 @@ function run(scripts: Array<{ text: string; marked: boolean }>): CreatedNode[] {
   return created;
 }
 
-const DEV_BOOTSTRAP =
-  'globalThis.__sveltekit_dev = { base: "/demo", version: "1", env: {} };';
+const DEV_BOOTSTRAP = 'globalThis.__sveltekit_dev = { base: "/demo", version: "1", env: {} };';
 const PROD_BOOTSTRAP =
   'globalThis.__sveltekit_1a2b3c = "/x"; var start = "/_app/immutable/entry/start.abc.js";';
 

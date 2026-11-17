@@ -29,21 +29,36 @@ export interface CheckoutData {
   deliveryDates: DeliveryOption[];
   cities: readonly string[];
   previewPayment: boolean;
+  storeOpen: boolean;
+  shippingInfoText: string;
+}
+
+function closedDatesOf(settings: Record<string, string>): string[] {
+  try {
+    const parsed = JSON.parse(settings.closed_dates ?? "[]");
+    return Array.isArray(parsed) ? parsed.filter((d): d is string => typeof d === "string") : [];
+  } catch {
+    return [];
+  }
 }
 
 export const load = async (): Promise<CheckoutData> => {
   const settings = await getSettings();
+  const closedDates = closedDatesOf(settings);
   const deliveryDates = upcomingDeliveryDates(new Date(), {
     cutoffWeekday: Number(settings.order_cutoff_weekday),
     cutoffTime: settings.order_cutoff_time ?? "23:59",
     dailyCapacity: Number(settings.daily_capacity),
     booked: await bookedCounts(),
-  });
+    // BA-10: tanggal libur menghilangkan tanggal itu dari pilihan pembeli.
+  }).filter((option) => !closedDates.includes(option.date));
   return {
     products: await listProducts(),
     deliveryDates,
     cities: JABODETABEK_CITIES,
     previewPayment: loadDokuConfig(process.env) === null,
+    storeOpen: settings.store_open !== "0",
+    shippingInfoText: settings.shipping_info_text ?? "",
   };
 };
 
@@ -111,6 +126,15 @@ export const actions: Actions = {
     }
 
     const settings = await getSettings();
+    // BA-10: toko tutup menonaktifkan checkout dengan pesan; pesanan lama tetap.
+    if (settings.store_open === "0") {
+      return fail(403, {
+        message: "Maaf, toko sedang tutup sementara sehingga pesanan baru belum bisa dibuat.",
+      });
+    }
+    if (closedDatesOf(settings).includes(parsed.output.deliveryDate)) {
+      return fail(400, { message: "Tanggal kirim tersebut sedang libur. Pilih tanggal lain." });
+    }
     const bounds = boundsFromSettings(settings);
     if (!isInServiceArea(parsed.output.lat, parsed.output.lng, bounds)) {
       return fail(400, {

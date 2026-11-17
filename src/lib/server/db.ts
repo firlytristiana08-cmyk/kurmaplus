@@ -4,7 +4,7 @@
 // sama). Placeholder ditulis `?` dan diterjemahkan ke `$n` untuk Postgres.
 
 import { setDefaultResultOrder } from "node:dns";
-import { mkdirSync, readFileSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { Pool, type PoolClient, types } from "pg";
@@ -263,12 +263,35 @@ function connectionString(): string | null {
   return null;
 }
 
+function applyMigrations(raw: DatabaseSync): void {
+  // Pelacak migrasi: berkas di db/migrations dijalankan sekali per database,
+  // sehingga ALTER TABLE pada migrasi berikutnya aman dijalankan berulang kali.
+  raw.exec(
+    "CREATE TABLE IF NOT EXISTS schema_migrations (name TEXT PRIMARY KEY, applied_at TEXT NOT NULL)",
+  );
+  const dir = path.join(process.cwd(), "db", "migrations");
+  for (const file of readdirSync(dir).sort()) {
+    if (!file.endsWith(".sql")) continue;
+    const done = sqliteGet<{ ok: number }>(
+      raw,
+      "SELECT 1 AS ok FROM schema_migrations WHERE name = ?",
+      [file],
+    );
+    if (done) continue;
+    raw.exec(readFileSync(path.join(dir, file), "utf8"));
+    sqliteRun(raw, "INSERT INTO schema_migrations (name, applied_at) VALUES (?, ?)", [
+      file,
+      new Date().toISOString(),
+    ]);
+  }
+}
+
 function openSqlite(): Db {
   // KURMAPLUS_DATA_DIR hanya untuk pengujian; produksi memakai .data.
   const dataDir = process.env.KURMAPLUS_DATA_DIR ?? path.join(process.cwd(), ".data");
   mkdirSync(dataDir, { recursive: true });
   const raw = new DatabaseSync(path.join(dataDir, "kurmaplus.db"));
-  raw.exec(readFileSync(path.join(process.cwd(), "db/migrations/0001_init.sql"), "utf8"));
+  applyMigrations(raw);
   const seeded = sqliteGet<{ n: number }>(raw, "SELECT COUNT(*) AS n FROM products", []);
   if ((seeded?.n ?? 0) === 0) {
     raw.exec(readFileSync(path.join(process.cwd(), "db/seed.sql"), "utf8"));
@@ -278,6 +301,7 @@ function openSqlite(): Db {
   const demoSeeded = sqliteGet<{ n: number }>(raw, "SELECT COUNT(*) AS n FROM orders", []);
   if ((demoSeeded?.n ?? 0) === 0) {
     raw.exec(readFileSync(path.join(process.cwd(), "db/seed-demo.sql"), "utf8"));
+    raw.exec(readFileSync(path.join(process.cwd(), "db/seed-demo-admin.sql"), "utf8"));
   }
   return new SqliteDb(raw);
 }
@@ -529,6 +553,11 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
             available: 0,
           });
         }
+        // PRD Portal Admin: penguncian stok meninggalkan baris stock_movements.
+        await tx.run(
+          "INSERT INTO stock_movements (id, variant_id, delta, reason, order_id, actor, created_at) VALUES (?, ?, ?, 'lock_order', ?, 'sistem', ?)",
+          [crypto.randomUUID(), item.variantId, -item.qty, null, input.now.toISOString()],
+        );
         lines.push({ priceIdr: variant.price_idr, qty: item.qty });
         snapshots.push({
           variantId: item.variantId,
@@ -689,6 +718,17 @@ export async function markPaidByInvoice(invoiceNumber: string, now: Date): Promi
     await db.run("UPDATE payments SET status = 'success' WHERE invoice_number = ?", [
       invoiceNumber,
     ]);
+    // PRD Portal Admin: perubahan status tercatat di log audit (pelaku sistem).
+    await db.run(
+      "INSERT INTO audit_log (id, actor, entity, entity_id, action, before_json, after_json, created_at) VALUES (?, 'sistem', 'order', ?, 'status_changed', ?, ?, ?)",
+      [
+        crypto.randomUUID(),
+        invoiceNumber,
+        JSON.stringify({ status: "pending_payment" }),
+        JSON.stringify({ status: "paid", source: "doku" }),
+        now.toISOString(),
+      ],
+    );
     return true;
   }
   return false;
@@ -706,8 +746,8 @@ export async function recordWebhookEvent(requestId: string, now: Date): Promise<
 export async function expireStaleOrders(now: Date): Promise<number> {
   const db = await getDb();
   return db.transaction(async (tx) => {
-    const stale = await tx.all<{ id: number }>(
-      "SELECT id FROM orders WHERE status = 'pending_payment' AND expires_at <= ?",
+    const stale = await tx.all<{ id: number; code: string }>(
+      "SELECT id, code FROM orders WHERE status = 'pending_payment' AND expires_at <= ?",
       [now.toISOString()],
     );
     if (stale.length === 0) {
@@ -723,8 +763,24 @@ export async function expireStaleOrders(now: Date): Promise<number> {
           item.qty,
           item.variant_id,
         ]);
+        // PRD Portal Admin: pengembalian stok dicatat di stock_movements.
+        await tx.run(
+          "INSERT INTO stock_movements (id, variant_id, delta, reason, order_id, actor, created_at) VALUES (?, ?, ?, 'expire_return', ?, 'sistem', ?)",
+          [crypto.randomUUID(), item.variant_id, item.qty, order.id, now.toISOString()],
+        );
       }
       await tx.run("UPDATE orders SET status = 'expired' WHERE id = ?", [order.id]);
+      // PRD Portal Admin: aksi sistem dicatat di log audit.
+      await tx.run(
+        "INSERT INTO audit_log (id, actor, entity, entity_id, action, before_json, after_json, created_at) VALUES (?, 'sistem', 'order', ?, 'order_expired', ?, ?, ?)",
+        [
+          crypto.randomUUID(),
+          order.code,
+          JSON.stringify({ status: "pending_payment" }),
+          JSON.stringify({ status: "expired" }),
+          now.toISOString(),
+        ],
+      );
     }
     return stale.length;
   });
