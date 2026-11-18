@@ -3,6 +3,7 @@
 	import { formatDateId, formatRupiah, formatWeight } from '#lib/format';
 	import {
 		backupCart,
+		commitPurchased,
 		cart,
 		readDirectBuy,
 		restoreCartBackup,
@@ -39,8 +40,10 @@
 	});
 
 	$effect(() => {
-		// Pesanan ditolak server: kembalikan keranjang seperti sebelum dikirim.
-		if (form?.message) {
+		// Pesanan gagal dibuat: kembalikan keranjang seperti sebelum dikirim.
+		// Bila pesanan sudah ada (form.code terisi, mis. halaman bayar DOKU yang
+		// gagal dibuka), jangan dipulihkan — barang sudah tercatat terbeli.
+		if (form?.message && !form.code) {
 			restoreCartBackup();
 		}
 	});
@@ -88,9 +91,11 @@
 			return;
 		}
 		// Pesanan akan dibuat: item yang dibeli keluar dari keranjang (cegah
-		// terbeli dua kali), dengan cadangan bila ternyata pesanan ditolak.
+		// terbeli dua kali). Pemotongan ditulis langsung ke penyimpanan tanpa
+		// render supaya form tetap terhubung saat dikirim; cadangan dipakai
+		// untuk memulihkan bila ternyata pesanan gagal dibuat.
 		backupCart(cart.items);
-		cart.redeemPurchased(rows.map((row) => ({ variantId: row.variantId, qty: row.qty })));
+		commitPurchased(rows.map((row) => ({ variantId: row.variantId, qty: row.qty })));
 		// Formulir dikirim (navigasi penuh): tampilkan overlay proses pembayaran.
 		loading = true;
 	}
@@ -195,6 +200,10 @@
 <main class="wrap">
 	<h1>Checkout</h1>
 
+	{#if form?.message}
+		<div class="error-box" role="alert">{form.message}</div>
+	{/if}
+
 	{#if rows.length === 0}
 		{#if data.directMode && directBuy === null}
 			<p class="muted">
@@ -205,10 +214,6 @@
 		{/if}
 		<a class="btn" href="/katalog">Pilih kurma</a>
 	{:else}
-		{#if form?.message}
-			<div class="error-box" role="alert">{form.message}</div>
-		{/if}
-
 		{#if !data.storeOpen}
 			<div class="error-box" role="alert">
 				Maaf, toko sedang tutup sementara sehingga pesanan baru belum bisa dibuat. Silakan
