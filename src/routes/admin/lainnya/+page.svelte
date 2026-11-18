@@ -52,7 +52,7 @@
 	</div>
 
 	<form method="POST" action="/admin/masuk?/keluar">
-		<button class="btn btn-secondary" type="submit">Keluar</button>
+		<button class="btn" type="submit">Keluar</button>
 	</form>
 </main>
 

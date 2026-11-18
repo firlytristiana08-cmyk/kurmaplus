@@ -450,6 +450,12 @@ html {
 	max-width: min(var(--admin-w), 100%);
 }
 
+/* Halaman yang tetap selebar layar ponsel di semua ukuran layar
+   (mis. halaman masuk admin). */
+.admin-scope .wrap-narrow {
+	max-width: 430px;
+}
+
 /* Teks panjang (alamat, keterangan, nama varian) dibungkus, tidak melebar. */
 p,
 li,
