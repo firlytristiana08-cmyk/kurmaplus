@@ -3,6 +3,7 @@
 	import { formatDateId, formatRupiah, formatWeight } from '#lib/format';
 	import {
 		backupCart,
+		commitPurchased,
 		cart,
 		readDirectBuy,
 		restoreCartBackup,
@@ -39,8 +40,10 @@
 	});
 
 	$effect(() => {
-		// Pesanan ditolak server: kembalikan keranjang seperti sebelum dikirim.
-		if (form?.message) {
+		// Pesanan gagal dibuat: kembalikan keranjang seperti sebelum dikirim.
+		// Bila pesanan sudah ada (form.code terisi, mis. halaman bayar DOKU yang
+		// gagal dibuka), jangan dipulihkan — barang sudah tercatat terbeli.
+		if (form?.message && !form.code) {
 			restoreCartBackup();
 		}
 	});
@@ -88,9 +91,11 @@
 			return;
 		}
 		// Pesanan akan dibuat: item yang dibeli keluar dari keranjang (cegah
-		// terbeli dua kali), dengan cadangan bila ternyata pesanan ditolak.
+		// terbeli dua kali). Pemotongan ditulis langsung ke penyimpanan tanpa
+		// render supaya form tetap terhubung saat dikirim; cadangan dipakai
+		// untuk memulihkan bila ternyata pesanan gagal dibuat.
 		backupCart(cart.items);
-		cart.redeemPurchased(rows.map((row) => ({ variantId: row.variantId, qty: row.qty })));
+		commitPurchased(rows.map((row) => ({ variantId: row.variantId, qty: row.qty })));
 		// Formulir dikirim (navigasi penuh): tampilkan overlay proses pembayaran.
 		loading = true;
 	}
@@ -195,6 +200,10 @@
 <main class="wrap">
 	<h1>Checkout</h1>
 
+	{#if form?.message}
+		<div class="error-box" role="alert">{form.message}</div>
+	{/if}
+
 	{#if rows.length === 0}
 		{#if data.directMode && directBuy === null}
 			<p class="muted">
@@ -205,10 +214,6 @@
 		{/if}
 		<a class="btn" href="/katalog">Pilih kurma</a>
 	{:else}
-		{#if form?.message}
-			<div class="error-box" role="alert">{form.message}</div>
-		{/if}
-
 		{#if !data.storeOpen}
 			<div class="error-box" role="alert">
 				Maaf, toko sedang tutup sementara sehingga pesanan baru belum bisa dibuat. Silakan
@@ -248,6 +253,11 @@
 						bind:value={phoneValue}
 					/>
 					<p class="hint">Dipakai untuk konfirmasi pengiriman dan melacak pesanan.</p>
+				</div>
+				<div class="field">
+					<label for="email">Email <span class="required-mark">*</span></label>
+					<input id="email" name="email" type="email" inputmode="email" autocomplete="email" required />
+					<p class="hint">Detail pesanan dan bukti pembayaran dikirim ke email ini.</p>
 				</div>
 			</section>
 
@@ -300,11 +310,11 @@
 				<div class="choice-list" role="radiogroup" aria-labelledby="kurir-heading">
 					<label class="choice">
 						<input type="radio" name="courier" value="Grab" bind:group={courierValue} />
-						<span>Grab</span>
+						<span class="choice-label"><svg class="choice-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M19.44 9.03L15.41 5H11v2h3.59l2 2H5c-2.8 0-5 2.2-5 5s2.2 5 5 5c2.46 0 4.45-1.69 4.9-4h1.65l2.77-2.77c-.21.54-.32 1.14-.32 1.77 0 2.8 2.2 5 5 5s5-2.2 5-5c0-2.65-1.97-4.77-4.56-4.97zM7.82 15C7.4 16.15 6.28 17 5 17c-1.63 0-3-1.37-3-3s1.37-3 3-3c1.28 0 2.4.85 2.82 2H11v2H7.82zM19 17c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3z" /></svg>Grab</span>
 					</label>
 					<label class="choice">
 						<input type="radio" name="courier" value="Gojek" bind:group={courierValue} />
-						<span>Gojek</span>
+						<span class="choice-label"><svg class="choice-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M19.44 9.03L15.41 5H11v2h3.59l2 2H5c-2.8 0-5 2.2-5 5s2.2 5 5 5c2.46 0 4.45-1.69 4.9-4h1.65l2.77-2.77c-.21.54-.32 1.14-.32 1.77 0 2.8 2.2 5 5 5s5-2.2 5-5c0-2.65-1.97-4.77-4.56-4.97zM7.82 15C7.4 16.15 6.28 17 5 17c-1.63 0-3-1.37-3-3s1.37-3 3-3c1.28 0 2.4.85 2.82 2H11v2H7.82zM19 17c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3z" /></svg>Gojek</span>
 					</label>
 				</div>
 				<div class="info-box">
@@ -330,8 +340,8 @@
 								disabled={option.isFull}
 								bind:group={dateValue}
 							/>
-							<span>
-								{option.weekdayName}, {formatDateId(option.date)}
+							<span class="choice-label">
+								<svg class="choice-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zM9 14H7v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2zm-8 4H7v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2z" /></svg>{option.weekdayName}, {formatDateId(option.date)}
 								{#if option.isFull}<span class="badge badge-off">Penuh</span>{/if}
 							</span>
 						</label>
@@ -397,6 +407,19 @@
 		overflow: hidden;
 		background: var(--sand);
 		isolation: isolate;
+	}
+
+	.choice-label {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.375rem;
+	}
+
+	.choice-icon {
+		display: block;
+		flex: none;
+		width: 18px;
+		height: 18px;
 	}
 
 	.choice-list {

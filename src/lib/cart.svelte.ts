@@ -145,6 +145,23 @@ export function backupCart(items: CartItem[]): void {
   }
 }
 
+export function commitPurchased(purchased: CartItem[]): void {
+  // Potong keranjang langsung ke penyimpanan TANPA memicu render. Dipakai saat
+  // formulir checkout dikirim (navigasi penuh): mutasi state reaktif di tengah
+  // submit membuat form terlepas dari DOM dan dibatalkan browser
+  // ("form is not connected"). Semantik sama dengan CartState.redeemPurchased;
+  // halaman berikutnya membaca hasilnya saat hidrasi.
+  const remaining = readStorage()
+    .map((item) => {
+      const bought = purchased
+        .filter((entry) => entry.variantId === item.variantId)
+        .reduce((sum, entry) => sum + entry.qty, 0);
+      return { variantId: item.variantId, qty: item.qty - bought };
+    })
+    .filter((item) => item.qty > 0);
+  writeStorage(remaining);
+}
+
 export function restoreCartBackup(): void {
   try {
     const raw = window.sessionStorage.getItem(BACKUP_KEY);

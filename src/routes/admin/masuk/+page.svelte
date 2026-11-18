@@ -12,7 +12,7 @@
 	<title>Masuk · KURMAPLUS Admin</title>
 </svelte:head>
 
-<main class="wrap">
+<main class="wrap wrap-narrow">
 	<header class="admin-head">
 		<p class="wordmark">KURMAPLUS <span class="plus">Admin</span></p>
 		<h1>Masuk</h1>
@@ -29,7 +29,7 @@
 				Anda sudah masuk sebagai <strong>{data.session.label}</strong>.
 			</p>
 			<form method="POST" action="?/keluar">
-				<button class="btn btn-secondary" type="submit">Keluar</button>
+				<button class="btn" type="submit">Keluar</button>
 			</form>
 		</div>
 	{:else if data.isDev}

@@ -931,8 +931,8 @@ export async function adminListOrders(filter: OrderFilter): Promise<{
   }
   if (filter.q && filter.q.trim() !== "") {
     const q = `%${filter.q.trim()}%`;
-    where.push("(code LIKE ? OR customer_name LIKE ? OR customer_phone LIKE ?)");
-    params.push(q, q, q);
+    where.push("(code LIKE ? OR customer_name LIKE ? OR customer_phone LIKE ? OR email LIKE ?)");
+    params.push(q, q, q, q);
   }
   const clause = where.length > 0 ? `WHERE ${where.join(" AND ")}` : "";
   const countRow = await db.get<{ n: number }>(
@@ -951,6 +951,7 @@ export async function adminListOrders(filter: OrderFilter): Promise<{
 }
 
 export interface AdminOrderDetail extends AdminOrderLine {
+  email: string | null;
   address: string;
   lat: number;
   lng: number;
@@ -975,6 +976,7 @@ export async function adminOrderDetail(code: string): Promise<AdminOrderDetail |
   const db = await getDb();
   const row = await db.get<
     AdminOrderRow & {
+      email: string | null;
       address: string;
       lat: number;
       lng: number;
@@ -1015,6 +1017,7 @@ export async function adminOrderDetail(code: string): Promise<AdminOrderDetail |
   ]);
   return {
     ...toLine(row),
+    email: row.email,
     address: row.address,
     lat: row.lat,
     lng: row.lng,
