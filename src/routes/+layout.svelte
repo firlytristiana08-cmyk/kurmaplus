@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { page } from '$app/state';
 	import { onMount } from 'svelte';
 	import '../app.css';
 
@@ -41,5 +42,19 @@
 		}
 	}
 </script>
+
+{#if page.url.pathname !== '/'}
+	<!-- Latar ilustrasi (bg-halaman) 10% — semua halaman kecuali halaman utama. -->
+	<div class="halaman-bg" aria-hidden="true">
+		<picture>
+			<source media="(min-width: 1024px)" srcset="/images/bg-halaman-desktop.avif" type="image/avif" />
+			<source media="(min-width: 1024px)" srcset="/images/bg-halaman-desktop.webp" type="image/webp" />
+			<source media="(min-width: 640px)" srcset="/images/bg-halaman-tablet.avif" type="image/avif" />
+			<source media="(min-width: 640px)" srcset="/images/bg-halaman-tablet.webp" type="image/webp" />
+			<source srcset="/images/bg-halaman-hp.avif" type="image/avif" />
+			<img src="/images/bg-halaman-hp.webp" alt="" width="1536" height="2752" />
+		</picture>
+	</div>
+{/if}
 
 {@render children()}
