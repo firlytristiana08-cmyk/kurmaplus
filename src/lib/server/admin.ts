@@ -931,8 +931,8 @@ export async function adminListOrders(filter: OrderFilter): Promise<{
   }
   if (filter.q && filter.q.trim() !== "") {
     const q = `%${filter.q.trim()}%`;
-    where.push("(code LIKE ? OR customer_name LIKE ? OR customer_phone LIKE ?)");
-    params.push(q, q, q);
+    where.push("(code LIKE ? OR customer_name LIKE ? OR customer_phone LIKE ? OR email LIKE ?)");
+    params.push(q, q, q, q);
   }
   const clause = where.length > 0 ? `WHERE ${where.join(" AND ")}` : "";
   const countRow = await db.get<{ n: number }>(

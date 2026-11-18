@@ -149,6 +149,12 @@
 				<dt>Nomor WhatsApp</dt>
 				<dd>{order.customerPhone}</dd>
 			</div>
+			{#if order.email}
+				<div>
+					<dt>Email</dt>
+					<dd>{order.email}</dd>
+				</div>
+			{/if}
 			<div>
 				<dt>Alamat</dt>
 				<dd>{order.address}</dd>
