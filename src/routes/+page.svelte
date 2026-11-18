@@ -11,21 +11,21 @@
 	<meta name="theme-color" content="#241710" />
 	<link
 		rel="preload"
-		href="/images/hero.webp"
+		href="/images/new-bg-hp.avif"
 		as="image"
-		type="image/webp"
+		type="image/avif"
 		media="(max-width: 639px)"
 	/>
 	<link
 		rel="preload"
-		href="/images/bg-tablet.webp"
+		href="/images/new-bg-tablet.avif"
 		as="image"
-		type="image/webp"
+		type="image/avif"
 		media="(min-width: 640px) and (max-width: 1023px)"
 	/>
 	<link
 		rel="preload"
-		href="/images/bg-desktop.webp"
+		href="/images/new-bg-desktop.webp"
 		as="image"
 		type="image/webp"
 		media="(min-width: 1024px)"
@@ -37,20 +37,23 @@
 		<!-- Art direction: tiap perangkat hanya mengunduh satu gambar sesuai
 		     lebar layarnya agar akses publik tetap ringan. -->
 		<picture>
-			<source media="(min-width: 1024px)" srcset="/images/bg-desktop.webp" type="image/webp" />
-			<source media="(min-width: 640px)" srcset="/images/bg-tablet.webp" type="image/webp" />
+			<source media="(min-width: 1024px)" srcset="/images/new-bg-desktop.webp" type="image/webp" />
+			<source media="(min-width: 640px)" srcset="/images/new-bg-tablet.avif" type="image/avif" />
+			<source media="(min-width: 640px)" srcset="/images/new-bg-tablet.webp" type="image/webp" />
+			<source srcset="/images/new-bg-hp.avif" type="image/avif" />
+			<source srcset="/images/new-bg-hp.webp" type="image/webp" />
 			<img
 				class="hero-bg"
-				src="/images/hero.webp"
+				src="/images/new-bg-hp.webp"
 				alt="Ilustrasi kampung Jakarta dengan Monas di kejauhan"
-				width="539"
-				height="956"
+				width="940"
+				height="1672"
 				fetchpriority="high"
 			/>
 		</picture>
 
-		<!-- Posisi kartu mengambang mengikuti mockup: ekor menunjuk ke atas
-		     genteng rumah yang menyala pada tiap latar. -->
+		<!-- Posisi kartu mengambang: ekor menghadap ke bawah, menunjuk tepat
+		     ke ruko pada tiap latar (jangkar diukur per perangkat). -->
 		<div class="card-anchor">
 			<section class="card" aria-labelledby="brand">
 				<div class="card-body">
@@ -103,40 +106,43 @@
 		object-position: center;
 	}
 
-	/* Jangkar posisi kartu: ekor menunjuk ke atas genteng rumah yang menyala
-	   di tiap latar (hasil ukur piksel). */
+	/* Jangkar posisi kartu: ekor (65,6% lebar kartu) menunjuk tepat ke ruko
+	   pada tiap latar — ujung ekor dihitung dari puncak genteng ruko
+	   (top dikurangi 24px = panjang ekor). */
 	.card-anchor {
 		position: absolute;
-		right: clamp(14px, 9.5vw, 51px);
-		top: 38%;
+		left: 68%;
+		top: calc(47% - 24px);
 		width: min(250px, calc(100vw - 28px));
-		transform: translateY(-100%);
+		transform: translate(-65.6%, -100%);
 	}
 
 	@media (min-width: 640px) {
 		.card-anchor {
-			right: auto;
-			left: 68%;
-			top: 28.5%;
-			transform: translate(-65.6%, -100%);
+			left: 58.5%;
+			top: calc(38% - 24px);
 		}
 	}
 
 	@media (min-width: 1024px) {
 		.card-anchor {
-			top: 26%;
+			left: 57%;
+			top: calc(35% - 24px);
 		}
 	}
 
 	@media (min-width: 1024px) and (min-aspect-ratio: 2/1) {
+		/* Layar sangat lebar: crop vertikal mengangkat posisi ruko. */
 		.card-anchor {
-			top: 21%;
+			top: calc(31% - 24px);
 		}
 	}
 
 	@media (max-height: 560px) {
+		/* Layar pendek (mis. HP lanskap): kartu tetap utuh terlihat, ekor
+		   tetap menghadap badan ruko di bawahnya. */
 		.card-anchor {
-			top: 72%;
+			top: calc(59% - 24px);
 		}
 	}
 
