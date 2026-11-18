@@ -52,8 +52,8 @@
 			/>
 		</picture>
 
-		<!-- Posisi kartu mengambang mengikuti mockup: ekor menunjuk ke atas
-		     genteng rumah yang menyala pada tiap latar. -->
+		<!-- Posisi kartu mengambang: ekor menghadap ke bawah, menunjuk tepat
+		     ke ruko pada tiap latar (jangkar diukur per perangkat). -->
 		<div class="card-anchor">
 			<section class="card" aria-labelledby="brand">
 				<div class="card-body">
@@ -106,40 +106,43 @@
 		object-position: center;
 	}
 
-	/* Jangkar posisi kartu: ekor menunjuk ke atas genteng rumah yang menyala
-	   di tiap latar (hasil ukur piksel). */
+	/* Jangkar posisi kartu: ekor (65,6% lebar kartu) menunjuk tepat ke ruko
+	   pada tiap latar — ujung ekor dihitung dari puncak genteng ruko
+	   (top dikurangi 24px = panjang ekor). */
 	.card-anchor {
 		position: absolute;
-		right: clamp(14px, 9.5vw, 51px);
-		top: 38%;
+		left: 68%;
+		top: calc(47% - 24px);
 		width: min(250px, calc(100vw - 28px));
-		transform: translateY(-100%);
+		transform: translate(-65.6%, -100%);
 	}
 
 	@media (min-width: 640px) {
 		.card-anchor {
-			right: auto;
-			left: 68%;
-			top: 28.5%;
-			transform: translate(-65.6%, -100%);
+			left: 58.5%;
+			top: calc(38% - 24px);
 		}
 	}
 
 	@media (min-width: 1024px) {
 		.card-anchor {
-			top: 26%;
+			left: 57%;
+			top: calc(35% - 24px);
 		}
 	}
 
 	@media (min-width: 1024px) and (min-aspect-ratio: 2/1) {
+		/* Layar sangat lebar: crop vertikal mengangkat posisi ruko. */
 		.card-anchor {
-			top: 21%;
+			top: calc(31% - 24px);
 		}
 	}
 
 	@media (max-height: 560px) {
+		/* Layar pendek (mis. HP lanskap): kartu tetap utuh terlihat, ekor
+		   tetap menghadap badan ruko di bawahnya. */
 		.card-anchor {
-			top: 72%;
+			top: calc(59% - 24px);
 		}
 	}
 
