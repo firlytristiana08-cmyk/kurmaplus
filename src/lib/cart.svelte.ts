@@ -58,9 +58,11 @@ class CartState {
   add(variantId: number, qty: number): void {
     const existing = this.items.find((item) => item.variantId === variantId);
     if (existing) {
+      // Item yang sudah ada: jumlah bertambah, posisi tetap.
       existing.qty = Math.min(99, existing.qty + qty);
     } else {
-      this.items.push({ variantId, qty });
+      // Item baru tampil paling atas (keranjang modern: terbaru di atas).
+      this.items.unshift({ variantId, qty });
     }
     this.setItems([...this.items]);
   }
