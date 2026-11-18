@@ -141,6 +141,7 @@
 			<div class="row-main">
 				<div class="row-l1">{order.customerName} · <span class="tabular">{order.customerPhone}</span></div>
 				<div class="row-l2">
+					{#if order.email}Email: {order.email}<br />{/if}
 					{order.address}, {order.city}<br />
 					{#if order.note}Catatan pembeli: {order.note}<br />{/if}
 					Tanggal kirim: {formatDateId(order.deliveryDate)} · kurir pilihan: {order.courier}

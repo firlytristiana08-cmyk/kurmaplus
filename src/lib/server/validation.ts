@@ -32,6 +32,12 @@ export const checkoutSchema = v.object({
     v.maxLength(80, "Nama maksimal 80 karakter."),
   ),
   customerPhone: v.pipe(v.string(), v.trim(), v.minLength(8, "Nomor WhatsApp wajib diisi.")),
+  email: v.pipe(
+    v.string("Email wajib diisi."),
+    v.trim(),
+    v.maxLength(100, "Email maksimal 100 karakter."),
+    v.email("Format email belum benar."),
+  ),
   address: v.pipe(
     v.string(),
     v.trim(),

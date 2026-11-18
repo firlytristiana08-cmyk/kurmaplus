@@ -123,7 +123,7 @@ export interface DokuCheckoutPayload {
   invoiceNumber: string;
   amountIdr: number;
   paymentDueMinutes: number;
-  customer: { name: string; phone: string; address: string; city: string };
+  customer: { name: string; phone: string; address: string; city: string; email?: string };
   callbackUrl: string;
   lineItems: { name: string; quantity: number; price: number }[];
 }
@@ -164,6 +164,7 @@ export async function createCheckoutPayment(
     customer: {
       name: payload.customer.name,
       phone: normalizeDokuPhone(payload.customer.phone),
+      ...(payload.customer.email ? { email: payload.customer.email } : {}),
       address: payload.customer.address,
       city: payload.customer.city,
       country: "ID",

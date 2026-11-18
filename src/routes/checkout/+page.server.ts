@@ -101,6 +101,7 @@ export const actions: Actions = {
     const parsed = v.safeParse(checkoutSchema, {
       customerName: form.get("customerName"),
       customerPhone: form.get("customerPhone"),
+      email: form.get("email"),
       address: form.get("address"),
       city: form.get("city"),
       note: form.get("note") ?? "",
@@ -180,6 +181,7 @@ export const actions: Actions = {
       code,
       customerName: parsed.output.customerName,
       customerPhone: phone,
+      email: parsed.output.email,
       address: parsed.output.address,
       city: parsed.output.city,
       lat: parsed.output.lat,
@@ -218,6 +220,7 @@ export const actions: Actions = {
             customer: {
               name: parsed.output.customerName,
               phone,
+              email: parsed.output.email,
               address: parsed.output.address,
               city: parsed.output.city,
             },

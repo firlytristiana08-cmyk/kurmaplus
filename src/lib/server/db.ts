@@ -488,6 +488,7 @@ export interface CreateOrderInput {
   code: string;
   customerName: string;
   customerPhone: string;
+  email?: string | null;
   address: string;
   city: string;
   lat: number;
@@ -518,6 +519,7 @@ interface OrderRow {
   code: string;
   status: OrderStatus;
   customer_name: string;
+  email: string | null;
   customer_phone: string;
   address: string;
   city: string;
@@ -595,12 +597,13 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
       ).toISOString();
 
       await tx.run(
-        `INSERT INTO orders (code, status, customer_name, customer_phone, address, city, lat, lng, courier, delivery_date, subtotal_idr, total_idr, note, created_at, expires_at)
-				 VALUES (?, 'pending_payment', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO orders (code, status, customer_name, customer_phone, email, address, city, lat, lng, courier, delivery_date, subtotal_idr, total_idr, note, created_at, expires_at)
+				 VALUES (?, 'pending_payment', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           input.code,
           input.customerName,
           input.customerPhone,
+          input.email ?? null,
           input.address,
           input.city,
           input.lat,
@@ -652,6 +655,7 @@ export interface OrderDetail {
   status: OrderStatus;
   customerName: string;
   customerPhone: string;
+  email: string | null;
   address: string;
   city: string;
   lat: number;
@@ -684,6 +688,7 @@ async function orderDetailFromRow(db: Db, row: OrderRow): Promise<OrderDetail> {
     status: row.status,
     customerName: row.customer_name,
     customerPhone: row.customer_phone,
+    email: row.email,
     address: row.address,
     city: row.city,
     lat: row.lat,

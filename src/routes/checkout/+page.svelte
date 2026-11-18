@@ -254,6 +254,11 @@
 					/>
 					<p class="hint">Dipakai untuk konfirmasi pengiriman dan melacak pesanan.</p>
 				</div>
+				<div class="field">
+					<label for="email">Email <span class="required-mark">*</span></label>
+					<input id="email" name="email" type="email" inputmode="email" autocomplete="email" required />
+					<p class="hint">Detail pesanan dan bukti pembayaran dikirim ke email ini.</p>
+				</div>
 			</section>
 
 			<hr class="divider" />
