@@ -360,17 +360,25 @@ textarea:focus-visible {
 	color: var(--brick);
 }
 
-/* Tombol utama menempel di bawah layar (PRD tata letak). */
+/* Tombol utama menempel di bawah layar (PRD tata letak). Latar transparan
+   saat bar di posisi alami; muncul hanya saat bar menempel (melayang) —
+   deteksi lewat use:stickyBar (lihat src/lib/sticky-bar.ts). */
 .sticky-bar {
 	position: sticky;
 	bottom: 0;
+	background: transparent;
+	border-top: 1px solid transparent;
+	padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+	z-index: 20;
+	transition: background-color 150ms ease-out, border-color 150ms ease-out;
+}
+
+.sticky-bar.is-stuck {
 	background: rgba(244, 237, 224, 0.92);
 	background: color-mix(in srgb, var(--paper) 92%, transparent);
 	-webkit-backdrop-filter: blur(8px);
 	backdrop-filter: blur(8px);
-	border-top: 1px solid var(--sand);
-	padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
-	z-index: 20;
+	border-top-color: var(--sand);
 }
 
 .sticky-inner {

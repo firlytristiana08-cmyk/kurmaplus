@@ -10,6 +10,7 @@
 		type CartItem
 	} from '#lib/cart.svelte';
 	import PageFooter from '#lib/components/PageFooter.svelte';
+	import { stickyBar } from '#lib/sticky-bar';
 	import PageHeader from '#lib/components/PageHeader.svelte';
 	import ProsesLoader from '#lib/components/ProsesLoader.svelte';
 	import { clearInvalid, handleInvalid } from '#lib/validation';
@@ -378,7 +379,7 @@
 
 <!-- Bilah tombol di luar .wrap agar lebarnya rata kiri-kanan seperti halaman lain. -->
 {#if rows.length > 0}
-	<div class="sticky-bar">
+	<div class="sticky-bar" use:stickyBar>
 		<div class="sticky-inner">
 			<button
 				type="submit"

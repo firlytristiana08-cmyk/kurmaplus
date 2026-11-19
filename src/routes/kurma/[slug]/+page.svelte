@@ -3,6 +3,7 @@
 	import { formatRupiah, formatWeight } from '#lib/format';
 	import { cart, setDirectBuy } from '#lib/cart.svelte';
 	import PageFooter from '#lib/components/PageFooter.svelte';
+	import { stickyBar } from '#lib/sticky-bar';
 	import PageHeader from '#lib/components/PageHeader.svelte';
 	import type { ProductData } from './+page.server';
 
@@ -209,7 +210,7 @@
 </main>
 
 {#if selectedVariant}
-	<div class="sticky-bar">
+	<div class="sticky-bar" use:stickyBar>
 		<div class="sticky-inner two-buttons">
 			<button
 				type="button"
