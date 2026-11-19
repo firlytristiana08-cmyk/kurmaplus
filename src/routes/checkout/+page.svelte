@@ -502,7 +502,7 @@
 
 				<div class="map-block">
 					<div id="peta-checkout" class="map" role="application" aria-label="Peta lokasi pengiriman"></div>
-					<button type="button" id="tombol-lokasi" class="btn">Gunakan lokasi saya</button>
+					<button type="button" id="tombol-lokasi" class="btn btn-secondary">Gunakan lokasi saya</button>
 					{#if mapMessage}
 						<p class="error-text" role="status">{mapMessage}</p>
 					{:else if pinSet}
@@ -608,6 +608,11 @@
 <PageFooter />
 
 <style>
+	/* Tombol lokasi: isian putih solid (senada tombol "Keranjang" di detail). */
+	.map-block .btn-secondary {
+		background: var(--card);
+	}
+
 	.map-block {
 		display: grid;
 		gap: 0.625rem;
