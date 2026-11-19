@@ -3,6 +3,7 @@
 	// Seluruh detail produk diatur di sini (tugas 90); penyesuaian stok selalu
 	// bercatatan (BA-08); perubahan harga hanya untuk pesanan baru (BA-09).
 	import { enhance } from '$app/forms';
+	import { adminEnhance } from '#lib/admin-feedback';
 	import { formatDateTimeId, formatRupiah } from '#lib/format';
 
 	let { data, form } = $props();
@@ -88,7 +89,7 @@
 				>
 					{editing === product.id ? 'Tutup detail' : 'Ubah detail'}
 				</button>
-				<form method="POST" action="?/produk" use:enhance>
+				<form method="POST" action="?/produk" use:enhance={adminEnhance()}>
 					<input type="hidden" name="product_id" value={product.id} />
 					<input type="hidden" name="active" value={product.active ? '0' : '1'} />
 					<button class="btn-mini" type="submit">{product.active ? 'Nonaktifkan' : 'Aktifkan'}</button>
@@ -97,7 +98,7 @@
 		</div>
 
 		{#if editing === product.id}
-			<form class="surface" method="POST" action="?/detail" use:enhance>
+			<form class="surface" method="POST" action="?/detail" use:enhance={adminEnhance()}>
 				<input type="hidden" name="product_id" value={product.id} />
 				<div class="field">
 					<label for="nama-{product.id}">Nama produk</label>
@@ -140,7 +141,7 @@
 		<div class="surface">
 			{#each product.variants as variant (variant.id)}
 				<div class="row" style="align-items: flex-start; flex-direction: column; gap: 0.5rem">
-					<form method="POST" action="?/varian" use:enhance style="width: 100%">
+					<form method="POST" action="?/varian" use:enhance={adminEnhance()} style="width: 100%">
 						<input type="hidden" name="variant_id" value={variant.id} />
 						<div class="row-l1" style="width: 100%; gap: 0.5rem">
 							<input
@@ -190,7 +191,7 @@
 					<form
 						method="POST"
 						action="?/stok"
-						use:enhance
+						use:enhance={adminEnhance()}
 						style="width: 100%"
 						onsubmit={(event) => {
 							const reason = event.currentTarget.querySelector<HTMLInputElement>('input[name="reason"]');
@@ -210,7 +211,7 @@
 					<form
 						method="POST"
 						action="?/hapus"
-						use:enhance
+						use:enhance={adminEnhance('Varian dihapus.')}
 						style="width: 100%"
 						onsubmit={(event) => {
 							if (!window.confirm(`Hapus varian ${variant.label}? Hanya bisa bila belum punya riwayat pesanan/stok.`)) {
@@ -224,7 +225,7 @@
 				</div>
 			{/each}
 
-			<form method="POST" action="?/tambah" use:enhance style="margin-top: 0.5rem">
+			<form method="POST" action="?/tambah" use:enhance={adminEnhance()} style="margin-top: 0.5rem">
 				<input type="hidden" name="product_id" value={product.id} />
 				<p class="muted" style="margin: 0.5rem 0 0.25rem; font-size: 0.8125rem">Tambah varian baru</p>
 				<div class="btn-row" style="margin: 0">

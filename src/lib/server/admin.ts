@@ -976,6 +976,7 @@ export async function adminOrderDetail(code: string): Promise<AdminOrderDetail |
   const db = await getDb();
   const row = await db.get<
     AdminOrderRow & {
+      id: number;
       email: string | null;
       address: string;
       lat: number;
@@ -996,11 +997,10 @@ export async function adminOrderDetail(code: string): Promise<AdminOrderDetail |
     }
   >("SELECT * FROM orders WHERE code = ?", [code]);
   if (!row) return null;
-  const idRow = await db.get<{ id: number }>("SELECT id FROM orders WHERE code = ?", [code]);
   const items = (
     await db.all<{ name_snapshot: string; price_snapshot: number; qty: number }>(
       "SELECT name_snapshot, price_snapshot, qty FROM order_items WHERE order_id = ?",
-      [idRow?.id ?? -1],
+      [row.id],
     )
   ).map((item) => ({ name: item.name_snapshot, priceIdr: item.price_snapshot, qty: item.qty }));
   const historyRows = await db.all<{
@@ -1066,6 +1066,7 @@ export interface TodaySummary {
     stock: number;
     locked: number;
   }[];
+  counts: { pending_payment: number; paid: number; packed: number; shipped: number };
   threshold: number;
   storeOpen: boolean;
   openCheckoutDate: string;
@@ -1078,7 +1079,7 @@ export async function adminToday(now = new Date()): Promise<TodaySummary> {
 
   const needRows = await db.all<AdminOrderRow>(
     `SELECT code, status, customer_name, customer_phone, city, delivery_date, courier, total_idr, created_at, shipping_status, shipping_actual_idr
-\t\t FROM orders WHERE status IN ('paid', 'packed', 'shipped') ORDER BY delivery_date ASC, created_at ASC`,
+\t\t FROM orders WHERE status IN ('paid', 'packed', 'shipped') ORDER BY delivery_date ASC, created_at ASC LIMIT 10`,
   );
 
   // Rekap akhir pekan terdekat (Sabtu & Minggu) untuk pesanan yang masih
@@ -1099,29 +1100,46 @@ export async function adminToday(now = new Date()): Promise<TodaySummary> {
     }
   }
 
-  const weekend = [];
-  for (const entry of weekendDates) {
-    const orders = await db.all<{ code: string; courier: string }>(
-      `SELECT code, courier FROM orders WHERE delivery_date = ? AND status IN ('paid', 'packed')`,
-      [entry.date],
-    );
-    let packageCount = 0;
+  // Rekap akhir pekan dalam satu query gabungan (bukan satu query per pesanan):
+  // jumlah kemasan langsung dihitung dari order_items.
+  const weekendRows = weekendDates.length
+    ? await db.all<{ delivery_date: string; courier: string; packages: number }>(
+        `SELECT o.delivery_date, o.courier, COALESCE(SUM(oi.qty), 0) AS packages
+\t\t FROM orders o LEFT JOIN order_items oi ON oi.order_id = o.id
+\t\t WHERE o.delivery_date IN (${weekendDates.map(() => "?").join(", ")})
+\t\t AND o.status IN ('paid', 'packed')
+\t\t GROUP BY o.id`,
+        weekendDates.map((entry) => entry.date),
+      )
+    : [];
+  const weekend = weekendDates.map((entry) => {
+    const rows = weekendRows.filter((row) => row.delivery_date === entry.date);
     const perCourier: Record<string, number> = {};
-    for (const order of orders) {
-      perCourier[order.courier] = (perCourier[order.courier] ?? 0) + 1;
-      const qty = await db.get<{ n: number }>(
-        "SELECT COALESCE(SUM(qty), 0) AS n FROM order_items WHERE order_id = (SELECT id FROM orders WHERE code = ?)",
-        [order.code],
-      );
-      packageCount += qty?.n ?? 0;
+    let packageCount = 0;
+    for (const row of rows) {
+      perCourier[row.courier] = (perCourier[row.courier] ?? 0) + 1;
+      packageCount += row.packages;
     }
-    weekend.push({
+    return {
       date: entry.date,
       weekdayName: entry.weekdayName,
-      orderCount: orders.length,
+      orderCount: rows.length,
       packageCount,
       perCourier,
-    });
+    };
+  });
+
+  // Ringkasan pesanan aktif per status (baris ringkasan di beranda).
+  const countRows = await db.all<{ status: string; n: number }>(
+    `SELECT status, COUNT(*) AS n FROM orders
+\t\t WHERE status IN ('pending_payment', 'paid', 'packed', 'shipped')
+\t\t GROUP BY status`,
+  );
+  const counts = { pending_payment: 0, paid: 0, packed: 0, shipped: 0 };
+  for (const row of countRows) {
+    if (row.status in counts) {
+      counts[row.status as keyof typeof counts] = row.n;
+    }
   }
 
   const lowStock = (
@@ -1152,6 +1170,7 @@ export async function adminToday(now = new Date()): Promise<TodaySummary> {
   return {
     needAction: needRows.map(toLine),
     weekend,
+    counts,
     lowStock,
     threshold,
     storeOpen: settings.store_open !== "0",

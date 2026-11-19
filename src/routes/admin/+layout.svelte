@@ -6,10 +6,29 @@
 	import type { Snippet } from 'svelte';
 
 	let { children }: { children: Snippet } = $props();
+	let toastMessage = $state('');
 
 	// Pratinjau/dev: bawa ?sesi=demo ke setiap navigasi admin (klik tautan,
 	// submit form) karena cookie bisa diblokir di dalam iframe pratinjau.
 	// Lihat src/hooks.server.ts. Tidak aktif di produksi.
+	// Umpan balik aksi admin: toast singkat setelah aksi berhasil (lihat
+	// src/lib/admin-feedback.ts) dan toast salin di detail pesanan.
+	onMount(() => {
+		let timer: ReturnType<typeof setTimeout> | undefined;
+		const onToast = (event: Event): void => {
+			toastMessage = (event as CustomEvent<string>).detail;
+			clearTimeout(timer);
+			timer = setTimeout(() => {
+				toastMessage = '';
+			}, 2600);
+		};
+		window.addEventListener('kurma:toast', onToast);
+		return () => {
+			window.removeEventListener('kurma:toast', onToast);
+			clearTimeout(timer);
+		};
+	});
+
 	onMount(() => {
 		if (!import.meta.env.DEV) return;
 		const addSesi = (raw: string): string | null => {
@@ -126,4 +145,10 @@
 		{/each}
 	</nav>
 {/if}
+	{#if toastMessage}
+		<div class="toast" role="status">
+			<svg class="mk" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 6.5 4.7 9.2 10 3.4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" /></svg>
+			{toastMessage}
+		</div>
+	{/if}
 </div>

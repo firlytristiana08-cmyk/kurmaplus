@@ -2,6 +2,7 @@
 	// Detail pesanan — "layar menjawab: apa langkah berikut untuk satu pesanan?"
 	// (PRD Portal Admin — AD-06..AD-14, BA-01..BA-07).
 	import { enhance } from '$app/forms';
+	import { adminEnhance } from '#lib/admin-feedback';
 	import BackLink from '#lib/components/BackLink.svelte';
 	import StatusBadge from '#lib/components/admin/StatusBadge.svelte';
 	import type { OrderStatus } from '#lib/order-status';
@@ -178,7 +179,7 @@
 				{#if i < shippingSteps.length - 1}<span class="sep">›</span>{/if}
 			{/each}
 		</div>
-		<form method="POST" action="?/ongkir" use:enhance>
+		<form method="POST" action="?/ongkir" use:enhance={adminEnhance()}>
 			<div class="field">
 				<label for="nominal">Nominal ongkir dari aplikasi kurir</label>
 				<input id="nominal" name="nominal" type="text" inputmode="numeric" value={order.shippingActualIdr ?? ''} placeholder="mis. 25000" />
@@ -225,7 +226,7 @@
 			Invoice {order.code} · dibayar {order.paidAt ? formatDateTimeId(order.paidAt) : '—'}
 			{#if order.manualPaidReason}· manual: {order.manualPaidReason}{/if}
 		</p>
-		<form method="POST" action="?/cek_doku" use:enhance>
+		<form method="POST" action="?/cek_doku" use:enhance={adminEnhance()}>
 			<div class="btn-row">
 				<button class="btn-mini" type="submit">Cek status ke DOKU</button>
 			</div>
@@ -234,7 +235,7 @@
 			<form
 				method="POST"
 				action="?/bayar_manual"
-				use:enhance
+				use:enhance={adminEnhance()}
 				onsubmit={(event) => {
 					if (!window.confirm('Tandai bayar manual? Pastikan sudah memeriksa dashboard DOKU. Tindakan tercatat di log audit.')) {
 						event.preventDefault();
@@ -253,7 +254,7 @@
 	<!-- Catatan internal (AD-11) -->
 	<div class="surface">
 		<h3 style="margin-top: 0">Catatan internal</h3>
-		<form method="POST" action="?/catatan" use:enhance>
+		<form method="POST" action="?/catatan" use:enhance={adminEnhance()}>
 			<div class="field">
 				<label for="catatan" class="visually-hidden" style="position: absolute; left: -9999px">Catatan internal</label>
 				<textarea id="catatan" name="note" placeholder="Tulis catatan untuk diri sendiri…">{order.internalNote ?? ''}</textarea>
@@ -272,7 +273,7 @@
 					Tercatat {order.refundNotedAt ? formatDateTimeId(order.refundNotedAt) : ''} — {order.refundNote}
 				</p>
 			{/if}
-			<form method="POST" action="?/refund" use:enhance>
+			<form method="POST" action="?/refund" use:enhance={adminEnhance()}>
 				<div class="field">
 					<label for="catatan-refund">Catatan pengembalian (dilakukan di dashboard DOKU)</label>
 					<input id="catatan-refund" name="note" type="text" placeholder="mis. dana dikembalikan via transfer, 20 Nov" required />
@@ -306,7 +307,7 @@
 		<h2>Aksi lain</h2>
 	</div>
 	<div class="surface">
-		<form method="POST" action="?/tanggal" use:enhance>
+		<form method="POST" action="?/tanggal" use:enhance={adminEnhance()}>
 			<h3 style="margin-top: 0">Pindah tanggal kirim</h3>
 			<p class="muted">Hanya Sabtu atau Minggu (BA-07). Pembeli perlu diberi tahu lewat WhatsApp.</p>
 			<div class="field">
@@ -326,7 +327,7 @@
 			<form
 				method="POST"
 				action="?/status"
-				use:enhance
+				use:enhance={adminEnhance('Status pesanan diperbarui.')}
 				onsubmit={(event) => {
 					if (!window.confirm(`Batalkan pesanan ${order.code}? Tindakan tercatat di log audit.`)) {
 						event.preventDefault();
@@ -368,7 +369,7 @@
 				<form
 					method="POST"
 					action="?/status"
-					use:enhance
+					use:enhance={adminEnhance('Status pesanan diperbarui.')}
 					onsubmit={(event) => {
 						if (!window.confirm(`${forwardLabel[forward[order.status] ?? '']}? Perpindahan status tercatat di log audit.`)) {
 							event.preventDefault();
@@ -386,7 +387,7 @@
 				<form
 					method="POST"
 					action="?/status"
-					use:enhance
+					use:enhance={adminEnhance('Status pesanan diperbarui.')}
 					onsubmit={(event) => {
 						const reason = window.prompt('Koreksi mundur satu langkah — alasan (wajib):');
 						if (reason === null || reason.trim() === '') {

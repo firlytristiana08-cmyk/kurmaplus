@@ -614,3 +614,47 @@ h3,
 	overflow: hidden;
 	text-overflow: ellipsis;
 }
+
+/* Umpan balik aksi: spinner kecil di tombol saat diproses + toast singkat. */
+.is-busy {
+	pointer-events: none;
+	opacity: 0.7;
+}
+
+button.is-busy::after {
+	content: '';
+	display: inline-block;
+	width: 0.875rem;
+	height: 0.875rem;
+	margin-left: 0.375rem;
+	border: 2px solid currentColor;
+	border-top-color: transparent;
+	border-radius: 50%;
+	animation: busy-spin 0.7s linear infinite;
+	flex: none;
+}
+
+@keyframes busy-spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+.toast {
+	position: fixed;
+	left: 50%;
+	bottom: 5.5rem;
+	z-index: 60;
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	max-width: min(26rem, calc(100vw - 2rem));
+	transform: translateX(-50%);
+	padding: 0.75rem 1.125rem;
+	border: 1.5px solid var(--olive);
+	border-radius: 0.8125rem;
+	background: var(--card);
+	color: var(--olive);
+	font-weight: 700;
+	box-shadow: 0 6px 24px rgba(45, 38, 75, 0.16);
+}
