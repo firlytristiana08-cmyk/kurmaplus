@@ -191,7 +191,7 @@
 					<form
 						method="POST"
 						action="?/stok"
-						use:enhance={adminEnhance()}
+						use:enhance={adminEnhance("Stok disesuaikan.", { reset: true })}
 						style="width: 100%"
 						onsubmit={(event) => {
 							const reason = event.currentTarget.querySelector<HTMLInputElement>('input[name="reason"]');
@@ -225,7 +225,7 @@
 				</div>
 			{/each}
 
-			<form method="POST" action="?/tambah" use:enhance={adminEnhance()} style="margin-top: 0.5rem">
+			<form method="POST" action="?/tambah" use:enhance={adminEnhance("Varian baru ditambahkan.", { reset: true })} style="margin-top: 0.5rem">
 				<input type="hidden" name="product_id" value={product.id} />
 				<p class="muted" style="margin: 0.5rem 0 0.25rem; font-size: 0.8125rem">Tambah varian baru</p>
 				<div class="btn-row" style="margin: 0">
