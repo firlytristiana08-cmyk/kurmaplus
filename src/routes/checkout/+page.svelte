@@ -14,7 +14,6 @@
 	import PageHeader from '#lib/components/PageHeader.svelte';
 	import ProsesLoader from '#lib/components/ProsesLoader.svelte';
 	import { clearInvalid, handleInvalid } from '#lib/validation';
-	import type { Snapshot } from './$types';
 	import type { CheckoutData } from './+page.server';
 
 	let { data, form }: { data: CheckoutData; form?: { message?: string; code?: string } } = $props();
@@ -127,7 +126,7 @@
 
 	const DRAFT_TTL_MS = 24 * 60 * 60 * 1000;
 	const SUBMITTED_KEY = 'kurma-checkout-submitted';
-	const FAILSAFE_KEY = 'kurma-checkout-draft';
+	const DRAFT_KEY = 'kurma-checkout-draft';
 
 	function draftOf(): CheckoutDraft {
 		return {
@@ -146,8 +145,8 @@
 		};
 	}
 
-	function applyDraft(draft: CheckoutDraft): void {
-		if (Date.now() - draft.savedAt > DRAFT_TTL_MS) return;
+	function applyDraft(draft: CheckoutDraft): boolean {
+		if (Date.now() - draft.savedAt > DRAFT_TTL_MS) return false;
 		nameValue = draft.name;
 		phoneValue = draft.phone;
 		emailValue = draft.email;
@@ -161,24 +160,46 @@
 		latValue = draft.lat;
 		lngValue = draft.lng;
 		pinSet = draft.pin && Boolean(draft.lat && draft.lng);
+		return true;
 	}
 
-	export const snapshot: Snapshot<CheckoutDraft> = {
-		capture: () => draftOf(),
-		restore: (draft) => {
-			if (sessionStorage.getItem(SUBMITTED_KEY)) {
-				// Pesanan terakhir sukses dikirim — isian lama tidak dipulihkan.
-				sessionStorage.removeItem(SUBMITTED_KEY);
-				sessionStorage.removeItem(FAILSAFE_KEY);
-				return;
-			}
-			applyDraft(draft);
+	// Simpanan isian di penyimpanan tab: bertahan saat pindah halaman, refresh,
+	// dan kembali dengan cara apa pun — tombol back/forward maupun tombol/link.
+	function saveDraft(): void {
+		try {
+			sessionStorage.setItem(DRAFT_KEY, JSON.stringify(draftOf()));
+		} catch {
+			/* penyimpanan penuh/di-block — abaikan */
 		}
-	};
+	}
+
+	function clearDraft(): void {
+		try {
+			sessionStorage.removeItem(DRAFT_KEY);
+			sessionStorage.removeItem(SUBMITTED_KEY);
+		} catch {
+			/* abaikan */
+		}
+	}
+
+	function restoreDraft(): void {
+		const raw = sessionStorage.getItem(DRAFT_KEY);
+		if (!raw) return;
+		try {
+			if (applyDraft(JSON.parse(raw) as CheckoutDraft)) {
+				saveDraft(); // isian dipakai lagi — perpanjang masa simpan 24 jam
+			} else {
+				clearDraft(); // lewat 24 jam — data basi dibuang
+			}
+		} catch {
+			clearDraft();
+		}
+	}
 
 	function onInputCapture(event: Event): void {
 		clearInvalid(event);
 		formNotice = '';
+		saveDraft();
 	}
 
 	function handleSubmit(event: SubmitEvent): void {
@@ -207,8 +228,8 @@
 		commitPurchased(rows.map((row) => ({ variantId: row.variantId, qty: row.qty })));
 		// Catat isian terakhir untuk pemulihan bila submit gagal di server, dan
 		// tandai bahwa pesanan sudah dikirim agar isian lama tidak dipulihkan.
+		saveDraft();
 		try {
-			sessionStorage.setItem(FAILSAFE_KEY, JSON.stringify(draftOf()));
 			sessionStorage.setItem(SUBMITTED_KEY, '1');
 		} catch {
 			/* penyimpanan penuh/di-block — abaikan */
@@ -218,19 +239,17 @@
 	}
 
 	onMount(() => {
-		// Submit form memuat ulang halaman: bila server menolak, pasang kembali
-		// isian yang baru dikirim supaya pengguna tidak mengisi ulang.
+		// Isian tersimpan dipasang kembali apa pun cara pengguna kembali ke
+		// halaman ini (back/forward, tombol/link, atau refresh), kecuali tepat
+		// setelah pesanan sukses dikirim — di situ form dimulai kosong.
 		if (form?.message && !form.code) {
-			const raw = sessionStorage.getItem(FAILSAFE_KEY);
-			sessionStorage.removeItem(FAILSAFE_KEY);
+			// Submit ditolak server: isian yang barusan dikirim dipasang kembali.
 			sessionStorage.removeItem(SUBMITTED_KEY);
-			if (raw) {
-				try {
-					applyDraft(JSON.parse(raw) as CheckoutDraft);
-				} catch {
-					/* data draft rusak — abaikan */
-				}
-			}
+			restoreDraft();
+		} else if (sessionStorage.getItem(SUBMITTED_KEY)) {
+			clearDraft();
+		} else {
+			restoreDraft();
 		}
 		// Kembali dari cache (mis. tombol back setelah halaman bayar): sembunyikan overlay.
 		const onPageShow = (): void => {
@@ -280,6 +299,7 @@
 							lngValue = position.lng.toFixed(6);
 							pinSet = true;
 							mapMessage = '';
+							saveDraft();
 						}
 					});
 				}
@@ -287,6 +307,7 @@
 				lngValue = lng.toFixed(6);
 				pinSet = true;
 				mapMessage = '';
+				saveDraft();
 			};
 
 			map.on('click', (event: import('leaflet').LeafletMouseEvent) => {
@@ -360,7 +381,7 @@
 			</div>
 		{/if}
 
-		<form id="form-checkout" method="POST" onsubmit={handleSubmit} oninvalidcapture={handleInvalid} oninputcapture={onInputCapture}>
+		<form id="form-checkout" method="POST" onsubmit={handleSubmit} oninvalidcapture={handleInvalid} oninputcapture={onInputCapture} onchange={saveDraft}>
 			<input type="hidden" name="items" value={itemsJson} />
 			<input type="hidden" name="lat" value={latValue} />
 			<input type="hidden" name="lng" value={lngValue} />
