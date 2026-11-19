@@ -626,4 +626,9 @@
 	.two-buttons .btn {
 		justify-content: center;
 	}
+
+	/* Tombol keranjang: warna dasar kartu (isian solid, bukan transparan). */
+	.two-buttons .btn-secondary {
+		background: var(--card);
+	}
 </style>
