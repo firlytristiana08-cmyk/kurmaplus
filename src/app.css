@@ -316,12 +316,12 @@ textarea:focus-visible {
 	font-size: 0.9375rem;
 }
 
-/* Teks info ongkir: baris pertama tampil tebal, sisa teks di baris berikutnya. */
-.info-box .info-judul {
+/* Teks info pengiriman: baris pertama tampil tebal, sisa teks di baris berikutnya. */
+.info-box .info-title {
 	display: block;
 }
 
-.info-box .info-sisa {
+.info-box .info-rest {
 	display: block;
 	margin-top: 0.25rem;
 	white-space: pre-line;

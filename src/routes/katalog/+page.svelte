@@ -43,13 +43,11 @@
 	<section class="intro">
 		<h1>Kurma enak untuk tiap hari — dikirim tiap akhir pekan.</h1>
 		<div class="info-box">
-			<strong>Pengiriman terdekat:</strong>
-			{ringkasTanggal(data.deliveryDates)}
+			<strong class="info-title">Pengiriman terdekat:</strong>
+			<span class="info-rest">{ringkasTanggal(data.deliveryDates)} & Ongkir Grab/Gojek, dibayar langsung ke kurir.</span>
 			{#if data.deliveryDates.some((option) => option.isFull)}
 				<span class="badge badge-off">Sebagian penuh</span>
 			{/if}
-			<br />
-			Ongkir Grab/Gojek — dibayar langsung ke kurir.
 		</div>
 	</section>
 

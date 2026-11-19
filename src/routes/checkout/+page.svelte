@@ -320,9 +320,9 @@
 				<div class="info-box">
 					{#if data.shippingInfoText}
 						{@const [judulInfo, ...sisaInfo] = data.shippingInfoText.split('\n')}
-						<strong class="info-judul">{judulInfo}</strong>
+						<strong class="info-title">{judulInfo}</strong>
 						{#if sisaInfo.length > 0}
-							<span class="info-sisa">{sisaInfo.join('\n')}</span>
+							<span class="info-rest">{sisaInfo.join('\n')}</span>
 						{/if}
 					{:else}
 						Ongkir mengikuti tarif kurir, dibayar langsung ke kurir — di luar total ini.
