@@ -196,6 +196,22 @@
 		}
 	}
 
+	// Isian tersimpan dipasang kembali apa pun cara pengguna kembali ke
+	// halaman ini (back/forward, tombol/link, atau refresh), kecuali tepat
+	// setelah pesanan sukses dikirim — di situ form dimulai kosong.
+	if (typeof window !== 'undefined') {
+		// svelte-ignore state_referenced_locally -- cukup nilai awal: form dari server
+		if (form?.message && !form.code) {
+			// Submit ditolak server: isian yang barusan dikirim dipasang kembali.
+			sessionStorage.removeItem(SUBMITTED_KEY);
+			restoreDraft();
+		} else if (sessionStorage.getItem(SUBMITTED_KEY)) {
+			clearDraft();
+		} else {
+			restoreDraft();
+		}
+	}
+
 	function onInputCapture(event: Event): void {
 		clearInvalid(event);
 		formNotice = '';
@@ -238,33 +254,18 @@
 		loading = true;
 	}
 
-	onMount(() => {
-		// Isian tersimpan dipasang kembali apa pun cara pengguna kembali ke
-		// halaman ini (back/forward, tombol/link, atau refresh), kecuali tepat
-		// setelah pesanan sukses dikirim — di situ form dimulai kosong.
-		if (form?.message && !form.code) {
-			// Submit ditolak server: isian yang barusan dikirim dipasang kembali.
-			sessionStorage.removeItem(SUBMITTED_KEY);
-			restoreDraft();
-		} else if (sessionStorage.getItem(SUBMITTED_KEY)) {
-			clearDraft();
-		} else {
-			restoreDraft();
-		}
-		// Kembali dari cache (mis. tombol back setelah halaman bayar): sembunyikan overlay.
-		const onPageShow = (): void => {
-			loading = false;
-		};
-		window.addEventListener('pageshow', onPageShow);
-		let cleanup = () => {};
+	// Peta dibuat saat kontainernya muncul — kategori "Lokasi pengiriman" yang
+	// default tertutup menahan kontainer keluar dari DOM — dan dibongkar lagi
+	// saat kategori ditutup, supaya selalu segar setiap kali dibuka.
+	function mapSetup(node: HTMLElement): { destroy: () => void } {
+		let cleanup = (): void => {};
 		void (async () => {
 			const leaflet = await import('leaflet');
 			await import('leaflet/dist/leaflet.css');
-			const mapElement = document.getElementById('peta-checkout');
-			if (!mapElement) {
+			if (!node.isConnected) {
 				return;
 			}
-			const map = leaflet.map(mapElement).setView([-6.2, 106.85], 11);
+			const map = leaflet.map(node).setView([-6.2, 106.85], 11);
 			leaflet
 				.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
 					attribution:
@@ -341,9 +342,21 @@
 				map.remove();
 			};
 		})();
+		return {
+			destroy: () => {
+				cleanup();
+			}
+		};
+	}
+
+	onMount(() => {
+		// Kembali dari cache (mis. tombol back setelah halaman bayar): sembunyikan overlay.
+		const onPageShow = (): void => {
+			loading = false;
+		};
+		window.addEventListener('pageshow', onPageShow);
 		return () => {
 			window.removeEventListener('pageshow', onPageShow);
-			cleanup();
 		};
 	});
 </script>
@@ -501,7 +514,7 @@
 				</div>
 
 				<div class="map-block">
-					<div id="peta-checkout" class="map" role="application" aria-label="Peta lokasi pengiriman"></div>
+					<div id="peta-checkout" class="map" role="application" aria-label="Peta lokasi pengiriman" use:mapSetup></div>
 					<button type="button" id="tombol-lokasi" class="btn btn-secondary">Gunakan lokasi saya</button>
 					{#if mapMessage}
 						<p class="error-text" role="status">{mapMessage}</p>
