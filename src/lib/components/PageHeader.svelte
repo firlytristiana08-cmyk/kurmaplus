@@ -11,7 +11,7 @@
 
 <header class="header">
 	<div class="header-inner">
-		<Wordmark href="/katalog" />
+		<Wordmark href="/" />
 		<nav aria-label="Navigasi utama">
 			<a href="/lacak">Lacak pesanan</a>
 			<a

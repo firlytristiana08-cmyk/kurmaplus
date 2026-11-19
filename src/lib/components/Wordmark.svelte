@@ -1,6 +1,6 @@
 <script lang="ts">
 	let {
-		href = '/katalog',
+		href = '/',
 		level = 'span'
 	}: {
 		href?: string;
