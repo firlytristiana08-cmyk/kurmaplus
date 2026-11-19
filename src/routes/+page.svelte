@@ -295,6 +295,12 @@
 			font-size: 1.0625rem;
 		}
 
+		/* Tagline tepat 2 baris: putus di koma (br) tanpa lipatan lanjutan. */
+		.tagline {
+			font-size: 0.75rem;
+			white-space: nowrap;
+		}
+
 		.card::after {
 			width: 3.25rem;
 		}
