@@ -271,6 +271,39 @@
 		height: 1.3125rem;
 	}
 
+	/* HP: kartu bubble diperkecil agar tidak mendominasi layar.
+	   Tinggi ekor dan jangkar posisi tidak berubah (titik ekor tetap di ruko). */
+	@media (max-width: 639px) {
+		.card-anchor {
+			width: min(212px, calc(100vw - 28px));
+		}
+
+		.card {
+			padding: 0.9375rem;
+		}
+
+		.brand-row {
+			gap: 0.625rem;
+		}
+
+		.logo {
+			width: 3.125rem;
+			height: 3.125rem;
+		}
+
+		.wordmark {
+			font-size: 1.0625rem;
+		}
+
+		.card::after {
+			width: 3.25rem;
+		}
+
+		.splash-btn {
+			margin-top: 0.75rem;
+		}
+	}
+
 	@keyframes rise-in {
 		from {
 			opacity: 0;
