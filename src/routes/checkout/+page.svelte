@@ -502,7 +502,7 @@
 
 				<div class="map-block">
 					<div id="peta-checkout" class="map" role="application" aria-label="Peta lokasi pengiriman"></div>
-					<button type="button" id="tombol-lokasi" class="btn btn-secondary">Lokasi saya</button>
+					<button type="button" id="tombol-lokasi" class="btn">Gunakan lokasi saya</button>
 					{#if mapMessage}
 						<p class="error-text" role="status">{mapMessage}</p>
 					{:else if pinSet}
