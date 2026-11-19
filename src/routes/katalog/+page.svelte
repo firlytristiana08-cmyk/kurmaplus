@@ -43,13 +43,11 @@
 	<section class="intro">
 		<h1>Kurma enak untuk tiap hari — dikirim tiap akhir pekan.</h1>
 		<div class="info-box">
-			<strong>Pengiriman terdekat:</strong>
-			{ringkasTanggal(data.deliveryDates)}
+			<strong class="info-title">Pengiriman terdekat:</strong>
+			<span class="info-rest">{ringkasTanggal(data.deliveryDates)} & Ongkir Grab/Gojek, dibayar langsung ke kurir.</span>
 			{#if data.deliveryDates.some((option) => option.isFull)}
 				<span class="badge badge-off">Sebagian penuh</span>
 			{/if}
-			<br />
-			Ongkir Grab/Gojek — dibayar langsung ke kurir.
 		</div>
 	</section>
 
@@ -145,8 +143,10 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
+		background: #f2eadb;
 		background: color-mix(in srgb, var(--sand) 55%, var(--card));
-		border-radius: var(--radius-m);
+		border-radius: var(--radius-l) var(--radius-l) var(--radius-m) var(--radius-m);
+		color: #aea7ac;
 		color: color-mix(in srgb, var(--ink) 35%, var(--paper));
 	}
 
@@ -156,6 +156,8 @@
 		aspect-ratio: 1 / 1;
 		object-fit: cover;
 		display: block;
+		/* Radius langsung di gambar — kliping overflow induk tidak andal di Safari lama. */
+		border-radius: var(--radius-l) var(--radius-l) 0 0;
 	}
 
 	.best-badge {
@@ -189,6 +191,7 @@
 	.sold {
 		margin: 0.25rem 0 0;
 		font-size: 0.8125rem;
+		color: #7d788d;
 		color: color-mix(in srgb, var(--ink) 62%, var(--card));
 	}
 

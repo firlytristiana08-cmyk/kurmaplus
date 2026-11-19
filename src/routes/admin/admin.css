@@ -43,6 +43,7 @@
 
 .row-l2 {
 	font-size: 0.8125rem;
+	color: #797284;
 	color: color-mix(in srgb, var(--ink) 62%, var(--paper));
 	margin-top: 0.125rem;
 	overflow-wrap: anywhere;
@@ -56,6 +57,7 @@
 }
 
 a.row:hover {
+	background: rgba(45, 38, 75, 0.04);
 	background: color-mix(in srgb, var(--ink) 4%, transparent);
 }
 
@@ -108,6 +110,7 @@ a.row:hover {
 .chip.is-active {
 	border-color: var(--rust);
 	color: var(--rust);
+	background: #f9efe8;
 	background: color-mix(in srgb, var(--rust) 7%, var(--card));
 }
 
@@ -202,6 +205,7 @@ a.row:hover {
 	display: inline-flex;
 	align-items: center;
 	gap: 0.3125rem;
+	color: #87808e;
 	color: color-mix(in srgb, var(--ink) 55%, var(--paper));
 }
 
@@ -214,6 +218,7 @@ a.row:hover {
 }
 
 .stepchain .sep {
+	color: #aea7ac;
 	color: color-mix(in srgb, var(--ink) 35%, var(--paper));
 }
 
@@ -251,6 +256,7 @@ a.row:hover {
 .timeline .when {
 	display: block;
 	font-size: 0.75rem;
+	color: #797284;
 	color: color-mix(in srgb, var(--ink) 62%, var(--paper));
 }
 
@@ -274,6 +280,7 @@ a.row:hover {
 }
 
 .recap-line .sum {
+	color: #797284;
 	color: color-mix(in srgb, var(--ink) 62%, var(--paper));
 	font-size: 0.8125rem;
 	text-align: right;
@@ -293,6 +300,7 @@ a.row:hover {
 .group-sub {
 	font-size: 0.8125rem;
 	font-weight: 700;
+	color: #797284;
 	color: color-mix(in srgb, var(--ink) 62%, var(--paper));
 	margin: 0.625rem 0 0;
 }
@@ -322,6 +330,7 @@ a.row:hover {
 	min-height: 62px;
 	padding: 0.5rem 0.25rem;
 	text-decoration: none;
+	color: #797284;
 	color: color-mix(in srgb, var(--ink) 62%, var(--paper));
 	font-size: 0.6875rem;
 	font-weight: 700;
@@ -356,7 +365,9 @@ a.row:hover {
 .admin-sticky {
 	position: sticky;
 	bottom: calc(62px + env(safe-area-inset-bottom));
+	background: rgba(244, 237, 224, 0.92);
 	background: color-mix(in srgb, var(--paper) 92%, transparent);
+	-webkit-backdrop-filter: blur(8px);
 	backdrop-filter: blur(8px);
 	border-top: 1px solid var(--sand);
 	box-shadow: 0 -10px 20px -14px rgb(45 38 75 / 0.28);
@@ -366,6 +377,7 @@ a.row:hover {
 
 .admin-sticky .sticky-hint {
 	font-size: 0.75rem;
+	color: #797284;
 	color: color-mix(in srgb, var(--ink) 62%, var(--paper));
 	text-align: center;
 	margin: 0.375rem 0 0;
@@ -595,6 +607,7 @@ h3,
 	margin: 0;
 	font-size: 0.75rem;
 	font-weight: 700;
+	color: #797284;
 	color: color-mix(in srgb, var(--ink) 62%, var(--paper));
 	max-width: 55%;
 	white-space: nowrap;

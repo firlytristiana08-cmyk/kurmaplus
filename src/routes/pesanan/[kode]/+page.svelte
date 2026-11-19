@@ -286,6 +286,7 @@
 	}
 
 	dt {
+		color: #797284;
 		color: color-mix(in srgb, var(--ink) 62%, var(--paper));
 	}
 
@@ -306,12 +307,14 @@
 
 	.hint {
 		font-size: 0.8125rem;
+		color: #797284;
 		color: color-mix(in srgb, var(--ink) 62%, var(--paper));
 	}
 
 	.modal-backdrop {
 		position: fixed;
 		inset: 0;
+		background: rgba(45, 38, 75, 0.45);
 		background: color-mix(in srgb, var(--ink) 45%, transparent);
 		display: flex;
 		align-items: center;
@@ -322,6 +325,7 @@
 
 	.modal {
 		background: var(--paper);
+		border: 1px solid #d0c9c5;
 		border: 1px solid color-mix(in srgb, var(--ink) 18%, var(--paper));
 		border-radius: 12px;
 		padding: 1.5rem;
@@ -347,6 +351,7 @@
 	}
 
 	.modal-mark.badge-wait {
+		color: #696278;
 		color: color-mix(in srgb, var(--ink) 70%, var(--paper));
 	}
 

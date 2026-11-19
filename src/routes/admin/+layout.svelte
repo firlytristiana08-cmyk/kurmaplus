@@ -106,22 +106,24 @@
 
 {@render children()}
 
-<nav class="tabbar no-print" aria-label="Navigasi admin">
-	{#each tabs as tab (tab.href)}
-		<a class="tab" class:is-active={isActive(tab)} href={tab.href} aria-current={isActive(tab) ? 'page' : undefined}>
-			{#if tab.href === '/admin'}
-				<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 3 10v11h6v-7h6v7h6V10z" /></svg>
-			{:else if tab.href === '/admin/pesanan'}
-				<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h12v20l-3-2-3 2-3-2-3 2zM9 7h6v2H9zm0 4h6v2H9z" /></svg>
-			{:else if tab.href === '/admin/pengiriman'}
-				<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 6h12v10H2zM15 9h4l3 3.5V16h-7z" /><circle cx="7" cy="18.5" r="2.5" /><circle cx="17.5" cy="18.5" r="2.5" /></svg>
-			{:else if tab.href === '/admin/produk'}
-				<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 3 7v10l9 5 9-5V7zm0 2.3 6.5 3.6L12 11.5 5.5 7.9zM5 9.6l6 3.3v6.6l-6-3.3zm14 0v6.6l-6 3.3v-6.6z" /></svg>
-			{:else}
-				<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="2.2" /><circle cx="12" cy="12" r="2.2" /><circle cx="19" cy="12" r="2.2" /></svg>
-			{/if}
-			{tab.label}
-		</a>
-	{/each}
-</nav>
+{#if !path.startsWith('/admin/masuk')}
+	<nav class="tabbar no-print" aria-label="Navigasi admin">
+		{#each tabs as tab (tab.href)}
+			<a class="tab" class:is-active={isActive(tab)} href={tab.href} aria-current={isActive(tab) ? 'page' : undefined}>
+				{#if tab.href === '/admin'}
+					<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 3 10v11h6v-7h6v7h6V10z" /></svg>
+				{:else if tab.href === '/admin/pesanan'}
+					<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h12v20l-3-2-3 2-3-2-3 2zM9 7h6v2H9zm0 4h6v2H9z" /></svg>
+				{:else if tab.href === '/admin/pengiriman'}
+					<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 6h12v10H2zM15 9h4l3 3.5V16h-7z" /><circle cx="7" cy="18.5" r="2.5" /><circle cx="17.5" cy="18.5" r="2.5" /></svg>
+				{:else if tab.href === '/admin/produk'}
+					<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 3 7v10l9 5 9-5V7zm0 2.3 6.5 3.6L12 11.5 5.5 7.9zM5 9.6l6 3.3v6.6l-6-3.3zm14 0v6.6l-6 3.3v-6.6z" /></svg>
+				{:else}
+					<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="2.2" /><circle cx="12" cy="12" r="2.2" /><circle cx="19" cy="12" r="2.2" /></svg>
+				{/if}
+				{tab.label}
+			</a>
+		{/each}
+	</nav>
+{/if}
 </div>

@@ -159,6 +159,7 @@ img {
 }
 
 .muted {
+	color: #797284;
 	color: color-mix(in srgb, var(--ink) 62%, var(--paper));
 	font-size: 0.875rem;
 }
@@ -205,6 +206,7 @@ img {
 
 .btn:disabled {
 	background: var(--sand);
+	color: #87808e;
 	color: color-mix(in srgb, var(--ink) 55%, var(--paper));
 	cursor: not-allowed;
 	box-shadow: none;
@@ -236,6 +238,7 @@ img {
 
 .field .hint {
 	font-size: 0.8125rem;
+	color: #797284;
 	color: color-mix(in srgb, var(--ink) 62%, var(--paper));
 	margin: 0.25rem 0 0;
 }
@@ -294,6 +297,7 @@ textarea:focus-visible {
 
 .error-box {
 	border: 1.5px solid var(--brick);
+	background: #f7ece8;
 	background: color-mix(in srgb, var(--brick) 8%, var(--card));
 	color: var(--brick);
 	border-radius: var(--radius-s);
@@ -304,11 +308,23 @@ textarea:focus-visible {
 
 .info-box {
 	border: 1.5px solid var(--sand);
+	background: #f2f2ea;
 	background: color-mix(in srgb, var(--olive) 7%, var(--card));
 	color: var(--tinta);
 	border-radius: var(--radius-s);
 	padding: 0.75rem 0.875rem;
 	font-size: 0.9375rem;
+}
+
+/* Teks info pengiriman: baris pertama tampil tebal, sisa teks di baris berikutnya. */
+.info-box .info-title {
+	display: block;
+}
+
+.info-box .info-rest {
+	display: block;
+	margin-top: 0.25rem;
+	white-space: pre-line;
 }
 
 /* Lencana status pesanan. */
@@ -324,31 +340,45 @@ textarea:focus-visible {
 }
 
 .badge-wait {
+	background: #f5e5dc;
 	background: color-mix(in srgb, var(--rust) 12%, var(--card));
 	color: var(--rust);
 }
 .badge-ok {
+	background: #e9e9df;
 	background: color-mix(in srgb, var(--olive) 12%, var(--card));
 	color: var(--olive);
 }
 .badge-off {
 	background: var(--sand);
+	color: #696278;
 	color: color-mix(in srgb, var(--ink) 70%, var(--paper));
 }
 .badge-alert {
+	background: #f3e4e0;
 	background: color-mix(in srgb, var(--brick) 12%, var(--card));
 	color: var(--brick);
 }
 
-/* Tombol utama menempel di bawah layar (PRD tata letak). */
+/* Tombol utama menempel di bawah layar (PRD tata letak). Latar transparan
+   saat bar di posisi alami; muncul hanya saat bar menempel (melayang) —
+   deteksi lewat use:stickyBar (lihat src/lib/sticky-bar.ts). */
 .sticky-bar {
 	position: sticky;
 	bottom: 0;
-	background: color-mix(in srgb, var(--paper) 92%, transparent);
-	backdrop-filter: blur(8px);
-	border-top: 1px solid var(--sand);
+	background: transparent;
+	border-top: 1px solid transparent;
 	padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
 	z-index: 20;
+	transition: background-color 150ms ease-out, border-color 150ms ease-out;
+}
+
+.sticky-bar.is-stuck {
+	background: rgba(244, 237, 224, 0.92);
+	background: color-mix(in srgb, var(--paper) 92%, transparent);
+	-webkit-backdrop-filter: blur(8px);
+	backdrop-filter: blur(8px);
+	border-top-color: var(--sand);
 }
 
 .sticky-inner {

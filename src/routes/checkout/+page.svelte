@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import { formatDateId, formatRupiah, formatWeight } from '#lib/format';
 	import {
 		backupCart,
@@ -10,6 +10,7 @@
 		type CartItem
 	} from '#lib/cart.svelte';
 	import PageFooter from '#lib/components/PageFooter.svelte';
+	import { stickyBar } from '#lib/sticky-bar';
 	import PageHeader from '#lib/components/PageHeader.svelte';
 	import ProsesLoader from '#lib/components/ProsesLoader.svelte';
 	import { clearInvalid, handleInvalid } from '#lib/validation';
@@ -19,6 +20,7 @@
 
 	let nameValue = $state('');
 	let phoneValue = $state('');
+	let emailValue = $state('');
 	let addressValue = $state('');
 	let cityValue = $state('');
 	let noteValue = $state('');
@@ -29,6 +31,10 @@
 	let loading = $state(false);
 	let pinSet = $state(false);
 	let mapMessage = $state('');
+	let formNotice = $state('');
+	// Kategori form (dropdown): default tertutup.
+	let kontakOpen = $state(false);
+	let lokasiOpen = $state(false);
 	// Item checkout: daftar "beli langsung" bila ada, selain itu isi keranjang.
 	let directBuy = $state<CartItem[] | null | undefined>(undefined);
 
@@ -45,6 +51,11 @@
 		// gagal dibuka), jangan dipulihkan — barang sudah tercatat terbeli.
 		if (form?.message && !form.code) {
 			restoreCartBackup();
+			// Kategori yang belum lengkap dibuka supaya langsung terlihat.
+			untrack(() => {
+				if (!kontakLengkap) kontakOpen = true;
+				if (!lokasiLengkap) lokasiOpen = true;
+			});
 		}
 	});
 
@@ -80,6 +91,133 @@
 	const subtotal = $derived(rows.reduce((sum, row) => sum + row.priceIdr * row.qty, 0));
 	const itemsJson = $derived(JSON.stringify(rows.map((row) => ({ variantId: row.variantId, qty: row.qty }))));
 
+	const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+	// Status kategori: terisi lengkap DAN formatnya benar (aturan server diikuti).
+	const kontakLengkap = $derived(
+		nameValue.trim().length >= 2 &&
+			nameValue.trim().length <= 80 &&
+			phoneValue.trim().length >= 8 &&
+			EMAIL_RE.test(emailValue.trim())
+	);
+	const lokasiLengkap = $derived(
+		addressValue.trim().length >= 5 &&
+			addressValue.trim().length <= 200 &&
+			cityValue !== '' &&
+			pinSet
+	);
+
+	// Isian form yang tersimpan di riwayat peramban (opsi A): kembali ke halaman
+	// ini mengisi ulang field. Batas 24 jam untuk data basi; setelah pesanan
+	// sukses dikirim, isian lama dibersihkan dan tidak dipulihkan lagi.
+	type CheckoutDraft = {
+		name: string;
+		phone: string;
+		email: string;
+		address: string;
+		city: string;
+		note: string;
+		courier: string;
+		date: string;
+		lat: string;
+		lng: string;
+		pin: boolean;
+		savedAt: number;
+	};
+
+	const DRAFT_TTL_MS = 24 * 60 * 60 * 1000;
+	const SUBMITTED_KEY = 'kurma-checkout-submitted';
+	const DRAFT_KEY = 'kurma-checkout-draft';
+
+	function draftOf(): CheckoutDraft {
+		return {
+			name: nameValue,
+			phone: phoneValue,
+			email: emailValue,
+			address: addressValue,
+			city: cityValue,
+			note: noteValue,
+			courier: courierValue,
+			date: dateValue,
+			lat: latValue,
+			lng: lngValue,
+			pin: pinSet,
+			savedAt: Date.now()
+		};
+	}
+
+	function applyDraft(draft: CheckoutDraft): boolean {
+		if (Date.now() - draft.savedAt > DRAFT_TTL_MS) return false;
+		nameValue = draft.name;
+		phoneValue = draft.phone;
+		emailValue = draft.email;
+		addressValue = draft.address;
+		cityValue = data.cities.includes(draft.city) ? draft.city : '';
+		noteValue = draft.note;
+		courierValue = draft.courier === 'Gojek' ? 'Gojek' : 'Grab';
+		dateValue = data.deliveryDates.some((option) => option.date === draft.date && !option.isFull)
+			? draft.date
+			: '';
+		latValue = draft.lat;
+		lngValue = draft.lng;
+		pinSet = draft.pin && Boolean(draft.lat && draft.lng);
+		return true;
+	}
+
+	// Simpanan isian di penyimpanan tab: bertahan saat pindah halaman, refresh,
+	// dan kembali dengan cara apa pun — tombol back/forward maupun tombol/link.
+	function saveDraft(): void {
+		try {
+			sessionStorage.setItem(DRAFT_KEY, JSON.stringify(draftOf()));
+		} catch {
+			/* penyimpanan penuh/di-block — abaikan */
+		}
+	}
+
+	function clearDraft(): void {
+		try {
+			sessionStorage.removeItem(DRAFT_KEY);
+			sessionStorage.removeItem(SUBMITTED_KEY);
+		} catch {
+			/* abaikan */
+		}
+	}
+
+	function restoreDraft(): void {
+		const raw = sessionStorage.getItem(DRAFT_KEY);
+		if (!raw) return;
+		try {
+			if (applyDraft(JSON.parse(raw) as CheckoutDraft)) {
+				saveDraft(); // isian dipakai lagi — perpanjang masa simpan 24 jam
+			} else {
+				clearDraft(); // lewat 24 jam — data basi dibuang
+			}
+		} catch {
+			clearDraft();
+		}
+	}
+
+	// Isian tersimpan dipasang kembali apa pun cara pengguna kembali ke
+	// halaman ini (back/forward, tombol/link, atau refresh), kecuali tepat
+	// setelah pesanan sukses dikirim — di situ form dimulai kosong.
+	if (typeof window !== 'undefined') {
+		// svelte-ignore state_referenced_locally -- cukup nilai awal: form dari server
+		if (form?.message && !form.code) {
+			// Submit ditolak server: isian yang barusan dikirim dipasang kembali.
+			sessionStorage.removeItem(SUBMITTED_KEY);
+			restoreDraft();
+		} else if (sessionStorage.getItem(SUBMITTED_KEY)) {
+			clearDraft();
+		} else {
+			restoreDraft();
+		}
+	}
+
+	function onInputCapture(event: Event): void {
+		clearInvalid(event);
+		formNotice = '';
+		saveDraft();
+	}
+
 	function handleSubmit(event: SubmitEvent): void {
 		if (loading) {
 			event.preventDefault();
@@ -87,7 +225,15 @@
 		}
 		if (!pinSet) {
 			event.preventDefault();
+			lokasiOpen = true;
 			mapMessage = 'Pasang titik tujuan di peta dulu — ketuk peta atau pakai tombol Lokasi saya.';
+			return;
+		}
+		if (!kontakLengkap || !lokasiLengkap) {
+			event.preventDefault();
+			if (!kontakLengkap) kontakOpen = true;
+			if (!lokasiLengkap) lokasiOpen = true;
+			formNotice = 'Lengkapi isian yang bertanda "Belum" sebelum melanjutkan.';
 			return;
 		}
 		// Pesanan akan dibuat: item yang dibeli keluar dari keranjang (cegah
@@ -96,25 +242,30 @@
 		// untuk memulihkan bila ternyata pesanan gagal dibuat.
 		backupCart(cart.items);
 		commitPurchased(rows.map((row) => ({ variantId: row.variantId, qty: row.qty })));
+		// Catat isian terakhir untuk pemulihan bila submit gagal di server, dan
+		// tandai bahwa pesanan sudah dikirim agar isian lama tidak dipulihkan.
+		saveDraft();
+		try {
+			sessionStorage.setItem(SUBMITTED_KEY, '1');
+		} catch {
+			/* penyimpanan penuh/di-block — abaikan */
+		}
 		// Formulir dikirim (navigasi penuh): tampilkan overlay proses pembayaran.
 		loading = true;
 	}
 
-	onMount(() => {
-		// Kembali dari cache (mis. tombol back setelah halaman bayar): sembunyikan overlay.
-		const onPageShow = (): void => {
-			loading = false;
-		};
-		window.addEventListener('pageshow', onPageShow);
-		let cleanup = () => {};
+	// Peta dibuat saat kontainernya muncul — kategori "Lokasi pengiriman" yang
+	// default tertutup menahan kontainer keluar dari DOM — dan dibongkar lagi
+	// saat kategori ditutup, supaya selalu segar setiap kali dibuka.
+	function mapSetup(node: HTMLElement): { destroy: () => void } {
+		let cleanup = (): void => {};
 		void (async () => {
 			const leaflet = await import('leaflet');
 			await import('leaflet/dist/leaflet.css');
-			const mapElement = document.getElementById('peta-checkout');
-			if (!mapElement) {
+			if (!node.isConnected) {
 				return;
 			}
-			const map = leaflet.map(mapElement).setView([-6.2, 106.85], 11);
+			const map = leaflet.map(node).setView([-6.2, 106.85], 11);
 			leaflet
 				.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
 					attribution:
@@ -149,6 +300,7 @@
 							lngValue = position.lng.toFixed(6);
 							pinSet = true;
 							mapMessage = '';
+							saveDraft();
 						}
 					});
 				}
@@ -156,11 +308,18 @@
 				lngValue = lng.toFixed(6);
 				pinSet = true;
 				mapMessage = '';
+				saveDraft();
 			};
 
 			map.on('click', (event: import('leaflet').LeafletMouseEvent) => {
 				placePin(event.latlng.lat, event.latlng.lng);
 			});
+
+			// Pin dari isian yang tersimpan (kembali dari riwayat/gagal submit).
+			if (pinSet && latValue && lngValue) {
+				placePin(Number(latValue), Number(lngValue));
+				map.setView([Number(latValue), Number(lngValue)], 14);
+			}
 
 			const locateButton = document.getElementById('tombol-lokasi');
 			const onLocate = (): void => {
@@ -183,9 +342,21 @@
 				map.remove();
 			};
 		})();
+		return {
+			destroy: () => {
+				cleanup();
+			}
+		};
+	}
+
+	onMount(() => {
+		// Kembali dari cache (mis. tombol back setelah halaman bayar): sembunyikan overlay.
+		const onPageShow = (): void => {
+			loading = false;
+		};
+		window.addEventListener('pageshow', onPageShow);
 		return () => {
 			window.removeEventListener('pageshow', onPageShow);
-			cleanup();
 		};
 	});
 </script>
@@ -202,6 +373,8 @@
 
 	{#if form?.message}
 		<div class="error-box" role="alert">{form.message}</div>
+	{:else if formNotice}
+		<div class="error-box" role="alert">{formNotice}</div>
 	{/if}
 
 	{#if rows.length === 0}
@@ -221,13 +394,33 @@
 			</div>
 		{/if}
 
-		<form id="form-checkout" method="POST" onsubmit={handleSubmit} oninvalidcapture={handleInvalid} oninputcapture={clearInvalid}>
+		<form id="form-checkout" method="POST" onsubmit={handleSubmit} oninvalidcapture={handleInvalid} oninputcapture={onInputCapture} onchange={saveDraft}>
 			<input type="hidden" name="items" value={itemsJson} />
 			<input type="hidden" name="lat" value={latValue} />
 			<input type="hidden" name="lng" value={lngValue} />
 
-			<section aria-labelledby="kontak-heading">
-				<h2 id="kontak-heading">Kontak</h2>
+			<section class="acc" aria-labelledby="kontak-heading">
+				<h2 class="acc-h2" id="kontak-heading">
+				<button
+					type="button"
+					class="acc-head"
+					aria-expanded={kontakOpen}
+					aria-controls="acc-body"
+					onclick={() => (kontakOpen = !kontakOpen)}
+				>
+					<span class="acc-title">Informasi pribadi (kontak)</span>
+					<span class="badge" class:badge-ok={kontakLengkap} class:badge-off={!kontakLengkap}>
+						{#if kontakLengkap}
+							<svg class="acc-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z" /></svg>Lengkap
+						{:else}
+							<svg class="acc-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm-1 5h2v7h-2V7Zm0 9h2v2h-2v-2Z" /></svg>Belum
+						{/if}
+					</span>
+					<svg class="acc-chevron" class:is-open={kontakOpen} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 10l5 5 5-5z" /></svg>
+				</button>
+				</h2>
+				{#if kontakOpen}
+				<div id="kontak-body" class="acc-body">
 				<div class="field">
 					<label for="customerName">Nama <span class="required-mark">*</span></label>
 					<input
@@ -256,15 +449,45 @@
 				</div>
 				<div class="field">
 					<label for="email">Email <span class="required-mark">*</span></label>
-					<input id="email" name="email" type="email" inputmode="email" autocomplete="email" required />
+										<input
+						id="email"
+						name="email"
+						type="email"
+						inputmode="email"
+						autocomplete="email"
+						required
+						bind:value={emailValue}
+					/>
 					<p class="hint">Detail pesanan dan bukti pembayaran dikirim ke email ini.</p>
 				</div>
+				</div>
+				{/if}
 			</section>
 
 			<hr class="divider" />
 
-			<section aria-labelledby="lokasi-heading">
-				<h2 id="lokasi-heading">Lokasi pengiriman</h2>
+			<section class="acc" aria-labelledby="lokasi-heading">
+				<h2 class="acc-h2" id="lokasi-heading">
+				<button
+					type="button"
+					class="acc-head"
+					aria-expanded={lokasiOpen}
+					aria-controls="acc-body"
+					onclick={() => (lokasiOpen = !lokasiOpen)}
+				>
+					<span class="acc-title">Lokasi pengiriman</span>
+					<span class="badge" class:badge-ok={lokasiLengkap} class:badge-off={!lokasiLengkap}>
+						{#if lokasiLengkap}
+							<svg class="acc-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z" /></svg>Lengkap
+						{:else}
+							<svg class="acc-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm-1 5h2v7h-2V7Zm0 9h2v2h-2v-2Z" /></svg>Belum
+						{/if}
+					</span>
+					<svg class="acc-chevron" class:is-open={lokasiOpen} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 10l5 5 5-5z" /></svg>
+				</button>
+				</h2>
+				{#if lokasiOpen}
+				<div id="lokasi-body" class="acc-body">
 				<div class="field">
 					<label for="address">Alamat <span class="required-mark">*</span></label>
 					<textarea
@@ -291,8 +514,8 @@
 				</div>
 
 				<div class="map-block">
-					<div id="peta-checkout" class="map" role="application" aria-label="Peta lokasi pengiriman"></div>
-					<button type="button" id="tombol-lokasi" class="btn btn-secondary">Lokasi saya</button>
+					<div id="peta-checkout" class="map" role="application" aria-label="Peta lokasi pengiriman" use:mapSetup></div>
+					<button type="button" id="tombol-lokasi" class="btn btn-secondary">Gunakan lokasi saya</button>
 					{#if mapMessage}
 						<p class="error-text" role="status">{mapMessage}</p>
 					{:else if pinSet}
@@ -301,6 +524,8 @@
 						<p class="hint">Ketuk peta atau pakai tombol Lokasi saya untuk memasang titik tujuan kurir.</p>
 					{/if}
 				</div>
+				</div>
+				{/if}
 			</section>
 
 			<hr class="divider" />
@@ -308,18 +533,22 @@
 			<section aria-labelledby="kurir-heading">
 				<h2 id="kurir-heading">Kurir</h2>
 				<div class="choice-list" role="radiogroup" aria-labelledby="kurir-heading">
-					<label class="choice">
+					<label class="choice" class:choice-on={courierValue === 'Grab'}>
 						<input type="radio" name="courier" value="Grab" bind:group={courierValue} />
 						<span class="choice-label"><svg class="choice-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M19.44 9.03L15.41 5H11v2h3.59l2 2H5c-2.8 0-5 2.2-5 5s2.2 5 5 5c2.46 0 4.45-1.69 4.9-4h1.65l2.77-2.77c-.21.54-.32 1.14-.32 1.77 0 2.8 2.2 5 5 5s5-2.2 5-5c0-2.65-1.97-4.77-4.56-4.97zM7.82 15C7.4 16.15 6.28 17 5 17c-1.63 0-3-1.37-3-3s1.37-3 3-3c1.28 0 2.4.85 2.82 2H11v2H7.82zM19 17c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3z" /></svg>Grab</span>
 					</label>
-					<label class="choice">
+					<label class="choice" class:choice-on={courierValue === 'Gojek'}>
 						<input type="radio" name="courier" value="Gojek" bind:group={courierValue} />
 						<span class="choice-label"><svg class="choice-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M19.44 9.03L15.41 5H11v2h3.59l2 2H5c-2.8 0-5 2.2-5 5s2.2 5 5 5c2.46 0 4.45-1.69 4.9-4h1.65l2.77-2.77c-.21.54-.32 1.14-.32 1.77 0 2.8 2.2 5 5 5s5-2.2 5-5c0-2.65-1.97-4.77-4.56-4.97zM7.82 15C7.4 16.15 6.28 17 5 17c-1.63 0-3-1.37-3-3s1.37-3 3-3c1.28 0 2.4.85 2.82 2H11v2H7.82zM19 17c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3z" /></svg>Gojek</span>
 					</label>
 				</div>
 				<div class="info-box">
 					{#if data.shippingInfoText}
-						{data.shippingInfoText}
+						{@const [judulInfo, ...sisaInfo] = data.shippingInfoText.split('\n')}
+						<strong class="info-title">{judulInfo}</strong>
+						{#if sisaInfo.length > 0}
+							<span class="info-rest">{sisaInfo.join('\n')}</span>
+						{/if}
 					{:else}
 						Ongkir mengikuti tarif kurir, dibayar langsung ke kurir — di luar total ini.
 					{/if}
@@ -332,7 +561,7 @@
 				<h2 id="tanggal-heading">Tanggal kirim</h2>
 				<div class="choice-list" role="radiogroup" aria-labelledby="tanggal-heading">
 					{#each data.deliveryDates as option (option.date)}
-						<label class="choice">
+						<label class="choice" class:choice-on={dateValue === option.date} class:choice-off={option.isFull}>
 							<input
 								type="radio"
 								name="deliveryDate"
@@ -374,7 +603,7 @@
 
 <!-- Bilah tombol di luar .wrap agar lebarnya rata kiri-kanan seperti halaman lain. -->
 {#if rows.length > 0}
-	<div class="sticky-bar">
+	<div class="sticky-bar" use:stickyBar>
 		<div class="sticky-inner">
 			<button
 				type="submit"
@@ -392,6 +621,11 @@
 <PageFooter />
 
 <style>
+	/* Tombol lokasi: isian putih solid (senada tombol "Keranjang" di detail). */
+	.map-block .btn-secondary {
+		background: var(--card);
+	}
+
 	.map-block {
 		display: grid;
 		gap: 0.625rem;
@@ -447,14 +681,64 @@
 		accent-color: var(--rust);
 	}
 
-	.choice:has(input:checked) {
+	.choice:has(input:checked),
+	.choice-on {
 		border-color: var(--rust);
+		background: #f9efe8;
 		background: color-mix(in srgb, var(--rust) 7%, var(--card));
 	}
 
-	.choice:has(input:disabled) {
+	.choice:has(input:disabled),
+	.choice-off {
 		opacity: 0.55;
 		cursor: not-allowed;
+	}
+
+	/* Kategori form (dropdown) dengan status lengkap/belum di judulnya. */
+	.acc-h2 {
+		margin: 0;
+	}
+
+	.acc-head {
+		display: flex;
+		width: 100%;
+		min-height: 48px;
+		align-items: center;
+		gap: 0.5rem;
+		padding: 0;
+		border: none;
+		background: transparent;
+		color: inherit;
+		font-family: inherit;
+		font-size: inherit;
+		font-weight: inherit;
+		text-align: left;
+		cursor: pointer;
+	}
+
+	.acc-title {
+		flex: 1;
+	}
+
+	.acc-icon {
+		width: 0.875rem;
+		height: 0.875rem;
+		flex: none;
+	}
+
+	.acc-chevron {
+		width: 1.25rem;
+		height: 1.25rem;
+		flex: none;
+		transition: transform 150ms ease-out;
+	}
+
+	.acc-chevron.is-open {
+		transform: rotate(180deg);
+	}
+
+	.acc-body {
+		padding-top: 0.25rem;
 	}
 
 	.summary-list {

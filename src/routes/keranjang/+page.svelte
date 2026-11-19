@@ -2,6 +2,7 @@
 	import { formatRupiah, formatWeight } from '#lib/format';
 	import { cart, type CartItem } from '#lib/cart.svelte';
 	import PageFooter from '#lib/components/PageFooter.svelte';
+	import { stickyBar } from '#lib/sticky-bar';
 	import PageHeader from '#lib/components/PageHeader.svelte';
 	import type { CartData } from './+page.server';
 
@@ -120,7 +121,7 @@
 
 <!-- Bilah tombol di luar .wrap agar lebarnya rata kiri-kanan seperti halaman lain. -->
 {#if rows.length > 0}
-	<div class="sticky-bar">
+	<div class="sticky-bar" use:stickyBar>
 		<div class="sticky-inner">
 			<a class="btn" href="/checkout">Lanjut ke checkout</a>
 		</div>
