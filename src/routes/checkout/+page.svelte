@@ -308,18 +308,22 @@
 			<section aria-labelledby="kurir-heading">
 				<h2 id="kurir-heading">Kurir</h2>
 				<div class="choice-list" role="radiogroup" aria-labelledby="kurir-heading">
-					<label class="choice">
+					<label class="choice" class:choice-on={courierValue === 'Grab'}>
 						<input type="radio" name="courier" value="Grab" bind:group={courierValue} />
 						<span class="choice-label"><svg class="choice-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M19.44 9.03L15.41 5H11v2h3.59l2 2H5c-2.8 0-5 2.2-5 5s2.2 5 5 5c2.46 0 4.45-1.69 4.9-4h1.65l2.77-2.77c-.21.54-.32 1.14-.32 1.77 0 2.8 2.2 5 5 5s5-2.2 5-5c0-2.65-1.97-4.77-4.56-4.97zM7.82 15C7.4 16.15 6.28 17 5 17c-1.63 0-3-1.37-3-3s1.37-3 3-3c1.28 0 2.4.85 2.82 2H11v2H7.82zM19 17c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3z" /></svg>Grab</span>
 					</label>
-					<label class="choice">
+					<label class="choice" class:choice-on={courierValue === 'Gojek'}>
 						<input type="radio" name="courier" value="Gojek" bind:group={courierValue} />
 						<span class="choice-label"><svg class="choice-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M19.44 9.03L15.41 5H11v2h3.59l2 2H5c-2.8 0-5 2.2-5 5s2.2 5 5 5c2.46 0 4.45-1.69 4.9-4h1.65l2.77-2.77c-.21.54-.32 1.14-.32 1.77 0 2.8 2.2 5 5 5s5-2.2 5-5c0-2.65-1.97-4.77-4.56-4.97zM7.82 15C7.4 16.15 6.28 17 5 17c-1.63 0-3-1.37-3-3s1.37-3 3-3c1.28 0 2.4.85 2.82 2H11v2H7.82zM19 17c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3z" /></svg>Gojek</span>
 					</label>
 				</div>
 				<div class="info-box">
 					{#if data.shippingInfoText}
-						{data.shippingInfoText}
+						{@const [judulInfo, ...sisaInfo] = data.shippingInfoText.split('\n')}
+						<strong class="info-judul">{judulInfo}</strong>
+						{#if sisaInfo.length > 0}
+							<span class="info-sisa">{sisaInfo.join('\n')}</span>
+						{/if}
 					{:else}
 						Ongkir mengikuti tarif kurir, dibayar langsung ke kurir — di luar total ini.
 					{/if}
@@ -332,7 +336,7 @@
 				<h2 id="tanggal-heading">Tanggal kirim</h2>
 				<div class="choice-list" role="radiogroup" aria-labelledby="tanggal-heading">
 					{#each data.deliveryDates as option (option.date)}
-						<label class="choice">
+						<label class="choice" class:choice-on={dateValue === option.date} class:choice-off={option.isFull}>
 							<input
 								type="radio"
 								name="deliveryDate"
@@ -447,12 +451,15 @@
 		accent-color: var(--rust);
 	}
 
-	.choice:has(input:checked) {
+	.choice:has(input:checked),
+	.choice-on {
 		border-color: var(--rust);
+		background: #f9efe8;
 		background: color-mix(in srgb, var(--rust) 7%, var(--card));
 	}
 
-	.choice:has(input:disabled) {
+	.choice:has(input:disabled),
+	.choice-off {
 		opacity: 0.55;
 		cursor: not-allowed;
 	}

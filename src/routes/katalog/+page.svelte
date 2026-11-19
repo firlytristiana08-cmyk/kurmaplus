@@ -145,8 +145,10 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
+		background: #f2eadb;
 		background: color-mix(in srgb, var(--sand) 55%, var(--card));
-		border-radius: var(--radius-m);
+		border-radius: var(--radius-l) var(--radius-l) var(--radius-m) var(--radius-m);
+		color: #aea7ac;
 		color: color-mix(in srgb, var(--ink) 35%, var(--paper));
 	}
 
@@ -156,6 +158,8 @@
 		aspect-ratio: 1 / 1;
 		object-fit: cover;
 		display: block;
+		/* Radius langsung di gambar — kliping overflow induk tidak andal di Safari lama. */
+		border-radius: var(--radius-l) var(--radius-l) 0 0;
 	}
 
 	.best-badge {
@@ -189,6 +193,7 @@
 	.sold {
 		margin: 0.25rem 0 0;
 		font-size: 0.8125rem;
+		color: #7d788d;
 		color: color-mix(in srgb, var(--ink) 62%, var(--card));
 	}
 

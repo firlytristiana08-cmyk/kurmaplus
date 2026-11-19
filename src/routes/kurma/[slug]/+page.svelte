@@ -318,6 +318,7 @@
 	}
 
 	.description {
+		color: #514a66;
 		color: color-mix(in srgb, var(--ink) 82%, var(--paper));
 	}
 
@@ -345,6 +346,7 @@
 	/* Hanya tombol ukuran yang aktif yang memakai border. */
 	.size-btn.selected {
 		border-color: var(--rust);
+		background: #f9efe8;
 		background: color-mix(in srgb, var(--rust) 7%, var(--card));
 	}
 
@@ -455,8 +457,10 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
+		background: #f2eadb;
 		background: color-mix(in srgb, var(--sand) 55%, var(--card));
 		border-radius: var(--radius-m);
+		color: #aea7ac;
 		color: color-mix(in srgb, var(--ink) 35%, var(--paper));
 	}
 
@@ -492,6 +496,7 @@
 		width: 8px;
 		height: 8px;
 		border-radius: 50%;
+		background: #c2bbbb;
 		background: color-mix(in srgb, var(--ink) 25%, var(--paper));
 	}
 
@@ -595,6 +600,7 @@
 	.dialog-item {
 		margin: 0;
 		font-size: 0.9375rem;
+		color: #59526c;
 		color: color-mix(in srgb, var(--ink) 78%, var(--paper));
 	}
 

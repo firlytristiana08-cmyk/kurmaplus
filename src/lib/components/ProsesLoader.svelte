@@ -18,6 +18,7 @@
 	.loader-overlay {
 		position: fixed;
 		inset: 0;
+		background: rgba(45, 38, 75, 0.45);
 		background: color-mix(in srgb, var(--ink) 45%, transparent);
 		display: flex;
 		align-items: center;
@@ -28,6 +29,7 @@
 
 	.loader-panel {
 		background: var(--paper);
+		border: 1px solid #d0c9c5;
 		border: 1px solid color-mix(in srgb, var(--ink) 18%, var(--paper));
 		border-radius: 12px;
 		padding: 1.5rem 1.75rem;
@@ -48,6 +50,7 @@
 		width: 2.25rem;
 		height: 2.25rem;
 		border-radius: 50%;
+		border: 3px solid rgba(171, 55, 16, 0.25);
 		border: 3px solid color-mix(in srgb, var(--rust) 25%, transparent);
 		border-top-color: var(--rust);
 		animation: putar 0.8s linear infinite;
