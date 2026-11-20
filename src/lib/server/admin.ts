@@ -1263,6 +1263,7 @@ export interface DeliveryGroup {
       note: string | null;
       status: OrderStatus;
       shippingStatus: string;
+      items: { name: string; qty: number }[];
     }[];
   }[];
 }
@@ -1270,6 +1271,7 @@ export interface DeliveryGroup {
 export async function adminDeliveryList(date: string): Promise<DeliveryGroup[]> {
   const db = await getDb();
   const rows = await db.all<{
+    id: number;
     code: string;
     customer_name: string;
     customer_phone: string;
@@ -1280,7 +1282,7 @@ export async function adminDeliveryList(date: string): Promise<DeliveryGroup[]> 
     status: OrderStatus;
     shipping_status: string;
   }>(
-    `SELECT code, customer_name, customer_phone, address, city, note, courier, status, shipping_status
+    `SELECT id, code, customer_name, customer_phone, address, city, note, courier, status, shipping_status
 \t\t FROM orders WHERE delivery_date = ? AND status IN ('paid', 'packed', 'shipped') ORDER BY courier, city, created_at`,
     [date],
   );
@@ -1296,6 +1298,10 @@ export async function adminDeliveryList(date: string): Promise<DeliveryGroup[]> 
       city = { city: row.city, orders: [] };
       group.cities.push(city);
     }
+    const items = await db.all<{ name_snapshot: string; qty: number }>(
+      "SELECT name_snapshot, qty FROM order_items WHERE order_id = ?",
+      [row.id],
+    );
     city.orders.push({
       code: row.code,
       customerName: row.customer_name,
@@ -1304,6 +1310,7 @@ export async function adminDeliveryList(date: string): Promise<DeliveryGroup[]> 
       note: row.note,
       status: row.status,
       shippingStatus: row.shipping_status,
+      items: items.map((item) => ({ name: item.name_snapshot, qty: item.qty })),
     });
   }
   return [...byCourier.values()];

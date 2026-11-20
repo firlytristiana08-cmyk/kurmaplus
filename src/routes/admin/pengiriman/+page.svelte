@@ -1,8 +1,8 @@
 <script lang="ts">
 	// Pengiriman — "layar menjawab: apa yang harus dikemas dan diantar pada
 	// tanggal tertentu?" Daftar kemas total per varian; daftar antar per kurir
-	// lalu per kota. Cetak A4 hitam putih per lembar: label isi paket
-	// (1 kemasan per lembar) dan slip tujuan (1 pesanan per lembar) (AD-15..AD-17).
+	// lalu per kota. Cetak A4 hitam putih: slip per pesanan (1 pesanan per
+	// lembar) berisi isi pesanan untuk packing dan tujuan antarnya (AD-15..AD-17).
 	import { tick } from 'svelte';
 	import StatusBadge from '#lib/components/admin/StatusBadge.svelte';
 	import { formatDateId } from '#lib/format';
@@ -28,21 +28,20 @@
 		return out;
 	});
 
-	// Cetak per lembar, satu item per lembar — bukan daftar gabungan:
-	// label isi paket (1 lembar per kemasan) dan slip tujuan (1 lembar per pesanan).
-	type PrintSheet =
-		| { kind: 'kemas'; code: string; name: string; isi: string; seq: string }
-		| {
-				kind: 'antar';
-				code: string;
-				name: string;
-				phone: string;
-				address: string;
-				note: string | null;
-				ongkir: string;
-			};
+	// Cetak slip per pesanan — satu lembar per pesanan, memuat isi pesanan
+	// (kemasan beserta isinya, untuk packing) dan tujuan antarnya.
+	type SlipSheet = {
+		code: string;
+		name: string;
+		phone: string;
+		address: string;
+		note: string | null;
+		ongkir: string;
+		items: { name: string; qty: number }[];
+		kemasan: number;
+	};
 
-	let sheets: PrintSheet[] = $state([]);
+	let sheets: SlipSheet[] = $state([]);
 	let printing = $state(false);
 
 	function ongkirLabel(shippingStatus: string): string {
@@ -55,42 +54,24 @@
 					: 'belum dipesan';
 	}
 
-	function kemasanSheets(order: (typeof packing.orders)[number]): PrintSheet[] {
-		const total = order.packageCount;
-		const out: PrintSheet[] = [];
-		let i = 0;
-		for (const it of order.items) {
-			for (let q = 0; q < it.qty; q++) {
-				i += 1;
-				out.push({
-					kind: 'kemas',
-					code: order.code,
-					name: order.customerName,
-					isi: it.name,
-					seq: `${i} dari ${total}`,
-				});
-			}
-		}
-		return out;
-	}
-
-	function antarSheets(
+	function slipSheet(
 		order: (typeof delivery)[number]['cities'][number]['orders'][number],
-	): PrintSheet[] {
+	): SlipSheet[] {
 		return [
 			{
-				kind: 'antar',
 				code: order.code,
 				name: order.customerName,
 				phone: order.customerPhone,
 				address: order.address,
 				note: order.note,
 				ongkir: ongkirLabel(order.shippingStatus),
+				items: order.items,
+				kemasan: order.items.reduce((n, it) => n + it.qty, 0),
 			},
 		];
 	}
 
-	async function printSheetsNow(list: PrintSheet[]): Promise<void> {
+	async function printSheetsNow(list: SlipSheet[]): Promise<void> {
 		sheets = list;
 		printing = true;
 		const cleanup = (): void => {
@@ -163,18 +144,7 @@
 										<StatusBadge status={order.status} />
 									</div>
 									<div class="row-l2 tabular">{order.packageCount} kemasan</div>
-								</div>
-								<div class="row-side">
-									<button
-										class="btn-mini"
-										type="button"
-										onclick={() => void printSheetsNow(kemasanSheets(order))}
-									>
-										<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 2h12v20l-3-2-3 2-3-2-3 2zM9 7h6v2H9zm0 4h6v2H9z"/></svg>
-										Cetak label
-									</button>
-								</div>
-							</div>
+								</div>							</div>
 						{/each}
 					{/if}
 				</div>
@@ -223,7 +193,7 @@
 											<button
 												class="btn-mini"
 												type="button"
-												onclick={() => void printSheetsNow(antarSheets(order))}
+												onclick={() => void printSheetsNow(slipSheet(order))}
 											>
 												<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 2h12v20l-3-2-3 2-3-2-3 2zM9 7h6v2H9zm0 4h6v2H9z"/></svg>
 												Cetak slip
@@ -237,36 +207,30 @@
 				{/each}
 			{/if}
 		{:else}
-			<!-- Lembar cetak: satu kemasan / satu pesanan per lembar -->
+			<!-- Lembar cetak: satu pesanan per lembar — isi pesanan + tujuan -->
 			{#each sheets as sheet (sheet)}
 				<section class="print-sheet">
-					<h2 class="print-title">
-						{sheet.kind === 'kemas'
-							? `KURMAPLUS — Kemasan ${sheet.seq} · ${sheet.code} — ${formatDateId(data.date)}`
-							: `KURMAPLUS — Pesanan ${sheet.code} — ${formatDateId(data.date)}`}
-					</h2>
+					<h2 class="print-title">KURMAPLUS — Pesanan {sheet.code} — {formatDateId(data.date)}</h2>
 					<div class="surface">
-						{#if sheet.kind === 'kemas'}
-							<div class="row">
-								<div class="row-main">
-									<div class="row-l1">{sheet.isi}</div>
-									<div class="row-l2 tabular">
-										{sheet.code} · {sheet.name} · kemasan {sheet.seq}
-									</div>
+						<div class="row">
+							<div class="row-main">
+								<div class="row-l1">Isi pesanan · {sheet.kemasan} kemasan</div>
+								{#each sheet.items as item}
+									<div class="row-l2 tabular">{item.name} — {item.qty} kemasan</div>
+								{/each}
+							</div>
+						</div>
+						<hr class="divider" />
+						<div class="row">
+							<div class="row-main">
+								<div class="row-l1">{sheet.name}</div>
+								<div class="row-l2 tabular">
+									{sheet.phone} · {sheet.address}<br />
+									{#if sheet.note}Catatan: {sheet.note}<br />{/if}
+									{sheet.code} · ongkir {sheet.ongkir}
 								</div>
 							</div>
-						{:else}
-							<div class="row">
-								<div class="row-main">
-									<div class="row-l1">{sheet.name}</div>
-									<div class="row-l2 tabular">
-										{sheet.phone} · {sheet.address}<br />
-										{#if sheet.note}Catatan: {sheet.note}<br />{/if}
-										{sheet.code} · ongkir {sheet.ongkir}
-									</div>
-								</div>
-							</div>
-						{/if}
+						</div>
 					</div>
 				</section>
 			{/each}
