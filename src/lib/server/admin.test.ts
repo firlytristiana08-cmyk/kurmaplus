@@ -213,6 +213,15 @@ describe("admin: stok, ongkir, tanggal, pengaturan", () => {
     expect(report.omzetIdr).toBeGreaterThan(0);
   });
 
+  it("seed database baru: foto produk legacy tersalin ke galeri", async () => {
+    const dbi = await db.getDb();
+    const rows = await dbi.all<{ data: string }>(
+      "SELECT data FROM product_photos WHERE product_id = 1 ORDER BY sort_order, id",
+      [],
+    );
+    expect(rows.map((row) => row.data)).toEqual(["sukari.webp", "sukari-2.webp", "sukari-3.webp"]);
+  });
+
   it("produk: tambah & hapus permanen — riwayat pesanan tetap utuh", async () => {
     const created = await admin.adminCreateProduct(
       {

@@ -3,6 +3,9 @@
 	// Foto dikompres di perangkat (maks 1600px, WebP) menjadi URL data.
 	let { photos = $bindable<string[]>([]) } = $props();
 
+	// Muatan gabungan dibatasi ~3 MB — batas badan permintaan Vercel 4,5 MB.
+	const MAX_TOTAL_CHARS = 3 * 1024 * 1024;
+
 	let error = $state('');
 
 	async function fileToDataUrl(file: File): Promise<string> {
@@ -29,10 +32,24 @@
 				error = `Ukuran ${file.name} lebih dari 10 MB.`;
 				continue;
 			}
-			const dataUrl = await fileToDataUrl(file);
-			if (dataUrl !== '') picked.push(dataUrl);
+			try {
+				const dataUrl = await fileToDataUrl(file);
+				if (dataUrl !== '') picked.push(dataUrl);
+			} catch {
+				error = `Foto ${file.name} tidak bisa dibaca di perangkat ini. Coba format lain (JPG/PNG).`;
+			}
 		}
-		photos = [...photos, ...picked].slice(0, 20);
+		const kept: string[] = [];
+		let size = photos.reduce((sum, photo) => sum + photo.length, 0);
+		for (const photo of picked) {
+			if (size + photo.length > MAX_TOTAL_CHARS) {
+				error = 'Muatan foto sudah penuh (maksimal sekitar 3 MB per unggahan). Simpan dulu, lalu tambah foto lagi.';
+				break;
+			}
+			kept.push(photo);
+			size += photo.length;
+		}
+		photos = [...photos, ...kept].slice(0, 20);
 	}
 
 	function removeAt(index: number): void {
