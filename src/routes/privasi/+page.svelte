@@ -19,7 +19,7 @@
 	<section class="surface">
 		<h2>Data yang kami ambil</h2>
 		<p>
-			Nama, nomor WhatsApp, email (bila diisi), alamat, catatan patokan, dan titik koordinat tujuan dipakai untuk
+			Nama, nomor WhatsApp, email, alamat, catatan patokan, dan titik koordinat tujuan dipakai untuk
 			mengirim pesanan Anda dan disimpan bersama rincian pesanan. Keranjang belanja hanya
 			tersimpan di perangkat Anda, bukan di server kami.
 		</p>

@@ -20,7 +20,7 @@
 				Pilih kurma dan ukuran, lalu tekan <strong>Keranjang</strong> untuk mengumpulkan beberapa
 				item, atau <strong>Beli langsung</strong> untuk langsung bayar item itu saja.
 			</li>
-			<li>Isi nama, nomor WhatsApp, alamat, dan pasang titik tujuan di peta.</li>
+			<li>Isi nama, nomor WhatsApp, email, alamat, dan pasang titik tujuan di peta.</li>
 			<li>Pilih pengiriman COD, Grab, atau Gojek, lalu tanggal kirim Sabtu atau Minggu.</li>
 			<li>
 				Bayar dengan QRIS lewat halaman DOKU. Ada batas waktu bayar sejak pesanan dibuat.
