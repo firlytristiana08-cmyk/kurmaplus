@@ -4,10 +4,13 @@
 import { fail } from "@sveltejs/kit";
 import { adminToday, adminToggleStore } from "#lib/server/admin";
 import { requireAdmin } from "#lib/server/admin-auth";
+import { expireStaleOrders } from "#lib/server/db";
 import type { Actions, PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async ({ cookies }) => {
   await requireAdmin(cookies);
+  // Sinkronkan status: pesanan yang masa bayarnya habis ikut ditutup sistem.
+  await expireStaleOrders(new Date());
   return { today: await adminToday(new Date()) };
 };
 

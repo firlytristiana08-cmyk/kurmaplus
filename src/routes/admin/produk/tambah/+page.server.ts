@@ -2,6 +2,7 @@
 // diarahkan ke halaman ubah produk yang baru dibuat.
 
 import { fail, redirect } from "@sveltejs/kit";
+import { parsePhotoInput } from "#lib/photos";
 import { adminCreateProduct } from "#lib/server/admin";
 import { requireAdmin } from "#lib/server/admin-auth";
 import type { Actions, PageServerLoad } from "./$types";
@@ -27,8 +28,8 @@ export const actions: Actions = {
     }));
     const photos = form
       .getAll("photos")
-      .map((v) => String(v ?? "").trim())
-      .filter((v) => v !== "");
+      .map((v) => parsePhotoInput(String(v ?? "")))
+      .filter((photo) => photo.lg !== "");
     const result = await adminCreateProduct(
       {
         name: String(form.get("name") ?? ""),

@@ -5,11 +5,12 @@
 	import BackLink from '#lib/components/BackLink.svelte';
 	import { adminEnhance } from '#lib/admin-feedback';
 	import PhotoPicker from '#lib/components/admin/PhotoPicker.svelte';
+	import type { PhotoTiers } from '#lib/photos';
 	import { formatRupiah } from '#lib/format';
 
 	let { data, form } = $props();
 
-	let photos = $state<string[]>([]);
+	let photos = $state<PhotoTiers[]>([]);
 </script>
 
 <svelte:head>
@@ -78,7 +79,7 @@
 		>
 			<PhotoPicker bind:photos />
 			{#each photos as photo, index (index)}
-				<input type="hidden" name="photos" value={photo} />
+				<input type="hidden" name="photos" value={JSON.stringify(photo)} />
 			{/each}
 			<div class="btn-row" style="margin: 0.5rem 0 0">
 				<button class="btn-mini is-rust" type="submit">Tambah foto</button>
@@ -120,8 +121,8 @@
 	<div class="section-head">
 		<h2>Varian &amp; stok</h2>
 	</div>
-	<div class="surface">
-		{#each data.variants as variant (variant.id)}
+	{#each data.variants as variant (variant.id)}
+		<div class="surface">
 			<div class="row" style="align-items: flex-start; flex-direction: column; gap: 0.5rem">
 				<form method="POST" action="?/varian" use:enhance={adminEnhance()} style="width: 100%">
 					<input type="hidden" name="variant_id" value={variant.id} />
@@ -205,8 +206,10 @@
 					<button class="btn-mini" type="submit">Hapus varian</button>
 				</form>
 			</div>
-		{/each}
+		</div>
+	{/each}
 
+	<div class="surface">
 		<form method="POST" action="?/tambah" use:enhance={adminEnhance('Varian baru ditambahkan.', { reset: true })} style="margin-top: 0.5rem">
 			<input type="hidden" name="product_id" value={data.product.id} />
 			<p class="muted" style="margin: 0.5rem 0 0.25rem; font-size: 0.8125rem">Tambah varian baru</p>

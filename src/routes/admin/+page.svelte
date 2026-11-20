@@ -4,14 +4,14 @@
 	import { enhance } from '$app/forms';
 	import { adminEnhance } from '#lib/admin-feedback';
 	import StatusBadge from '#lib/components/admin/StatusBadge.svelte';
-	import { formatDateId, formatRupiah } from '#lib/format';
+	import { formatDateId, formatDateTimeId, formatRupiah } from '#lib/format';
 
 	let { data, form } = $props();
 	const today = $derived(data.today);
 
 	const actionHint: Record<string, string> = {
 		paid: 'Kemas untuk dikirim',
-		packed: 'Pesan kurir & antar',
+		packed: 'Pesan pengiriman & antar',
 		shipped: 'Pastikan diterima & tagih ongkir',
 	};
 </script>
@@ -57,6 +57,7 @@
 						<div class="row-l1">
 							{order.code} · {order.customerName}
 							<StatusBadge status={order.status} />
+							<span class="muted">{formatDateTimeId(order.createdAt)}</span>
 						</div>
 						<div class="row-l2">
 							{actionHint[order.status] ?? 'Tindak lanjuti'} · {formatDateId(order.deliveryDate)} ·

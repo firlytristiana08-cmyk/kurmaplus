@@ -30,7 +30,7 @@
 	const nextHint: Partial<Record<OrderStatus, string>> = {
 		pending_payment: 'Tunggu pembayaran — atau tandai dibayar manual setelah memeriksa DOKU.',
 		paid: 'Kemas pesanan ini, lalu tandai dikemas.',
-		packed: 'Pesan kurir sesuai pilihan pembeli, lalu tandai dikirim.',
+		packed: 'Pesan pengiriman sesuai pilihan pembeli, lalu tandai dikirim.',
 		shipped: 'Pastikan paket diterima, tagih ongkir, lalu tandai selesai.',
 		done: 'Selesai. Riwayat tetap tersimpan.',
 		expired: 'Kedaluwarsa — stok sudah dikembalikan sistem.',
@@ -60,7 +60,7 @@
 
 	const shippingSteps: { key: string; label: string }[] = [
 		{ key: 'not_booked', label: 'Belum dipesan' },
-		{ key: 'booked', label: 'Kurir dipesan' },
+		{ key: 'booked', label: 'Pengiriman dipesan' },
 		{ key: 'billed', label: 'Ditagih' },
 		{ key: 'paid', label: 'Lunas' },
 	];
@@ -170,7 +170,7 @@
 					{#if order.email}Email: {order.email}<br />{/if}
 					{order.address}, {order.city}<br />
 					{#if order.note}Catatan pembeli: {order.note}<br />{/if}
-					Tanggal kirim: {formatDateId(order.deliveryDate)} · kurir pilihan: {order.courier}
+					Tanggal kirim: {formatDateId(order.deliveryDate)} · pengiriman: {order.courier}
 				</div>
 			</div>
 		</div>
@@ -206,7 +206,7 @@
 		</div>
 		<form method="POST" action="?/ongkir" use:enhance={adminEnhance()}>
 			<div class="field">
-				<label for="nominal">Nominal ongkir dari aplikasi kurir</label>
+				<label for="nominal">Nominal ongkir dari aplikasi pengiriman</label>
 				<input id="nominal" name="nominal" type="text" inputmode="numeric" value={order.shippingActualIdr ?? ''} placeholder="mis. 25000" />
 				<p class="hint">Dicatat terpisah, tidak mengubah total pesanan.</p>
 			</div>
@@ -391,6 +391,7 @@
 	<div class="print-area">
 		<section class="print-sheet">
 			<h2 class="print-title">KURMAPLUS — Pesanan {order.code} — {formatDateId(order.deliveryDate)}</h2>
+			<p style="margin: 0.25rem 0 0.75rem">Tanggal pesanan: {formatDateTimeId(order.createdAt)}</p>
 			<div class="surface">
 				<h3 style="margin-top: 0">Isi pesanan · {order.items.length} jenis · {kemasanCount} kemasan</h3>
 				{#each order.items as item}
@@ -423,7 +424,7 @@
 						<div class="row-l1">Pengiriman</div>
 						<div class="row-l2 tabular">
 							{order.address}, {order.city}<br />
-							{formatDateId(order.deliveryDate)} · kurir {order.courier}
+							{formatDateId(order.deliveryDate)} · pengiriman {order.courier}
 							{#if order.note}<br />Catatan: {order.note}{/if}
 						</div>
 					</div>

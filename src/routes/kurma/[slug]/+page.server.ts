@@ -3,7 +3,7 @@ import { getProductBySlug, type ProductView } from "#lib/server/db";
 
 export interface ProductData {
   product: ProductView;
-  photos: string[];
+  photos: { id: number; src: string }[];
 }
 
 export const load = async ({ params }): Promise<ProductData> => {
@@ -12,6 +12,6 @@ export const load = async ({ params }): Promise<ProductData> => {
     error(404, "Produk tidak ditemukan.");
   }
   // Galeri foto: baris product_photos — semuanya diatur di admin.
-  const photos = product.photos.map((entry) => entry.src);
+  const photos = product.photos;
   return { product, photos };
 };

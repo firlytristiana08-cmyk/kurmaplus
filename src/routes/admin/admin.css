@@ -43,7 +43,7 @@
 
 .row-l2 {
 	font-size: 0.8125rem;
-	color: #797284;
+	color: #73685f;
 	color: color-mix(in srgb, var(--ink) 62%, var(--paper));
 	margin-top: 0.125rem;
 	overflow-wrap: anywhere;
@@ -205,7 +205,7 @@ a.row:hover {
 	display: inline-flex;
 	align-items: center;
 	gap: 0.3125rem;
-	color: #87808e;
+	color: #82776e;
 	color: color-mix(in srgb, var(--ink) 55%, var(--paper));
 }
 
@@ -256,7 +256,7 @@ a.row:hover {
 .timeline .when {
 	display: block;
 	font-size: 0.75rem;
-	color: #797284;
+	color: #73685f;
 	color: color-mix(in srgb, var(--ink) 62%, var(--paper));
 }
 
@@ -280,7 +280,7 @@ a.row:hover {
 }
 
 .recap-line .sum {
-	color: #797284;
+	color: #73685f;
 	color: color-mix(in srgb, var(--ink) 62%, var(--paper));
 	font-size: 0.8125rem;
 	text-align: right;
@@ -300,7 +300,7 @@ a.row:hover {
 .group-sub {
 	font-size: 0.8125rem;
 	font-weight: 700;
-	color: #797284;
+	color: #73685f;
 	color: color-mix(in srgb, var(--ink) 62%, var(--paper));
 	margin: 0.625rem 0 0;
 }
@@ -330,7 +330,7 @@ a.row:hover {
 	min-height: 62px;
 	padding: 0.5rem 0.25rem;
 	text-decoration: none;
-	color: #797284;
+	color: #73685f;
 	color: color-mix(in srgb, var(--ink) 62%, var(--paper));
 	font-size: 0.6875rem;
 	font-weight: 700;
@@ -377,7 +377,7 @@ a.row:hover {
 
 .admin-sticky .sticky-hint {
 	font-size: 0.75rem;
-	color: #797284;
+	color: #73685f;
 	color: color-mix(in srgb, var(--ink) 62%, var(--paper));
 	text-align: center;
 	margin: 0.375rem 0 0;
@@ -622,7 +622,7 @@ h3,
 	margin: 0;
 	font-size: 0.75rem;
 	font-weight: 700;
-	color: #797284;
+	color: #73685f;
 	color: color-mix(in srgb, var(--ink) 62%, var(--paper));
 	max-width: 55%;
 	white-space: nowrap;

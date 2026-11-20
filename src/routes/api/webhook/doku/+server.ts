@@ -1,5 +1,11 @@
 import { json, type RequestHandler } from "@sveltejs/kit";
-import { getOrderByCode, getSettings, markPaidByInvoice, recordWebhookEvent } from "#lib/server/db";
+import {
+  expireOrderByInvoice,
+  getOrderByCode,
+  getSettings,
+  markPaidByInvoice,
+  recordWebhookEvent,
+} from "#lib/server/db";
 import { loadDokuConfig, verifyNotificationSignature } from "#lib/server/doku";
 import { notifyOwnerPaid } from "#lib/server/notify";
 
@@ -42,6 +48,13 @@ export const POST: RequestHandler = async ({ request }) => {
     payload = JSON.parse(rawBody) as typeof payload;
   } catch {
     return json({ message: "Isi notifikasi tidak sah" }, { status: 400 });
+  }
+
+  // Kedaluwarsa dari DOKU (sejalan dengan email ke pembeli): tutup pesanan
+  // yang masih menunggu bayar dan kembalikan stoknya.
+  if (payload.transaction?.status === "EXPIRED" && payload.order?.invoice_number) {
+    await expireOrderByInvoice(payload.order.invoice_number, now);
+    return json({ message: "OK" });
   }
 
   // Hanya status SUCCESS yang mengubah pesanan; FAILED diabaikan karena

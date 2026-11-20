@@ -153,7 +153,7 @@
 		addressValue = draft.address;
 		cityValue = data.cities.includes(draft.city) ? draft.city : '';
 		noteValue = draft.note;
-		courierValue = draft.courier === 'Gojek' ? 'Gojek' : 'Grab';
+		courierValue = ['COD', 'Grab', 'Gojek'].includes(draft.courier) ? draft.courier : 'Grab';
 		dateValue = data.deliveryDates.some((option) => option.date === draft.date && !option.isFull)
 			? draft.date
 			: '';
@@ -275,10 +275,10 @@
 			// Ikon pin kustom (SVG inline). Ikon bawaan Leaflet memakai berkas PNG
 			// yang kerap gagal dimuat setelah proses build, dan warnanya biru di
 			// luar identitas toko. Pin terisi warna bata dengan titik putih dan
-			// garis navy — konsisten dengan tombol dan kartu KURMAPLUS.
+			// garis tinta cokelat — konsisten dengan tombol dan kartu KURMAPLUS.
 			const pinSvg =
 				'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 34 46" width="34" height="46">' +
-				'<path d="M17 2C9.3 2 3 8.3 3 16c0 10.6 14 28 14 28s14-17.4 14-28c0-7.7-6.3-14-14-14z" fill="#AB3710" stroke="#2D264B" stroke-width="2" stroke-linejoin="round"/>' +
+				'<path d="M17 2C9.3 2 3 8.3 3 16c0 10.6 14 28 14 28s14-17.4 14-28c0-7.7-6.3-14-14-14z" fill="#AB3710" stroke="#241710" stroke-width="2" stroke-linejoin="round"/>' +
 				'<circle cx="17" cy="16" r="5" fill="#FFFFFF"/></svg>';
 			const pinIcon = leaflet.icon({
 				iconUrl: `data:image/svg+xml,${encodeURIComponent(pinSvg)}`,
@@ -363,7 +363,7 @@
 
 <svelte:head>
 	<title>Checkout — KURMAPLUS</title>
-	<meta name="description" content="Isi data pengiriman, pilih kurir dan tanggal kirim, lalu bayar." />
+	<meta name="description" content="Isi data pengiriman, pilih pengiriman dan tanggal kirim, lalu bayar." />
 </svelte:head>
 
 <PageHeader />
@@ -531,8 +531,12 @@
 			<hr class="divider" />
 
 			<section aria-labelledby="kurir-heading">
-				<h2 id="kurir-heading">Kurir</h2>
+				<h2 id="kurir-heading">Pengiriman</h2>
 				<div class="choice-list" role="radiogroup" aria-labelledby="kurir-heading">
+					<label class="choice" class:choice-on={courierValue === 'COD'}>
+						<input type="radio" name="courier" value="COD" bind:group={courierValue} />
+						<span class="choice-label">COD</span>
+					</label>
 					<label class="choice" class:choice-on={courierValue === 'Grab'}>
 						<input type="radio" name="courier" value="Grab" bind:group={courierValue} />
 						<span class="choice-label"><svg class="choice-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M19.44 9.03L15.41 5H11v2h3.59l2 2H5c-2.8 0-5 2.2-5 5s2.2 5 5 5c2.46 0 4.45-1.69 4.9-4h1.65l2.77-2.77c-.21.54-.32 1.14-.32 1.77 0 2.8 2.2 5 5 5s5-2.2 5-5c0-2.65-1.97-4.77-4.56-4.97zM7.82 15C7.4 16.15 6.28 17 5 17c-1.63 0-3-1.37-3-3s1.37-3 3-3c1.28 0 2.4.85 2.82 2H11v2H7.82zM19 17c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3z" /></svg>Grab</span>
@@ -550,7 +554,7 @@
 							<span class="info-rest">{sisaInfo.join('\n')}</span>
 						{/if}
 					{:else}
-						Ongkir mengikuti tarif kurir, dibayar langsung ke kurir — di luar total ini.
+						Ongkir mengikuti tarif pengiriman, dibayar langsung saat barang datang — di luar total ini.
 					{/if}
 				</div>
 			</section>
@@ -610,7 +614,7 @@
 				form="form-checkout"
 				class="btn"
 				disabled={!data.storeOpen || loading} aria-busy={loading}>
-				{data.storeOpen ? `Bayar ${formatRupiah(subtotal)}` : 'Toko sedang tutup'}
+				{data.storeOpen ? `Bayar ${formatRupiah(subtotal)} dengan QRIS` : 'Toko sedang tutup'}
 			</button>
 		</div>
 	</div>

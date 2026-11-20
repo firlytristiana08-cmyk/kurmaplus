@@ -14,12 +14,14 @@ import {
   type ShippingStatus,
 } from "#lib/server/admin";
 import { requireAdmin } from "#lib/server/admin-auth";
-import { getSettings } from "#lib/server/db";
+import { expireStaleOrders, getSettings } from "#lib/server/db";
 import { checkStatus, loadDokuConfig } from "#lib/server/doku";
 import type { Actions, PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async ({ cookies, params }) => {
   await requireAdmin(cookies);
+  // Sinkronkan status: pesanan yang masa bayarnya habis ikut ditutup sistem.
+  await expireStaleOrders(new Date());
   const order = await adminOrderDetail(params.kode);
   if (!order) error(404, "Pesanan tidak ditemukan.");
   const settings = await getSettings();

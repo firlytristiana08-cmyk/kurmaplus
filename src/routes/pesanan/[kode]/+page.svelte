@@ -104,7 +104,7 @@
 				pesanan otomatis kedaluwarsa dan stok kembali tersedia.
 			</div>
 			{#if order.checkoutUrl}
-				<a class="btn" href={order.checkoutUrl}>Lanjutkan pembayaran</a>
+				<a class="btn" href={order.checkoutUrl}>Lanjutkan pembayaran dengan QRIS</a>
 			{:else if data.previewPayment}
 				<form method="POST" action="?/simulasi" onsubmit={() => (loading = true)}>
 					<button type="submit" class="btn">Simulasikan pembayaran (pratinjau)</button>
@@ -164,7 +164,7 @@
 				<dd>{order.city}</dd>
 			</div>
 			<div>
-				<dt>Kurir</dt>
+				<dt>Pengiriman</dt>
 				<dd>{order.courier}</dd>
 			</div>
 			<div>
@@ -179,7 +179,7 @@
 			{/if}
 		</dl>
 		<div class="info-box">
-			Ongkir {order.courier} dibayar pemesan saat kurir datang, tidak termasuk total pesanan ini.
+			Ongkir {order.courier} dibayar pemesan saat barang datang, tidak termasuk total pesanan ini.
 		</div>
 	</section>
 
@@ -286,7 +286,7 @@
 	}
 
 	dt {
-		color: #797284;
+		color: #73685f;
 		color: color-mix(in srgb, var(--ink) 62%, var(--paper));
 	}
 
@@ -307,7 +307,7 @@
 
 	.hint {
 		font-size: 0.8125rem;
-		color: #797284;
+		color: #73685f;
 		color: color-mix(in srgb, var(--ink) 62%, var(--paper));
 	}
 
@@ -351,7 +351,7 @@
 	}
 
 	.modal-mark.badge-wait {
-		color: #696278;
+		color: #62574e;
 		color: color-mix(in srgb, var(--ink) 70%, var(--paper));
 	}
 

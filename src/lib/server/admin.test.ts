@@ -227,7 +227,7 @@ describe("admin: stok, ongkir, tanggal, pengaturan", () => {
       {
         name: "Produk Tes Hapus",
         description: "Hanya untuk tes.",
-        photos: ["data:image/webp;base64,AAAA"],
+        photos: [{ sm: "", md: "", lg: "data:image/webp;base64,AAAA" }],
         variants: [{ label: "1 kg", weightGrams: 1000, priceIdr: 50000, stock: 2 }],
       },
       "tes",
@@ -280,7 +280,12 @@ describe("admin: manajemen detail produk & varian (tugas 90)", () => {
     expect(row?.name).toBe("Kurma Sukari Premium");
     expect(row?.sort_order).toBe(7);
     expect(row?.is_best_seller).toBe(1);
-    const added = await admin.adminAddProductPhotos(1, ["data:image/webp;base64,AAAA"], "tes", now);
+    const added = await admin.adminAddProductPhotos(
+      1,
+      [{ sm: "", md: "", lg: "data:image/webp;base64,AAAA" }],
+      "tes",
+      now,
+    );
     expect(added.ok).toBe(true);
     const photo = await dbi.get<{ id: number; data: string }>(
       "SELECT id, data FROM product_photos WHERE product_id = 1 ORDER BY id DESC LIMIT 1",

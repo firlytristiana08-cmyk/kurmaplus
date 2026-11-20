@@ -29,21 +29,10 @@ export const load: PageServerLoad = async ({ cookies }) => {
   const photos = await db.all<{ id: number; product_id: number }>(
     "SELECT id, product_id FROM product_photos ORDER BY product_id, sort_order, id",
   );
-  const movements = await db.all<{
-    id: string;
-    variant_id: number;
-    delta: number;
-    reason: string;
-    actor: string;
-    created_at: string;
-  }>(
-    "SELECT id, variant_id, delta, reason, actor, created_at FROM stock_movements ORDER BY created_at DESC LIMIT 20",
-  );
   return {
     products,
     variants,
     photos,
-    movements,
     threshold: Number(settings.low_stock_threshold ?? "10"),
   };
 };

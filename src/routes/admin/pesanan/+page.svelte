@@ -2,7 +2,7 @@
 	// Daftar pesanan — baris dua tingkat, filter lewat URL (AD-05).
 	import StatusBadge from '#lib/components/admin/StatusBadge.svelte';
 	import { STATUS_LABEL_ID, type OrderStatus } from '#lib/order-status';
-	import { formatDateId, formatRupiah } from '#lib/format';
+	import { formatDateId, formatDateTimeId, formatRupiah } from '#lib/format';
 
 	let { data } = $props();
 	const list = $derived(data.list);
@@ -60,9 +60,10 @@
 		</div>
 		<div class="chip-row">
 			<label class="chip" style="cursor: default">
-				Kurir
+				Pengiriman
 				<select name="kurir" onchange={(event) => event.currentTarget.form?.submit()} style="min-height: 32px; border: none; padding: 0 0.25rem; background: transparent; font-weight: 700">
 					<option value="" selected={!filter.courier}>Semua</option>
+					<option value="COD" selected={filter.courier === 'COD'}>COD</option>
 					<option value="Grab" selected={filter.courier === 'Grab'}>Grab</option>
 					<option value="Gojek" selected={filter.courier === 'Gojek'}>Gojek</option>
 				</select>
@@ -85,6 +86,7 @@
 						<div class="row-l1">
 							{order.code} · {order.customerName}
 							<StatusBadge status={order.status} />
+							<span class="muted">{formatDateTimeId(order.createdAt)}</span>
 						</div>
 						<div class="row-l2 tabular">
 							{formatDateId(order.deliveryDate)} · {order.city} · {order.courier} ·
