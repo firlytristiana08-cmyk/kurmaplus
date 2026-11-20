@@ -392,13 +392,20 @@
 		<section class="print-sheet">
 			<h2 class="print-title">KURMAPLUS — Pesanan {order.code} — {formatDateId(order.deliveryDate)}</h2>
 			<div class="surface">
-				<div class="row">
-					<div class="row-main">
-						<div class="row-l1">Isi pesanan · {kemasanCount} kemasan</div>
-						{#each order.items as item}
-							<div class="row-l2 tabular">{item.name} — {item.qty} kemasan</div>
-						{/each}
+				<h3 style="margin-top: 0">Isi pesanan · {order.items.length} jenis · {kemasanCount} kemasan</h3>
+				{#each order.items as item}
+					<div class="row">
+						<div class="row-main">
+							<div class="row-l1">{item.name}</div>
+							<div class="row-l2 tabular">{item.qty} × {formatRupiah(item.priceIdr)}</div>
+						</div>
+						<div class="row-side tabular">{formatRupiah(item.priceIdr * item.qty)}</div>
 					</div>
+				{/each}
+				<hr class="divider" />
+				<div class="row">
+					<div class="row-main"><strong>Total pesanan</strong></div>
+					<div class="row-side tabular"><strong>{formatRupiah(order.totalIdr)}</strong></div>
 				</div>
 				<hr class="divider" />
 				<div class="row">
