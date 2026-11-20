@@ -1,17 +1,10 @@
 <script lang="ts">
 	// Produk — daftar ringkas (tugas 116). Ketuk produk untuk membuka halaman
 	// ubah detail/foto/varian; produk baru lewat halaman Tambah produk.
-	import { formatDateTimeId, formatRupiah } from '#lib/format';
+	import { formatRupiah } from '#lib/format';
 
 	let { data } = $props();
 
-	const reasonLabels: Record<string, string> = {
-		lock_order: 'Terkunci pesanan',
-		expire_return: 'Kembali (kedaluwarsa)',
-		cancel_return: 'Kembali (dibatalkan)',
-		adjustment: 'Penyesuaian manual',
-		stock_initial: 'Stok awal varian baru',
-	};
 
 	let products = $derived.by(() => {
 		const photosByProduct = new Map<number, string>();
@@ -70,24 +63,6 @@
 		</a>
 	{/each}
 
-	<div class="section-head">
-		<h2>Riwayat stok</h2>
-	</div>
-	<div class="surface">
-		{#if data.movements.length === 0}
-			<p class="muted" style="margin: 0">Belum ada pergerakan stok.</p>
-		{:else}
-			<ul class="timeline">
-				{#each data.movements as mv (mv.id)}
-					<li>
-						<span class="when">{formatDateTimeId(mv.created_at)} · {mv.actor}</span>
-						Varian #{mv.variant_id} · {mv.delta > 0 ? `+${mv.delta}` : mv.delta} —
-						{reasonLabels[mv.reason] ?? mv.reason}
-					</li>
-				{/each}
-			</ul>
-		{/if}
-	</div>
 </main>
 
 <div class="page-foot-space"></div>
