@@ -82,6 +82,7 @@ export const actions: Actions = {
           city: order.city,
         },
         callbackUrl: `${url.origin}/pesanan/${order.code}?dari=pembayaran`,
+        notificationUrl: `${url.origin}/api/webhook/doku`,
         lineItems: order.items.map((item) => ({
           name: item.name,
           quantity: item.qty,

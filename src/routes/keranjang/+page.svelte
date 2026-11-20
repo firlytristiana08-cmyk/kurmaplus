@@ -36,7 +36,7 @@
 						weightGrams: variant.weightGrams,
 						priceIdr: variant.priceIdr,
 						stock: variant.stock,
-						photo: product.photo,
+						photo: product.photos[0]?.src ?? null,
 						slug: product.slug
 					});
 				}
@@ -67,7 +67,7 @@
 				<li class="cart-row">
 					<img
 						class="thumb"
-						src={`/images/${row.photo}`}
+						src={row.photo}
 						alt=""
 						width="72"
 						height="72"

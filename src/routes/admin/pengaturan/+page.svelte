@@ -2,6 +2,7 @@
 	import BackLink from '#lib/components/BackLink.svelte';
 	// Pengaturan toko — dibaca oleh checkout pelanggan (AD-20).
 	import { enhance } from '$app/forms';
+	import { adminEnhance } from '#lib/admin-feedback';
 
 	let { data, form } = $props();
 	const s = $derived(data.settings);
@@ -37,7 +38,7 @@
 		<p class="info-box">Pengaturan tersimpan dan tercatat di log audit.</p>
 	{/if}
 
-	<form method="POST" action="?/simpan" use:enhance>
+	<form method="POST" action="?/simpan" use:enhance={adminEnhance()}>
 		<div class="surface">
 			<h3 style="margin-top: 0">Toko</h3>
 			<div class="field">

@@ -391,14 +391,16 @@ export interface ProductView {
   slug: string;
   name: string;
   description: string;
-  photo: string | null;
-  photo2: string | null;
-  photo3: string | null;
+  photos: { id: number; src: string }[];
   isBestSeller: boolean;
   variants: VariantView[];
   minPriceIdr: number;
   allOutOfStock: boolean;
 }
+
+// Sumber foto lewat endpoint /api/foto/{id} — URL data tidak disematkan di
+// HTML, halaman tetap ringan dan browser bisa menyimpan foto di cache.
+export const photoApiSrc = (photoId: number): string => `/api/foto/${photoId}`;
 
 interface VariantRow {
   id: number;
@@ -428,10 +430,15 @@ interface ProductRow {
   slug: string;
   name: string;
   description: string;
-  photo: string | null;
-  photo_2: string | null;
-  photo_3: string | null;
   is_best_seller: number;
+}
+
+async function photosOf(db: Db, productId: number): Promise<{ id: number; src: string }[]> {
+  const rows = await db.all<{ id: number }>(
+    "SELECT id FROM product_photos WHERE product_id = ? ORDER BY sort_order, id",
+    [productId],
+  );
+  return rows.map((row) => ({ id: row.id, src: photoApiSrc(row.id) }));
 }
 
 async function toProductView(db: Db, row: ProductRow): Promise<ProductView> {
@@ -442,9 +449,7 @@ async function toProductView(db: Db, row: ProductRow): Promise<ProductView> {
     slug: row.slug,
     name: row.name,
     description: row.description,
-    photo: row.photo,
-    photo2: row.photo_2,
-    photo3: row.photo_3,
+    photos: await photosOf(db, row.id),
     isBestSeller: row.is_best_seller === 1,
     variants,
     minPriceIdr: prices.length > 0 ? Math.min(...prices) : 0,
@@ -455,7 +460,7 @@ async function toProductView(db: Db, row: ProductRow): Promise<ProductView> {
 export async function listProducts(): Promise<ProductView[]> {
   const db = await getDb();
   const rows = await db.all<ProductRow>(
-    "SELECT id, slug, name, description, photo, photo_2, photo_3, is_best_seller FROM products WHERE is_active = 1 ORDER BY sort_order",
+    "SELECT id, slug, name, description, is_best_seller FROM products WHERE is_active = 1 ORDER BY sort_order",
   );
   const products: ProductView[] = [];
   for (const row of rows) {
@@ -478,7 +483,7 @@ export async function productSoldCounts(): Promise<Map<number, number>> {
 export async function getProductBySlug(slug: string): Promise<ProductView | null> {
   const db = await getDb();
   const row = await db.get<ProductRow>(
-    "SELECT id, slug, name, description, photo, photo_2, photo_3, is_best_seller FROM products WHERE slug = ? AND is_active = 1",
+    "SELECT id, slug, name, description, is_best_seller FROM products WHERE slug = ? AND is_active = 1",
     [slug],
   );
   return row ? toProductView(db, row) : null;

@@ -1,7 +1,9 @@
 <script lang="ts">
+	import { tick } from 'svelte';
 	// Detail pesanan — "layar menjawab: apa langkah berikut untuk satu pesanan?"
 	// (PRD Portal Admin — AD-06..AD-14, BA-01..BA-07).
 	import { enhance } from '$app/forms';
+	import { adminEnhance } from '#lib/admin-feedback';
 	import BackLink from '#lib/components/BackLink.svelte';
 	import StatusBadge from '#lib/components/admin/StatusBadge.svelte';
 	import type { OrderStatus } from '#lib/order-status';
@@ -83,6 +85,23 @@
 		refund_noted: 'Pengembalian dana dicatat',
 		order_expired: 'Kedaluwarsa (sistem)',
 	};
+	// Cetak slip pesanan — satu lembar A4 berisi item pesanan, informasi
+	// pemesan, dan pengiriman saja.
+	let printing = $state(false);
+	const kemasanCount = $derived(order.items.reduce((n, it) => n + it.qty, 0));
+
+	async function printSlip(): Promise<void> {
+		printing = true;
+		const cleanup = (): void => {
+			printing = false;
+			window.removeEventListener('afterprint', cleanup);
+		};
+		window.addEventListener('afterprint', cleanup);
+		await tick();
+		window.print();
+		// Jaga-jaga bila peramban tidak memblokir print() dan tidak mengirim afterprint.
+		setTimeout(cleanup, 1500);
+	}
 </script>
 
 <svelte:head>
@@ -91,7 +110,7 @@
 
 <BackLink href="/admin/pesanan" />
 
-<main class="wrap">
+<main class="wrap" class:no-print={printing}>
 	<header class="admin-head">
 		<h1>Pesanan {order.code}</h1>
 		<p class="row-l1" style="margin: 0 0 0.25rem">
@@ -100,6 +119,13 @@
 		</p>
 		<p class="muted page-sub">Langkah berikut: {nextHint[order.status]}</p>
 	</header>
+
+	<div class="btn-row">
+		<button class="btn-mini" type="button" onclick={() => void printSlip()}>
+			<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 2h12v20l-3-2-3 2-3-2-3 2zM9 7h6v2H9zm0 4h6v2H9z"/></svg>
+			Cetak
+		</button>
+	</div>
 
 	{#if form?.message}
 		<p class="error-box">{form.message}</p>
@@ -178,7 +204,7 @@
 				{#if i < shippingSteps.length - 1}<span class="sep">›</span>{/if}
 			{/each}
 		</div>
-		<form method="POST" action="?/ongkir" use:enhance>
+		<form method="POST" action="?/ongkir" use:enhance={adminEnhance()}>
 			<div class="field">
 				<label for="nominal">Nominal ongkir dari aplikasi kurir</label>
 				<input id="nominal" name="nominal" type="text" inputmode="numeric" value={order.shippingActualIdr ?? ''} placeholder="mis. 25000" />
@@ -225,7 +251,7 @@
 			Invoice {order.code} · dibayar {order.paidAt ? formatDateTimeId(order.paidAt) : '—'}
 			{#if order.manualPaidReason}· manual: {order.manualPaidReason}{/if}
 		</p>
-		<form method="POST" action="?/cek_doku" use:enhance>
+		<form method="POST" action="?/cek_doku" use:enhance={adminEnhance()}>
 			<div class="btn-row">
 				<button class="btn-mini" type="submit">Cek status ke DOKU</button>
 			</div>
@@ -234,7 +260,7 @@
 			<form
 				method="POST"
 				action="?/bayar_manual"
-				use:enhance
+				use:enhance={adminEnhance()}
 				onsubmit={(event) => {
 					if (!window.confirm('Tandai bayar manual? Pastikan sudah memeriksa dashboard DOKU. Tindakan tercatat di log audit.')) {
 						event.preventDefault();
@@ -253,7 +279,7 @@
 	<!-- Catatan internal (AD-11) -->
 	<div class="surface">
 		<h3 style="margin-top: 0">Catatan internal</h3>
-		<form method="POST" action="?/catatan" use:enhance>
+		<form method="POST" action="?/catatan" use:enhance={adminEnhance()}>
 			<div class="field">
 				<label for="catatan" class="visually-hidden" style="position: absolute; left: -9999px">Catatan internal</label>
 				<textarea id="catatan" name="note" placeholder="Tulis catatan untuk diri sendiri…">{order.internalNote ?? ''}</textarea>
@@ -272,7 +298,7 @@
 					Tercatat {order.refundNotedAt ? formatDateTimeId(order.refundNotedAt) : ''} — {order.refundNote}
 				</p>
 			{/if}
-			<form method="POST" action="?/refund" use:enhance>
+			<form method="POST" action="?/refund" use:enhance={adminEnhance()}>
 				<div class="field">
 					<label for="catatan-refund">Catatan pengembalian (dilakukan di dashboard DOKU)</label>
 					<input id="catatan-refund" name="note" type="text" placeholder="mis. dana dikembalikan via transfer, 20 Nov" required />
@@ -306,7 +332,7 @@
 		<h2>Aksi lain</h2>
 	</div>
 	<div class="surface">
-		<form method="POST" action="?/tanggal" use:enhance>
+		<form method="POST" action="?/tanggal" use:enhance={adminEnhance()}>
 			<h3 style="margin-top: 0">Pindah tanggal kirim</h3>
 			<p class="muted">Hanya Sabtu atau Minggu (BA-07). Pembeli perlu diberi tahu lewat WhatsApp.</p>
 			<div class="field">
@@ -326,7 +352,7 @@
 			<form
 				method="POST"
 				action="?/status"
-				use:enhance
+				use:enhance={adminEnhance('Status pesanan diperbarui.')}
 				onsubmit={(event) => {
 					if (!window.confirm(`Batalkan pesanan ${order.code}? Tindakan tercatat di log audit.`)) {
 						event.preventDefault();
@@ -361,6 +387,52 @@
 	</div>
 </main>
 
+{#if printing}
+	<div class="print-area">
+		<section class="print-sheet">
+			<h2 class="print-title">KURMAPLUS — Pesanan {order.code} — {formatDateId(order.deliveryDate)}</h2>
+			<div class="surface">
+				<h3 style="margin-top: 0">Isi pesanan · {order.items.length} jenis · {kemasanCount} kemasan</h3>
+				{#each order.items as item}
+					<div class="row">
+						<div class="row-main">
+							<div class="row-l1">{item.name}</div>
+							<div class="row-l2 tabular">{item.qty} × {formatRupiah(item.priceIdr)}</div>
+						</div>
+						<div class="row-side tabular">{formatRupiah(item.priceIdr * item.qty)}</div>
+					</div>
+				{/each}
+				<hr class="divider" />
+				<div class="row">
+					<div class="row-main"><strong>Total pesanan</strong></div>
+					<div class="row-side tabular"><strong>{formatRupiah(order.totalIdr)}</strong></div>
+				</div>
+				<hr class="divider" />
+				<div class="row">
+					<div class="row-main">
+						<div class="row-l1">Pemesan</div>
+						<div class="row-l2 tabular">
+							{order.customerName}<br />
+							{order.customerPhone}{#if order.email} · {order.email}{/if}
+						</div>
+					</div>
+				</div>
+				<hr class="divider" />
+				<div class="row">
+					<div class="row-main">
+						<div class="row-l1">Pengiriman</div>
+						<div class="row-l2 tabular">
+							{order.address}, {order.city}<br />
+							{formatDateId(order.deliveryDate)} · kurir {order.courier}
+							{#if order.note}<br />Catatan: {order.note}{/if}
+						</div>
+					</div>
+				</div>
+			</div>
+		</section>
+	</div>
+{/if}
+
 {#if forward[order.status] ?? backward[order.status]}
 	<div class="admin-sticky no-print">
 		<div class="wrap" style="padding: 0">
@@ -368,7 +440,7 @@
 				<form
 					method="POST"
 					action="?/status"
-					use:enhance
+					use:enhance={adminEnhance('Status pesanan diperbarui.')}
 					onsubmit={(event) => {
 						if (!window.confirm(`${forwardLabel[forward[order.status] ?? '']}? Perpindahan status tercatat di log audit.`)) {
 							event.preventDefault();
@@ -386,7 +458,7 @@
 				<form
 					method="POST"
 					action="?/status"
-					use:enhance
+					use:enhance={adminEnhance('Status pesanan diperbarui.')}
 					onsubmit={(event) => {
 						const reason = window.prompt('Koreksi mundur satu langkah — alasan (wajib):');
 						if (reason === null || reason.trim() === '') {

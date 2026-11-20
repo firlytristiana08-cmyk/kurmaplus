@@ -56,9 +56,9 @@
 			<li>
 				<a class="product-card" href={`/kurma/${product.slug}`}>
 					<div class="product-photo">
-						{#if product.photo}
+						{#if product.photos[0]}
 							<img
-								src={`/images/${product.photo}`}
+								src={product.photos[0].src}
 								alt={`Foto ${product.name}`}
 								width="430"
 								height="430"

@@ -2,6 +2,7 @@
 	// Hari ini — "layar menjawab satu pertanyaan: apa yang harus dikerjakan
 	// sekarang?" (PRD Portal Admin — Arah desain).
 	import { enhance } from '$app/forms';
+	import { adminEnhance } from '#lib/admin-feedback';
 	import StatusBadge from '#lib/components/admin/StatusBadge.svelte';
 	import { formatDateId, formatRupiah } from '#lib/format';
 
@@ -29,29 +30,16 @@
 		<p class="error-box">{form.message}</p>
 	{/if}
 
-	<!-- Keadaan toko (AD-04) -->
-	<div class="surface">
-		<div class="row" style="border-bottom: none; padding: 0">
-			<div class="row-main">
-				<div class="row-l1">
-					<span class="badge {today.storeOpen ? 'badge-ok' : 'badge-off'}">
-						<svg class="mk" viewBox="0 0 12 12" aria-hidden="true">
-							{#if today.storeOpen}<circle cx="6" cy="6" r="5" fill="currentColor" />{:else}<path d="M0.5 0.5 11.5 11.5M11.5 0.5 0.5 11.5" stroke="currentColor" stroke-width="2.4" />{/if}
-						</svg>
-						{today.storeOpen ? 'Toko buka' : 'Toko tutup'}
-					</span>
-				</div>
-				<div class="row-l2">
-					{today.storeOpen
-						? 'Checkout pelanggan aktif.'
-						: 'Checkout pelanggan dinonaktifkan dengan pesan tutup.'}
-				</div>
-			</div>
-			<form method="POST" action="?/toko" use:enhance>
-				<input type="hidden" name="open" value={today.storeOpen ? '0' : '1'} />
-				<button class="btn-mini" type="submit">{today.storeOpen ? 'Tutup toko' : 'Buka toko'}</button>
-			</form>
-		</div>
+	<!-- Ringkasan pesanan: angka per status — klik membuka daftar terfilter. -->
+	<div class="section-head">
+		<h2>Ringkasan pesanan</h2>
+		<a href="/admin/pesanan">Semua pesanan</a>
+	</div>
+	<div class="chip-row">
+		<a class="chip" href="/admin/pesanan?status=pending_payment">Menunggu bayar <strong class="tabular">{today.counts.pending_payment}</strong></a>
+		<a class="chip" href="/admin/pesanan?status=paid">Perlu dikemas <strong class="tabular">{today.counts.paid}</strong></a>
+		<a class="chip" href="/admin/pesanan?status=packed">Siap kirim <strong class="tabular">{today.counts.packed}</strong></a>
+		<a class="chip" href="/admin/pesanan?status=shipped">Terkirim <strong class="tabular">{today.counts.shipped}</strong></a>
 	</div>
 
 	<!-- Perlu tindakan (AD-01) -->
@@ -84,7 +72,6 @@
 	<!-- Rekap akhir pekan (AD-02) -->
 	<div class="section-head">
 		<h2>Akhir pekan ini</h2>
-		<a href="/admin/pengiriman">Buka Pengiriman</a>
 	</div>
 	<div class="surface">
 		{#each today.weekend as day (day.date)}
@@ -123,6 +110,31 @@
 				</div>
 			{/each}
 		{/if}
+	</div>
+
+	<!-- Keadaan toko (AD-04) -->
+	<div class="surface">
+		<div class="row" style="border-bottom: none; padding: 0">
+			<div class="row-main">
+				<div class="row-l1">
+					<span class="badge {today.storeOpen ? 'badge-ok' : 'badge-off'}">
+						<svg class="mk" viewBox="0 0 12 12" aria-hidden="true">
+							{#if today.storeOpen}<circle cx="6" cy="6" r="5" fill="currentColor" />{:else}<path d="M0.5 0.5 11.5 11.5M11.5 0.5 0.5 11.5" stroke="currentColor" stroke-width="2.4" />{/if}
+						</svg>
+						{today.storeOpen ? 'Toko buka' : 'Toko tutup'}
+					</span>
+				</div>
+				<div class="row-l2">
+					{today.storeOpen
+						? 'Checkout pelanggan aktif.'
+						: 'Checkout pelanggan dinonaktifkan dengan pesan tutup.'}
+				</div>
+			</div>
+			<form method="POST" action="?/toko" use:enhance={adminEnhance('Status toko diperbarui.')}>
+				<input type="hidden" name="open" value={today.storeOpen ? '0' : '1'} />
+				<button class="btn-mini" type="submit">{today.storeOpen ? 'Tutup toko' : 'Buka toko'}</button>
+			</form>
+		</div>
 	</div>
 </main>
 

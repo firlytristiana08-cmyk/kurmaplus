@@ -225,6 +225,7 @@ export const actions: Actions = {
               city: parsed.output.city,
             },
             callbackUrl: `${url.origin}/pesanan/${code}?dari=pembayaran`,
+            notificationUrl: `${url.origin}/api/webhook/doku`,
             lineItems,
           },
           now,

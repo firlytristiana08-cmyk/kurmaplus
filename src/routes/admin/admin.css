@@ -509,6 +509,11 @@ h3,
 
 /* Area cetak A4 (AD-17): hitam putih, tanpa navigasi. */
 .print-area {
+	/* Judul kertas hanya muncul saat mencetak. */
+	.print-title {
+		display: none;
+	}
+
 	/* Layar: transparan (warna kertas). Cetak: putih (lihat @media print). */
 	background: transparent;
 	color: #000;
@@ -561,8 +566,18 @@ h3,
 	}
 
 	.print-title {
+		display: block !important;
 		font-size: 1.25rem;
 		margin: 0 0 0.25rem;
+	}
+
+	/* Satu item per lembar cetak. */
+	.print-sheet {
+		break-after: page;
+	}
+
+	.print-sheet:last-child {
+		break-after: auto;
 	}
 
 	@page {
@@ -613,4 +628,82 @@ h3,
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
+}
+
+/* Baris produk di halaman daftar — kartu tautan ke halaman ubah. */
+a.product-line {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	color: var(--ink);
+	text-decoration: none;
+}
+
+/* Satu foto + tombol hapusnya. */
+.photo-pick {
+	display: inline-flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.375rem;
+}
+
+/* Unggah foto produk: pratinjau kotak + tombol aksi di sebelahnya. */
+.photo-row {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	flex-wrap: wrap;
+}
+
+.photo-thumb {
+	width: 84px;
+	height: 84px;
+	object-fit: cover;
+	border: 1px solid var(--sand);
+	border-radius: var(--radius-s);
+	background: var(--card);
+}
+
+/* Umpan balik aksi: spinner kecil di tombol saat diproses + toast singkat. */
+.is-busy {
+	pointer-events: none;
+	opacity: 0.7;
+}
+
+button.is-busy::after {
+	content: '';
+	display: inline-block;
+	width: 0.875rem;
+	height: 0.875rem;
+	margin-left: 0.375rem;
+	border: 2px solid currentColor;
+	border-top-color: transparent;
+	border-radius: 50%;
+	animation: busy-spin 0.7s linear infinite;
+	flex: none;
+}
+
+@keyframes busy-spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+.toast {
+	position: fixed;
+	left: 50%;
+	bottom: 5.5rem;
+	z-index: 60;
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	max-width: min(26rem, calc(100vw - 2rem));
+	transform: translateX(-50%);
+	padding: 0.75rem 1.125rem;
+	border: 1.5px solid var(--olive);
+	border-radius: 0.8125rem;
+	background: var(--card);
+	color: var(--olive);
+	font-weight: 700;
+	box-shadow: 0 6px 24px rgba(45, 38, 75, 0.16);
 }

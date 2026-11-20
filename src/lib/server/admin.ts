@@ -624,13 +624,304 @@ export async function adminDeleteVariant(
   });
 }
 
+// Foto bisa berupa URL data (hasil unggah, base64) atau nama berkas lama
+// di folder /images/. Batas 1,5 juta karakter ≈ 1 MB biner per foto.
+function photoValueError(value: string | null | undefined): string | null {
+  if (value === undefined || value === null) return null;
+  const v = value.trim();
+  if (v === "") return null;
+  if (v.startsWith("data:")) {
+    if (v.length > 1_500_000) {
+      return "Ukuran foto terlalu besar — maksimal sekitar 1 MB per foto.";
+    }
+    return null;
+  }
+  if (v.length > 200) return "Nama berkas foto maksimal 200 karakter.";
+  return null;
+}
+
+function slugify(name: string): string {
+  return (
+    name
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "") || "produk"
+  );
+}
+
+export interface NewProductInput {
+  name: string;
+  description: string;
+  photos: string[];
+  variants: NewVariantInput[];
+}
+
+// Maksimal foto per produk — wajar untuk galeri katalog kecil.
+export const MAX_PRODUCT_PHOTOS = 20;
+
+export type CreateProductResult =
+  | { ok: true; productId: number; variantIds: number[] }
+  | { ok: false; error: string };
+
+export async function adminCreateProduct(
+  input: NewProductInput,
+  actor: string,
+  now = new Date(),
+): Promise<CreateProductResult> {
+  if (input.name.trim() === "") return { ok: false, error: "Nama produk wajib diisi." };
+  if (input.description.trim() === "") return { ok: false, error: "Deskripsi wajib diisi." };
+  if (input.variants.length === 0) {
+    return { ok: false, error: "Produk baru minimal punya satu varian." };
+  }
+  if (input.photos.length > MAX_PRODUCT_PHOTOS) {
+    return { ok: false, error: `Maksimal ${MAX_PRODUCT_PHOTOS} foto per produk.` };
+  }
+  for (const value of input.photos) {
+    const photoIssue = photoValueError(value);
+    if (photoIssue) return { ok: false, error: photoIssue };
+  }
+  for (const variant of input.variants) {
+    if (variant.label.trim() === "") return { ok: false, error: "Nama ukuran wajib diisi." };
+    if (!Number.isInteger(variant.weightGrams) || variant.weightGrams <= 0) {
+      return { ok: false, error: "Berat harus bilangan bulat lebih dari nol (gram)." };
+    }
+    if (!Number.isInteger(variant.priceIdr) || variant.priceIdr <= 0) {
+      return { ok: false, error: "Harga harus rupiah bulat lebih dari nol." };
+    }
+    if (!Number.isInteger(variant.stock) || variant.stock < 0) {
+      return { ok: false, error: "Stok awal tidak boleh negatif." };
+    }
+  }
+  const db = await getDb();
+  const at = now.toISOString();
+  return db.transaction(async (tx) => {
+    const created = await tx.get<{ id: number }>(
+      "SELECT COALESCE(MAX(id), 0) + 1 AS id FROM products",
+      [],
+    );
+    const productId = created?.id ?? 1;
+    // Slug unik dari nama produk.
+    const base = slugify(input.name);
+    let slug = base;
+    for (let i = 2; ; i++) {
+      const taken = await tx.get<{ id: number }>("SELECT id FROM products WHERE slug = ?", [slug]);
+      if (!taken) break;
+      slug = `${base}-${i}`;
+    }
+    const sortRow = await tx.get<{ next: number }>(
+      "SELECT COALESCE(MAX(sort_order), 0) + 1 AS next FROM products",
+      [],
+    );
+    await tx.run(
+      "INSERT INTO products (id, slug, name, description, sort_order, is_active, is_best_seller) VALUES (?, ?, ?, ?, ?, 1, 0)",
+      [productId, slug, input.name.trim(), input.description.trim(), sortRow?.next ?? 1],
+    );
+    await insertProductPhotos(tx, productId, input.photos);
+    const variantIds: number[] = [];
+    for (const variant of input.variants) {
+      const next = await tx.get<{ id: number }>(
+        "SELECT COALESCE(MAX(id), 0) + 1 AS id FROM variants",
+        [],
+      );
+      const variantId = next?.id ?? 1;
+      variantIds.push(variantId);
+      await tx.run(
+        "INSERT INTO variants (id, product_id, label, weight_grams, price_idr, stock, is_active) VALUES (?, ?, ?, ?, ?, ?, 1)",
+        [
+          variantId,
+          productId,
+          variant.label.trim(),
+          variant.weightGrams,
+          variant.priceIdr,
+          variant.stock,
+        ],
+      );
+      if (variant.stock > 0) {
+        await tx.run(
+          "INSERT INTO stock_movements (id, variant_id, delta, reason, order_id, actor, created_at) VALUES (?, ?, ?, 'stock_initial', NULL, ?, ?)",
+          [crypto.randomUUID(), variantId, variant.stock, actor, at],
+        );
+      }
+    }
+    await writeAudit(tx, {
+      actor,
+      entity: "product",
+      entityId: String(productId),
+      action: "product_created",
+      before: null,
+      after: {
+        slug,
+        name: input.name.trim(),
+        description: input.description.trim(),
+        photos: input.photos.length,
+        variants: input.variants,
+      },
+      at,
+    });
+    return { ok: true as const, productId, variantIds };
+  });
+}
+
+export async function adminDeleteProduct(
+  productId: number,
+  actor: string,
+  now = new Date(),
+): Promise<AdminResult> {
+  const db = await getDb();
+  const at = now.toISOString();
+  return db.transaction(async (tx) => {
+    const row = await tx.get<{
+      id: number;
+      slug: string;
+      name: string;
+      description: string;
+      photo: string | null;
+      photo_2: string | null;
+      photo_3: string | null;
+      sort_order: number;
+      is_active: number;
+      is_best_seller: number;
+    }>(
+      "SELECT id, slug, name, description, photo, photo_2, photo_3, sort_order, is_active, is_best_seller FROM products WHERE id = ?",
+      [productId],
+    );
+    if (!row) return fail("Produk tidak ditemukan.");
+    const variants = await tx.all<{
+      id: number;
+      label: string;
+      weight_grams: number;
+      price_idr: number;
+      stock: number;
+      is_active: number;
+    }>(
+      "SELECT id, label, weight_grams, price_idr, stock, is_active FROM variants WHERE product_id = ?",
+      [productId],
+    );
+    // Hapus permanen: produk + varian + riwayat stoknya. Item pesanan lama
+    // tetap utuh (nama & harga tersimpan saat transaksi) — kolom variant_id
+    // pada order_items tidak lagi dirujuk setelah varian dihapus.
+    await tx.run("DELETE FROM product_photos WHERE product_id = ?", [productId]);
+    await tx.run(
+      "DELETE FROM stock_movements WHERE variant_id IN (SELECT id FROM variants WHERE product_id = ?)",
+      [productId],
+    );
+    await tx.run("DELETE FROM variants WHERE product_id = ?", [productId]);
+    await tx.run("DELETE FROM products WHERE id = ?", [productId]);
+    await writeAudit(tx, {
+      actor,
+      entity: "product",
+      entityId: String(productId),
+      action: "product_deleted",
+      before: { ...row, variants },
+      after: null,
+      at,
+    });
+    return { ok: true as const };
+  });
+}
+
+// Simpan daftar foto baru sebagai baris product_photos (urut sesuai pilihan).
+async function insertProductPhotos(tx: Db, productId: number, photos: string[]): Promise<void> {
+  let sort = 0;
+  for (const photo of photos) {
+    const v = photo.trim();
+    if (v === "") continue;
+    const next = await tx.get<{ id: number }>(
+      "SELECT COALESCE(MAX(id), 0) + 1 AS id FROM product_photos",
+      [],
+    );
+    const photoId = next?.id ?? 1;
+    await tx.run(
+      "INSERT INTO product_photos (id, product_id, sort_order, data) VALUES (?, ?, ?, ?)",
+      [photoId, productId, sort, v],
+    );
+    sort += 1;
+  }
+}
+
+export async function adminAddProductPhotos(
+  productId: number,
+  photos: string[],
+  actor: string,
+  now = new Date(),
+): Promise<AdminResult> {
+  const items = photos.map((p) => p.trim()).filter((p) => p !== "");
+  if (items.length === 0) return fail("Pilih minimal satu foto.");
+  if (items.length > MAX_PRODUCT_PHOTOS) {
+    return fail(`Maksimal ${MAX_PRODUCT_PHOTOS} foto per produk.`);
+  }
+  for (const value of items) {
+    const photoIssue = photoValueError(value);
+    if (photoIssue) return fail(photoIssue);
+  }
+  const db = await getDb();
+  const at = now.toISOString();
+  return db.transaction(async (tx) => {
+    const product = await tx.get<{ id: number }>("SELECT id FROM products WHERE id = ?", [
+      productId,
+    ]);
+    if (!product) return fail("Produk tidak ditemukan.");
+    const existing = await tx.get<{ n: number }>(
+      "SELECT COUNT(*) AS n FROM product_photos WHERE product_id = ?",
+      [productId],
+    );
+    if ((existing?.n ?? 0) + items.length > MAX_PRODUCT_PHOTOS) {
+      return fail(`Maksimal ${MAX_PRODUCT_PHOTOS} foto per produk.`);
+    }
+    const sortRow = await tx.get<{ next: number }>(
+      "SELECT COALESCE(MAX(sort_order), -1) + 1 AS next FROM product_photos WHERE product_id = ?",
+      [productId],
+    );
+    await insertProductPhotos(tx, productId, items);
+    await writeAudit(tx, {
+      actor,
+      entity: "product",
+      entityId: String(productId),
+      action: "product_photos_added",
+      before: null,
+      after: { added: items.length, from_sort: sortRow?.next ?? 0 },
+      at,
+    });
+    return { ok: true as const };
+  });
+}
+
+export async function adminDeleteProductPhoto(
+  photoId: number,
+  actor: string,
+  now = new Date(),
+): Promise<AdminResult> {
+  const db = await getDb();
+  const at = now.toISOString();
+  return db.transaction(async (tx) => {
+    const row = await tx.get<{ id: number; product_id: number; sort_order: number; data: string }>(
+      "SELECT id, product_id, sort_order, data FROM product_photos WHERE id = ?",
+      [photoId],
+    );
+    if (!row) return fail("Foto tidak ditemukan.");
+    await tx.run("DELETE FROM product_photos WHERE id = ?", [photoId]);
+    await writeAudit(tx, {
+      actor,
+      entity: "product",
+      entityId: String(row.product_id),
+      action: "product_photo_deleted",
+      before: {
+        photo_id: row.id,
+        sort_order: row.sort_order,
+        kind: row.data.startsWith("data:") ? "unggahan" : "berkas",
+      },
+      after: null,
+      at,
+    });
+    return { ok: true as const };
+  });
+}
+
 export interface ProductPatch {
   isActive?: boolean;
   name?: string;
   description?: string;
-  photo?: string | null;
-  photo2?: string | null;
-  photo3?: string | null;
   sortOrder?: number;
   isBestSeller?: boolean;
 }
@@ -645,11 +936,6 @@ export async function adminUpdateProduct(
   if (patch.description !== undefined && patch.description.trim() === "") {
     return fail("Deskripsi wajib diisi.");
   }
-  for (const value of [patch.photo, patch.photo2, patch.photo3]) {
-    if (value !== undefined && value !== null && value.length > 200) {
-      return fail("Nama berkas foto maksimal 200 karakter.");
-    }
-  }
   if (
     patch.sortOrder !== undefined &&
     (!Number.isInteger(patch.sortOrder) || patch.sortOrder < 0)
@@ -663,36 +949,27 @@ export async function adminUpdateProduct(
       id: number;
       name: string;
       description: string;
-      photo: string | null;
-      photo_2: string | null;
-      photo_3: string | null;
       sort_order: number;
       is_active: number;
       is_best_seller: number;
     }>(
-      "SELECT id, name, description, photo, photo_2, photo_3, sort_order, is_active, is_best_seller FROM products WHERE id = ?",
+      "SELECT id, name, description, sort_order, is_active, is_best_seller FROM products WHERE id = ?",
       [productId],
     );
     if (!row) return fail("Produk tidak ditemukan.");
     const after = {
       name: patch.name?.trim() ?? row.name,
       description: patch.description?.trim() ?? row.description,
-      photo: patch.photo === undefined ? row.photo : patch.photo?.trim() || null,
-      photo_2: patch.photo2 === undefined ? row.photo_2 : patch.photo2?.trim() || null,
-      photo_3: patch.photo3 === undefined ? row.photo_3 : patch.photo3?.trim() || null,
       sort_order: patch.sortOrder ?? row.sort_order,
       is_active: patch.isActive === undefined ? row.is_active : patch.isActive ? 1 : 0,
       is_best_seller:
         patch.isBestSeller === undefined ? row.is_best_seller : patch.isBestSeller ? 1 : 0,
     };
     await tx.run(
-      "UPDATE products SET name = ?, description = ?, photo = ?, photo_2 = ?, photo_3 = ?, sort_order = ?, is_active = ?, is_best_seller = ? WHERE id = ?",
+      "UPDATE products SET name = ?, description = ?, sort_order = ?, is_active = ?, is_best_seller = ? WHERE id = ?",
       [
         after.name,
         after.description,
-        after.photo,
-        after.photo_2,
-        after.photo_3,
         after.sort_order,
         after.is_active,
         after.is_best_seller,
@@ -707,9 +984,6 @@ export async function adminUpdateProduct(
       before: {
         name: row.name,
         description: row.description,
-        photo: row.photo,
-        photo_2: row.photo_2,
-        photo_3: row.photo_3,
         sort_order: row.sort_order,
         is_active: row.is_active,
         is_best_seller: row.is_best_seller,
@@ -976,6 +1250,7 @@ export async function adminOrderDetail(code: string): Promise<AdminOrderDetail |
   const db = await getDb();
   const row = await db.get<
     AdminOrderRow & {
+      id: number;
       email: string | null;
       address: string;
       lat: number;
@@ -996,11 +1271,10 @@ export async function adminOrderDetail(code: string): Promise<AdminOrderDetail |
     }
   >("SELECT * FROM orders WHERE code = ?", [code]);
   if (!row) return null;
-  const idRow = await db.get<{ id: number }>("SELECT id FROM orders WHERE code = ?", [code]);
   const items = (
     await db.all<{ name_snapshot: string; price_snapshot: number; qty: number }>(
       "SELECT name_snapshot, price_snapshot, qty FROM order_items WHERE order_id = ?",
-      [idRow?.id ?? -1],
+      [row.id],
     )
   ).map((item) => ({ name: item.name_snapshot, priceIdr: item.price_snapshot, qty: item.qty }));
   const historyRows = await db.all<{
@@ -1066,6 +1340,7 @@ export interface TodaySummary {
     stock: number;
     locked: number;
   }[];
+  counts: { pending_payment: number; paid: number; packed: number; shipped: number };
   threshold: number;
   storeOpen: boolean;
   openCheckoutDate: string;
@@ -1078,7 +1353,7 @@ export async function adminToday(now = new Date()): Promise<TodaySummary> {
 
   const needRows = await db.all<AdminOrderRow>(
     `SELECT code, status, customer_name, customer_phone, city, delivery_date, courier, total_idr, created_at, shipping_status, shipping_actual_idr
-\t\t FROM orders WHERE status IN ('paid', 'packed', 'shipped') ORDER BY delivery_date ASC, created_at ASC`,
+\t\t FROM orders WHERE status IN ('paid', 'packed', 'shipped') ORDER BY delivery_date ASC, created_at ASC LIMIT 10`,
   );
 
   // Rekap akhir pekan terdekat (Sabtu & Minggu) untuk pesanan yang masih
@@ -1099,29 +1374,46 @@ export async function adminToday(now = new Date()): Promise<TodaySummary> {
     }
   }
 
-  const weekend = [];
-  for (const entry of weekendDates) {
-    const orders = await db.all<{ code: string; courier: string }>(
-      `SELECT code, courier FROM orders WHERE delivery_date = ? AND status IN ('paid', 'packed')`,
-      [entry.date],
-    );
-    let packageCount = 0;
+  // Rekap akhir pekan dalam satu query gabungan (bukan satu query per pesanan):
+  // jumlah kemasan langsung dihitung dari order_items.
+  const weekendRows = weekendDates.length
+    ? await db.all<{ delivery_date: string; courier: string; packages: number }>(
+        `SELECT o.delivery_date, o.courier, COALESCE(SUM(oi.qty), 0) AS packages
+\t\t FROM orders o LEFT JOIN order_items oi ON oi.order_id = o.id
+\t\t WHERE o.delivery_date IN (${weekendDates.map(() => "?").join(", ")})
+\t\t AND o.status IN ('paid', 'packed')
+\t\t GROUP BY o.id`,
+        weekendDates.map((entry) => entry.date),
+      )
+    : [];
+  const weekend = weekendDates.map((entry) => {
+    const rows = weekendRows.filter((row) => row.delivery_date === entry.date);
     const perCourier: Record<string, number> = {};
-    for (const order of orders) {
-      perCourier[order.courier] = (perCourier[order.courier] ?? 0) + 1;
-      const qty = await db.get<{ n: number }>(
-        "SELECT COALESCE(SUM(qty), 0) AS n FROM order_items WHERE order_id = (SELECT id FROM orders WHERE code = ?)",
-        [order.code],
-      );
-      packageCount += qty?.n ?? 0;
+    let packageCount = 0;
+    for (const row of rows) {
+      perCourier[row.courier] = (perCourier[row.courier] ?? 0) + 1;
+      packageCount += row.packages;
     }
-    weekend.push({
+    return {
       date: entry.date,
       weekdayName: entry.weekdayName,
-      orderCount: orders.length,
+      orderCount: rows.length,
       packageCount,
       perCourier,
-    });
+    };
+  });
+
+  // Ringkasan pesanan aktif per status (baris ringkasan di beranda).
+  const countRows = await db.all<{ status: string; n: number }>(
+    `SELECT status, COUNT(*) AS n FROM orders
+\t\t WHERE status IN ('pending_payment', 'paid', 'packed', 'shipped')
+\t\t GROUP BY status`,
+  );
+  const counts = { pending_payment: 0, paid: 0, packed: 0, shipped: 0 };
+  for (const row of countRows) {
+    if (row.status in counts) {
+      counts[row.status as keyof typeof counts] = row.n;
+    }
   }
 
   const lowStock = (
@@ -1152,6 +1444,7 @@ export async function adminToday(now = new Date()): Promise<TodaySummary> {
   return {
     needAction: needRows.map(toLine),
     weekend,
+    counts,
     lowStock,
     threshold,
     storeOpen: settings.store_open !== "0",
@@ -1160,128 +1453,6 @@ export async function adminToday(now = new Date()): Promise<TodaySummary> {
 }
 
 // ---------- Pengiriman (AD-15, AD-16) ----------
-
-export interface PackingList {
-  date: string;
-  orderCount: number;
-  packageCount: number;
-  lines: { variantId: number; name: string; label: string; qty: number }[];
-  orders: { code: string; customerName: string; status: OrderStatus; packageCount: number }[];
-}
-
-export async function adminPackingList(date: string): Promise<PackingList> {
-  const db = await getDb();
-  const orders = await db.all<{
-    code: string;
-    customer_name: string;
-    status: OrderStatus;
-    id: number;
-  }>(
-    `SELECT id, code, customer_name, status FROM orders WHERE delivery_date = ? AND status IN ('paid', 'packed') ORDER BY created_at ASC`,
-    [date],
-  );
-  const lines = new Map<number, { variantId: number; name: string; label: string; qty: number }>();
-  let packageCount = 0;
-  const orderSummaries: PackingList["orders"] = [];
-  for (const order of orders) {
-    const items = await db.all<{ variant_id: number; name_snapshot: string; qty: number }>(
-      "SELECT variant_id, name_snapshot, qty FROM order_items WHERE order_id = ?",
-      [order.id],
-    );
-    let orderPackages = 0;
-    for (const item of items) {
-      orderPackages += item.qty;
-      packageCount += item.qty;
-      const existing = lines.get(item.variant_id);
-      const label = item.name_snapshot;
-      if (existing) {
-        existing.qty += item.qty;
-      } else {
-        const variant = await db.get<{ label: string; product_name: string }>(
-          "SELECT v.label, p.name AS product_name FROM variants v JOIN products p ON p.id = v.product_id WHERE v.id = ?",
-          [item.variant_id],
-        );
-        lines.set(item.variant_id, {
-          variantId: item.variant_id,
-          name: variant?.product_name ?? label,
-          label: variant?.label ?? "",
-          qty: item.qty,
-        });
-      }
-    }
-    orderSummaries.push({
-      code: order.code,
-      customerName: order.customer_name,
-      status: order.status,
-      packageCount: orderPackages,
-    });
-  }
-  return {
-    date,
-    orderCount: orders.length,
-    packageCount,
-    lines: [...lines.values()].sort((a, b) => a.name.localeCompare(b.name)),
-    orders: orderSummaries,
-  };
-}
-
-export interface DeliveryGroup {
-  courier: string;
-  cities: {
-    city: string;
-    orders: {
-      code: string;
-      customerName: string;
-      customerPhone: string;
-      address: string;
-      note: string | null;
-      status: OrderStatus;
-      shippingStatus: string;
-    }[];
-  }[];
-}
-
-export async function adminDeliveryList(date: string): Promise<DeliveryGroup[]> {
-  const db = await getDb();
-  const rows = await db.all<{
-    code: string;
-    customer_name: string;
-    customer_phone: string;
-    address: string;
-    city: string;
-    note: string | null;
-    courier: string;
-    status: OrderStatus;
-    shipping_status: string;
-  }>(
-    `SELECT code, customer_name, customer_phone, address, city, note, courier, status, shipping_status
-\t\t FROM orders WHERE delivery_date = ? AND status IN ('paid', 'packed', 'shipped') ORDER BY courier, city, created_at`,
-    [date],
-  );
-  const byCourier = new Map<string, DeliveryGroup>();
-  for (const row of rows) {
-    let group = byCourier.get(row.courier);
-    if (!group) {
-      group = { courier: row.courier, cities: [] };
-      byCourier.set(row.courier, group);
-    }
-    let city = group.cities.find((c) => c.city === row.city);
-    if (!city) {
-      city = { city: row.city, orders: [] };
-      group.cities.push(city);
-    }
-    city.orders.push({
-      code: row.code,
-      customerName: row.customer_name,
-      customerPhone: row.customer_phone,
-      address: row.address,
-      note: row.note,
-      status: row.status,
-      shippingStatus: row.shipping_status,
-    });
-  }
-  return [...byCourier.values()];
-}
 
 // ---------- Laporan (AD-21) + ekspor CSV ----------
 

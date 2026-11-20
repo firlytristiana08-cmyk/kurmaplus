@@ -1,7 +1,9 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
+  createCheckoutPayment,
   type DokuConfig,
   digestBase64,
+  loadDokuConfig,
   requestTimestamp,
   signHmacSha256,
   stringToSign,
@@ -85,5 +87,65 @@ describe("signature DOKU (Non-SNAP)", () => {
 
   it("stamp waktu memakai ISO-8601 UTC tanpa milidetik", () => {
     expect(requestTimestamp(new Date("2026-11-14T03:00:00.123Z"))).toBe("2026-11-14T03:00:00Z");
+  });
+});
+
+describe("pengaman konfigurasi go-live", () => {
+  it("produksi tanpa DOKU_BASE_URL tidak diam-diam memakai sandbox", () => {
+    expect(
+      loadDokuConfig({ DOKU_CLIENT_ID: "x", DOKU_SECRET_KEY: "y", VERCEL_ENV: "production" }),
+    ).toBeNull();
+    const ok = loadDokuConfig({
+      DOKU_CLIENT_ID: "x",
+      DOKU_SECRET_KEY: "y",
+      VERCEL_ENV: "production",
+      DOKU_BASE_URL: "https://api.doku.com",
+    });
+    expect(ok?.baseUrl).toBe("https://api.doku.com");
+  });
+
+  it("non-produksi tanpa DOKU_BASE_URL memakai sandbox", () => {
+    const cfg = loadDokuConfig({ DOKU_CLIENT_ID: "x", DOKU_SECRET_KEY: "y" });
+    expect(cfg?.baseUrl).toBe("https://api-sandbox.doku.com");
+    expect(loadDokuConfig({ DOKU_CLIENT_ID: "x" })).toBeNull();
+  });
+
+  it("URL notifikasi dikirim di tiap permintaan pembayaran (jaring pengaman)", async () => {
+    let captured = "";
+    vi.stubGlobal("fetch", async (_url: unknown, init?: { body?: string }) => {
+      captured = init?.body ?? "";
+      return new Response(
+        JSON.stringify({
+          response: {
+            payment: { url: "https://bayar.example/x", expired_date: "2026-11-16T10:00:00Z" },
+          },
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      );
+    });
+    try {
+      const result = await createCheckoutPayment(
+        config,
+        {
+          invoiceNumber: "INV-1",
+          amountIdr: 20000,
+          paymentDueMinutes: 15,
+          customer: { name: "Tes", phone: "08123456789", address: "Jl. Tes 1", city: "Jakarta" },
+          callbackUrl: "https://toko.example/pesanan/INV-1?dari=pembayaran",
+          notificationUrl: "https://toko.example/api/webhook/doku",
+          lineItems: [{ name: "Kurma", quantity: 1, price: 20000 }],
+        },
+        new Date("2026-11-16T10:00:00Z"),
+      );
+      expect(result.paymentUrl).toBe("https://bayar.example/x");
+      const body = JSON.parse(captured) as {
+        additional_info?: { override_notification_url?: string };
+      };
+      expect(body.additional_info?.override_notification_url).toBe(
+        "https://toko.example/api/webhook/doku",
+      );
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });
