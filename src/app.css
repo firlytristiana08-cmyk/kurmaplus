@@ -125,6 +125,14 @@ a {
 	color: var(--rust);
 }
 
+/* Tombol mengikuti warna teks halaman. Tanpa ini, iOS/Android memakai
+   warna bawaan sistem (bisa biru untuk teks tombol & sorotan ketuk) —
+   berbeda dari tampilan mode responsive di desktop. */
+button {
+	color: inherit;
+	-webkit-tap-highlight-color: transparent;
+}
+
 img {
 	max-width: 100%;
 	display: block;
