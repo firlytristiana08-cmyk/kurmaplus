@@ -72,7 +72,6 @@
 	<!-- Rekap akhir pekan (AD-02) -->
 	<div class="section-head">
 		<h2>Akhir pekan ini</h2>
-		<a href="/admin/pengiriman">Buka Pengiriman</a>
 	</div>
 	<div class="surface">
 		{#each today.weekend as day (day.date)}

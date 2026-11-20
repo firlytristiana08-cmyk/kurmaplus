@@ -207,13 +207,6 @@ describe("admin: stok, ongkir, tanggal, pengaturan", () => {
     expect(today.lowStock.every((row) => row.stock < 12)).toBe(true);
   });
 
-  it("daftar kemas menjumlahkan kemasan per varian (AD-15)", async () => {
-    const list = await admin.adminPackingList("2026-11-21");
-    expect(list.orderCount).toBeGreaterThan(0);
-    const total = list.lines.reduce((n, line) => n + line.qty, 0);
-    expect(total).toBe(list.packageCount);
-  });
-
   it("laporan menghitung omzet tanpa ongkir (AD-21, BA-06)", async () => {
     const report = await admin.adminReport("2026-11-01", "2026-11-30");
     expect(report.orderCount).toBeGreaterThan(0);

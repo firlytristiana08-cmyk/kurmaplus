@@ -86,7 +86,6 @@
 	const tabs = [
 		{ href: '/admin', label: 'Hari ini', exact: true },
 		{ href: '/admin/pesanan', label: 'Pesanan', exact: false },
-		{ href: '/admin/pengiriman', label: 'Pengiriman', exact: false },
 		{ href: '/admin/produk', label: 'Produk', exact: false },
 		{ href: '/admin/lainnya', label: 'Lainnya', exact: false },
 	];
@@ -94,7 +93,6 @@
 	function isActive(tab: (typeof tabs)[number]): boolean {
 		if (tab.exact) return path === '/admin';
 		if (tab.href === '/admin/pesanan') return path.startsWith('/admin/pesanan');
-		if (tab.href === '/admin/pengiriman') return path.startsWith('/admin/pengiriman');
 		if (tab.href === '/admin/produk') return path.startsWith('/admin/produk');
 		return (
 			path.startsWith('/admin/pengaturan') ||
@@ -133,8 +131,6 @@
 					<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 3 10v11h6v-7h6v7h6V10z" /></svg>
 				{:else if tab.href === '/admin/pesanan'}
 					<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h12v20l-3-2-3 2-3-2-3 2zM9 7h6v2H9zm0 4h6v2H9z" /></svg>
-				{:else if tab.href === '/admin/pengiriman'}
-					<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 6h12v10H2zM15 9h4l3 3.5V16h-7z" /><circle cx="7" cy="18.5" r="2.5" /><circle cx="17.5" cy="18.5" r="2.5" /></svg>
 				{:else if tab.href === '/admin/produk'}
 					<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 3 7v10l9 5 9-5V7zm0 2.3 6.5 3.6L12 11.5 5.5 7.9zM5 9.6l6 3.3v6.6l-6-3.3zm14 0v6.6l-6 3.3v-6.6z" /></svg>
 				{:else}

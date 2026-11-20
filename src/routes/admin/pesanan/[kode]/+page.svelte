@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { tick } from 'svelte';
 	// Detail pesanan — "layar menjawab: apa langkah berikut untuk satu pesanan?"
 	// (PRD Portal Admin — AD-06..AD-14, BA-01..BA-07).
 	import { enhance } from '$app/forms';
@@ -84,6 +85,23 @@
 		refund_noted: 'Pengembalian dana dicatat',
 		order_expired: 'Kedaluwarsa (sistem)',
 	};
+	// Cetak slip pesanan — satu lembar A4 berisi item pesanan, informasi
+	// pemesan, dan pengiriman saja.
+	let printing = $state(false);
+	const kemasanCount = $derived(order.items.reduce((n, it) => n + it.qty, 0));
+
+	async function printSlip(): Promise<void> {
+		printing = true;
+		const cleanup = (): void => {
+			printing = false;
+			window.removeEventListener('afterprint', cleanup);
+		};
+		window.addEventListener('afterprint', cleanup);
+		await tick();
+		window.print();
+		// Jaga-jaga bila peramban tidak memblokir print() dan tidak mengirim afterprint.
+		setTimeout(cleanup, 1500);
+	}
 </script>
 
 <svelte:head>
@@ -92,7 +110,7 @@
 
 <BackLink href="/admin/pesanan" />
 
-<main class="wrap">
+<main class="wrap" class:no-print={printing}>
 	<header class="admin-head">
 		<h1>Pesanan {order.code}</h1>
 		<p class="row-l1" style="margin: 0 0 0.25rem">
@@ -101,6 +119,13 @@
 		</p>
 		<p class="muted page-sub">Langkah berikut: {nextHint[order.status]}</p>
 	</header>
+
+	<div class="btn-row">
+		<button class="btn-mini" type="button" onclick={() => void printSlip()}>
+			<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 2h12v20l-3-2-3 2-3-2-3 2zM9 7h6v2H9zm0 4h6v2H9z"/></svg>
+			Cetak
+		</button>
+	</div>
 
 	{#if form?.message}
 		<p class="error-box">{form.message}</p>
@@ -361,6 +386,45 @@
 		{/if}
 	</div>
 </main>
+
+{#if printing}
+	<div class="print-area">
+		<section class="print-sheet">
+			<h2 class="print-title">KURMAPLUS — Pesanan {order.code} — {formatDateId(order.deliveryDate)}</h2>
+			<div class="surface">
+				<div class="row">
+					<div class="row-main">
+						<div class="row-l1">Isi pesanan · {kemasanCount} kemasan</div>
+						{#each order.items as item}
+							<div class="row-l2 tabular">{item.name} — {item.qty} kemasan</div>
+						{/each}
+					</div>
+				</div>
+				<hr class="divider" />
+				<div class="row">
+					<div class="row-main">
+						<div class="row-l1">Pemesan</div>
+						<div class="row-l2 tabular">
+							{order.customerName}<br />
+							{order.customerPhone}{#if order.email} · {order.email}{/if}
+						</div>
+					</div>
+				</div>
+				<hr class="divider" />
+				<div class="row">
+					<div class="row-main">
+						<div class="row-l1">Pengiriman</div>
+						<div class="row-l2 tabular">
+							{order.address}, {order.city}<br />
+							{formatDateId(order.deliveryDate)} · kurir {order.courier}
+							{#if order.note}<br />Catatan: {order.note}{/if}
+						</div>
+					</div>
+				</div>
+			</div>
+		</section>
+	</div>
+{/if}
 
 {#if forward[order.status] ?? backward[order.status]}
 	<div class="admin-sticky no-print">
