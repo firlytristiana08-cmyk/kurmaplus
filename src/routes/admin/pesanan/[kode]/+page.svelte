@@ -391,6 +391,7 @@
 	<div class="print-area">
 		<section class="print-sheet">
 			<h2 class="print-title">KURMAPLUS — Pesanan {order.code} — {formatDateId(order.deliveryDate)}</h2>
+			<p style="margin: 0.25rem 0 0.75rem">Tanggal pesanan: {formatDateTimeId(order.createdAt)}</p>
 			<div class="surface">
 				<h3 style="margin-top: 0">Isi pesanan · {order.items.length} jenis · {kemasanCount} kemasan</h3>
 				{#each order.items as item}

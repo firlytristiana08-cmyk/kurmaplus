@@ -2,7 +2,7 @@
 	// Daftar pesanan — baris dua tingkat, filter lewat URL (AD-05).
 	import StatusBadge from '#lib/components/admin/StatusBadge.svelte';
 	import { STATUS_LABEL_ID, type OrderStatus } from '#lib/order-status';
-	import { formatDateId, formatRupiah } from '#lib/format';
+	import { formatDateId, formatDateTimeId, formatRupiah } from '#lib/format';
 
 	let { data } = $props();
 	const list = $derived(data.list);
@@ -85,6 +85,7 @@
 						<div class="row-l1">
 							{order.code} · {order.customerName}
 							<StatusBadge status={order.status} />
+							<span class="muted">{formatDateTimeId(order.createdAt)}</span>
 						</div>
 						<div class="row-l2 tabular">
 							{formatDateId(order.deliveryDate)} · {order.city} · {order.courier} ·
