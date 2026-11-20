@@ -1185,7 +1185,13 @@ export interface PackingList {
   orderCount: number;
   packageCount: number;
   lines: { variantId: number; name: string; label: string; qty: number }[];
-  orders: { code: string; customerName: string; status: OrderStatus; packageCount: number }[];
+  orders: {
+    code: string;
+    customerName: string;
+    status: OrderStatus;
+    packageCount: number;
+    items: { name: string; qty: number }[];
+  }[];
 }
 
 export async function adminPackingList(date: string): Promise<PackingList> {
@@ -1233,6 +1239,7 @@ export async function adminPackingList(date: string): Promise<PackingList> {
       customerName: order.customer_name,
       status: order.status,
       packageCount: orderPackages,
+      items: items.map((item) => ({ name: item.name_snapshot, qty: item.qty })),
     });
   }
   return {
