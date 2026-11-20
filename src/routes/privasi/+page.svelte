@@ -37,7 +37,7 @@
 	<section class="surface">
 		<h2>Akses ke pesanan Anda</h2>
 		<p>
-			Lacak pesanan hanya menemukan pesanan dengan kode pesanan (No Invoice) dan 4 digit terakhir nomor
+			Lacak pesanan hanya menemukan pesanan dengan kode pesanan (No invoice) dan 4 digit terakhir nomor
 			WhatsApp. Halaman pesanan memuat rincian pengiriman lengkap, jadi jangan bagikan tautan
 			pesanan Anda ke sembarang orang.
 		</p>

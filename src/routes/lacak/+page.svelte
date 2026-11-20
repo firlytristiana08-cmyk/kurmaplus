@@ -45,7 +45,7 @@
 
 	<form method="POST" oninvalidcapture={handleInvalid} oninputcapture={clearInvalid}>
 		<div class="field">
-			<label for="code">Kode pesanan/No Invoice <span class="required-mark">*</span></label>
+			<label for="code">Kode pesanan/No invoice <span class="required-mark">*</span></label>
 			<input
 				id="code"
 				name="code"
