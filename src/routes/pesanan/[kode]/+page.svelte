@@ -104,7 +104,7 @@
 				pesanan otomatis kedaluwarsa dan stok kembali tersedia.
 			</div>
 			{#if order.checkoutUrl}
-				<a class="btn" href={order.checkoutUrl}>Lanjutkan pembayaran</a>
+				<a class="btn" href={order.checkoutUrl}>Lanjutkan pembayaran dengan QRIS</a>
 			{:else if data.previewPayment}
 				<form method="POST" action="?/simulasi" onsubmit={() => (loading = true)}>
 					<button type="submit" class="btn">Simulasikan pembayaran (pratinjau)</button>
@@ -164,7 +164,7 @@
 				<dd>{order.city}</dd>
 			</div>
 			<div>
-				<dt>Kurir</dt>
+				<dt>Pengiriman</dt>
 				<dd>{order.courier}</dd>
 			</div>
 			<div>
@@ -179,7 +179,7 @@
 			{/if}
 		</dl>
 		<div class="info-box">
-			Ongkir {order.courier} dibayar pemesan saat kurir datang, tidak termasuk total pesanan ini.
+			Ongkir {order.courier} dibayar pemesan saat barang datang, tidak termasuk total pesanan ini.
 		</div>
 	</section>
 

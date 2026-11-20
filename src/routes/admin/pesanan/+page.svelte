@@ -60,9 +60,10 @@
 		</div>
 		<div class="chip-row">
 			<label class="chip" style="cursor: default">
-				Kurir
+				Pengiriman
 				<select name="kurir" onchange={(event) => event.currentTarget.form?.submit()} style="min-height: 32px; border: none; padding: 0 0.25rem; background: transparent; font-weight: 700">
 					<option value="" selected={!filter.courier}>Semua</option>
+					<option value="COD" selected={filter.courier === 'COD'}>COD</option>
 					<option value="Grab" selected={filter.courier === 'Grab'}>Grab</option>
 					<option value="Gojek" selected={filter.courier === 'Gojek'}>Gojek</option>
 				</select>

@@ -153,7 +153,7 @@
 		addressValue = draft.address;
 		cityValue = data.cities.includes(draft.city) ? draft.city : '';
 		noteValue = draft.note;
-		courierValue = draft.courier === 'Gojek' ? 'Gojek' : 'Grab';
+		courierValue = ['COD', 'Grab', 'Gojek'].includes(draft.courier) ? draft.courier : 'Grab';
 		dateValue = data.deliveryDates.some((option) => option.date === draft.date && !option.isFull)
 			? draft.date
 			: '';
@@ -363,7 +363,7 @@
 
 <svelte:head>
 	<title>Checkout — KURMAPLUS</title>
-	<meta name="description" content="Isi data pengiriman, pilih kurir dan tanggal kirim, lalu bayar." />
+	<meta name="description" content="Isi data pengiriman, pilih pengiriman dan tanggal kirim, lalu bayar." />
 </svelte:head>
 
 <PageHeader />
@@ -531,8 +531,12 @@
 			<hr class="divider" />
 
 			<section aria-labelledby="kurir-heading">
-				<h2 id="kurir-heading">Kurir</h2>
+				<h2 id="kurir-heading">Pengiriman</h2>
 				<div class="choice-list" role="radiogroup" aria-labelledby="kurir-heading">
+					<label class="choice" class:choice-on={courierValue === 'COD'}>
+						<input type="radio" name="courier" value="COD" bind:group={courierValue} />
+						<span class="choice-label"><svg class="choice-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M19.44 9.03L15.41 5H11v2h3.59l2 2H5c-2.8 0-5 2.2-5 5s2.2 5 5 5c2.46 0 4.45-1.69 4.9-4h1.65l2.77-2.77c-.21.54-.32 1.14-.32 1.77 0 2.8 2.2 5 5 5s5-2.2 5-5c0-2.65-1.97-4.77-4.56-4.97zM7.82 15C7.4 16.15 6.28 17 5 17c-1.63 0-3-1.37-3-3s1.37-3 3-3c1.28 0 2.4.85 2.82 2H11v2H7.82zM19 17c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3z" /></svg>COD</span>
+					</label>
 					<label class="choice" class:choice-on={courierValue === 'Grab'}>
 						<input type="radio" name="courier" value="Grab" bind:group={courierValue} />
 						<span class="choice-label"><svg class="choice-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M19.44 9.03L15.41 5H11v2h3.59l2 2H5c-2.8 0-5 2.2-5 5s2.2 5 5 5c2.46 0 4.45-1.69 4.9-4h1.65l2.77-2.77c-.21.54-.32 1.14-.32 1.77 0 2.8 2.2 5 5 5s5-2.2 5-5c0-2.65-1.97-4.77-4.56-4.97zM7.82 15C7.4 16.15 6.28 17 5 17c-1.63 0-3-1.37-3-3s1.37-3 3-3c1.28 0 2.4.85 2.82 2H11v2H7.82zM19 17c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3z" /></svg>Grab</span>
@@ -550,7 +554,7 @@
 							<span class="info-rest">{sisaInfo.join('\n')}</span>
 						{/if}
 					{:else}
-						Ongkir mengikuti tarif kurir, dibayar langsung ke kurir — di luar total ini.
+						Ongkir mengikuti tarif pengiriman, dibayar langsung saat barang datang — di luar total ini.
 					{/if}
 				</div>
 			</section>
@@ -610,7 +614,7 @@
 				form="form-checkout"
 				class="btn"
 				disabled={!data.storeOpen || loading} aria-busy={loading}>
-				{data.storeOpen ? `Bayar ${formatRupiah(subtotal)}` : 'Toko sedang tutup'}
+				{data.storeOpen ? `Bayar ${formatRupiah(subtotal)} dengan QRIS` : 'Toko sedang tutup'}
 			</button>
 		</div>
 	</div>

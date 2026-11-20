@@ -11,7 +11,7 @@
 
 	const actionHint: Record<string, string> = {
 		paid: 'Kemas untuk dikirim',
-		packed: 'Pesan kurir & antar',
+		packed: 'Pesan pengiriman & antar',
 		shipped: 'Pastikan diterima & tagih ongkir',
 	};
 </script>

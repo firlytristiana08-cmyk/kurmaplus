@@ -544,7 +544,7 @@ export interface CreateOrderInput {
   city: string;
   lat: number;
   lng: number;
-  courier: "Grab" | "Gojek";
+  courier: "COD" | "Grab" | "Gojek";
   deliveryDate: string;
   note: string | null;
   items: { variantId: number; qty: number }[];

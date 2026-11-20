@@ -21,10 +21,9 @@
 				item, atau <strong>Beli langsung</strong> untuk langsung bayar item itu saja.
 			</li>
 			<li>Isi nama, nomor WhatsApp, alamat, dan pasang titik tujuan di peta.</li>
-			<li>Pilih kurir Grab atau Gojek, lalu tanggal kirim Sabtu atau Minggu.</li>
+			<li>Pilih pengiriman COD, Grab, atau Gojek, lalu tanggal kirim Sabtu atau Minggu.</li>
 			<li>
-				Bayar lewat halaman DOKU — virtual account, QRIS, atau minimarket. Ada batas waktu bayar
-				sejak pesanan dibuat.
+				Bayar dengan QRIS lewat halaman DOKU. Ada batas waktu bayar sejak pesanan dibuat.
 			</li>
 			<li>Pantau pesanan dari halaman pesanan Anda atau menu Lacak pesanan.</li>
 		</ol>
@@ -42,8 +41,8 @@
 	<section class="surface">
 		<h2>Ongkir</h2>
 		<p>
-			Pengiriman memakai Grab atau Gojek. Ongkir mengikuti tarif aplikasi kurir dan dibayar
-			langsung kepada kurir saat barang datang — tidak termasuk total di halaman bayar.
+			Pengiriman memakai COD, Grab, atau Gojek. Ongkir mengikuti tarif pengiriman dan dibayar
+			langsung saat barang datang — tidak termasuk total di halaman bayar.
 		</p>
 	</section>
 

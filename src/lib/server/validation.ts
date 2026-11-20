@@ -46,7 +46,7 @@ export const checkoutSchema = v.object({
   ),
   city: v.picklist([...JABODETABEK_CITIES], "Kota atau kabupaten belum dipilih."),
   note: v.optional(v.pipe(v.string(), v.maxLength(500, "Catatan maksimal 500 karakter.")), ""),
-  courier: v.picklist(["Grab", "Gojek"], "Pilih kurir Grab atau Gojek."),
+  courier: v.picklist(["COD", "Grab", "Gojek"], "Pilih metode pengiriman."),
   deliveryDate: v.pipe(v.string(), v.regex(/^\d{4}-\d{2}-\d{2}$/, "Tanggal kirim tidak sah.")),
   lat: v.pipe(
     v.number(),
