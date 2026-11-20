@@ -52,7 +52,7 @@
 			<source media="(min-width: 640px)" srcset="/images/bg-halaman-tablet.avif" type="image/avif" />
 			<source media="(min-width: 640px)" srcset="/images/bg-halaman-tablet.webp" type="image/webp" />
 			<source srcset="/images/bg-halaman-hp.avif" type="image/avif" />
-			<img src="/images/bg-halaman-hp.webp" alt="" width="1536" height="2752" />
+			<img src="/images/bg-halaman-hp.webp" alt="" width="1536" height="2752" fetchpriority="low" decoding="async" />
 		</picture>
 	</div>
 {/if}

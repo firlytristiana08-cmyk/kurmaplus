@@ -66,6 +66,7 @@ import { formatRupiah } from '#lib/format';
 								width="430"
 								height="430"
 								loading="lazy"
+								decoding="async"
 							/>
 						{:else}
 							<div class="photo-placeholder" role="img" aria-label="Foto belum tersedia">

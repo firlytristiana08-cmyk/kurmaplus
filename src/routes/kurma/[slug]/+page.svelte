@@ -118,6 +118,7 @@ import { goto } from '$app/navigation';
 								width="600"
 								height="600"
 								loading={index === 0 ? 'eager' : 'lazy'}
+								decoding="async"
 							/>
 						</button>
 					{/each}
@@ -144,6 +145,7 @@ import { goto } from '$app/navigation';
 					alt={`Foto ${product.name}`}
 					width="430"
 					height="430"
+					decoding="async"
 				/>
 			</button>
 		{:else}
