@@ -286,7 +286,7 @@
 	}
 
 	dt {
-		color: #797284;
+		color: #73685f;
 		color: color-mix(in srgb, var(--ink) 62%, var(--paper));
 	}
 
@@ -307,7 +307,7 @@
 
 	.hint {
 		font-size: 0.8125rem;
-		color: #797284;
+		color: #73685f;
 		color: color-mix(in srgb, var(--ink) 62%, var(--paper));
 	}
 
@@ -351,7 +351,7 @@
 	}
 
 	.modal-mark.badge-wait {
-		color: #696278;
+		color: #62574e;
 		color: color-mix(in srgb, var(--ink) 70%, var(--paper));
 	}
 

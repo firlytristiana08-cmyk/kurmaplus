@@ -31,7 +31,7 @@
 }
 
 :root {
-	--ink: #2d264b;
+	--ink: #241710;
 	--tinta: #241710;
 	--paper: #f4ede0;
 	--sand: #e7dac3;
@@ -167,7 +167,7 @@ img {
 }
 
 .muted {
-	color: #797284;
+	color: #73685f;
 	color: color-mix(in srgb, var(--ink) 62%, var(--paper));
 	font-size: 0.875rem;
 }
@@ -214,7 +214,7 @@ img {
 
 .btn:disabled {
 	background: var(--sand);
-	color: #87808e;
+	color: #82776e;
 	color: color-mix(in srgb, var(--ink) 55%, var(--paper));
 	cursor: not-allowed;
 	box-shadow: none;
@@ -246,7 +246,7 @@ img {
 
 .field .hint {
 	font-size: 0.8125rem;
-	color: #797284;
+	color: #73685f;
 	color: color-mix(in srgb, var(--ink) 62%, var(--paper));
 	margin: 0.25rem 0 0;
 }
@@ -373,7 +373,7 @@ textarea:focus-visible {
 }
 .badge-off {
 	background: var(--sand);
-	color: #696278;
+	color: #62574e;
 	color: color-mix(in srgb, var(--ink) 70%, var(--paper));
 }
 .badge-alert {

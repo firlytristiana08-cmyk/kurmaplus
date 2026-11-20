@@ -319,7 +319,7 @@
 	}
 
 	.description {
-		color: #514a66;
+		color: #493e35;
 		color: color-mix(in srgb, var(--ink) 82%, var(--paper));
 	}
 
@@ -601,7 +601,7 @@
 	.dialog-item {
 		margin: 0;
 		font-size: 0.9375rem;
-		color: #59526c;
+		color: #52463e;
 		color: color-mix(in srgb, var(--ink) 78%, var(--paper));
 	}
 

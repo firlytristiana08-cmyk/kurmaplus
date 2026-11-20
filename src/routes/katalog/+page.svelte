@@ -191,7 +191,7 @@
 	.sold {
 		margin: 0.25rem 0 0;
 		font-size: 0.8125rem;
-		color: #7d788d;
+		color: #776e68;
 		color: color-mix(in srgb, var(--ink) 62%, var(--card));
 	}
 
