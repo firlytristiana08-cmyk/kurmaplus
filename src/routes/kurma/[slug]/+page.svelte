@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
+	import { photoSrcset } from '#lib/photos';
+import { goto } from '$app/navigation';
 	import { formatRupiah, formatWeight } from '#lib/format';
 	import { cart, setDirectBuy } from '#lib/cart.svelte';
 	import PageFooter from '#lib/components/PageFooter.svelte';
@@ -107,10 +108,12 @@
 					bind:this={galleryEl}
 					onscroll={onGalleryScroll}
 				>
-					{#each data.photos as photo, index (photo)}
+					{#each data.photos as photo, index (photo.id)}
 						<button type="button" class="slide" onclick={() => openLightbox(index)}>
 							<img
-								src={photo}
+								src={photo.src}
+								srcset={photoSrcset(photo.id)}
+								sizes="(max-width: 720px) 92vw, 520px"
 								alt={`Foto ${product.name} ${index + 1}`}
 								width="600"
 								height="600"
@@ -120,7 +123,7 @@
 					{/each}
 				</div>
 				<div class="dots" role="group" aria-label="Pilih foto">
-					{#each data.photos as photo, index (photo)}
+					{#each data.photos as photo, index (photo.id)}
 						<button
 							type="button"
 							class="dot"
@@ -136,6 +139,8 @@
 				<img
 					class="photo"
 					src={product.photos[0].src}
+					srcset={photoSrcset(product.photos[0].id)}
+					sizes="(max-width: 720px) 92vw, 520px"
 					alt={`Foto ${product.name}`}
 					width="430"
 					height="430"
@@ -255,12 +260,12 @@
 			onclick={(event) => event.stopPropagation()}
 			role="presentation"
 		>
-			{#each data.photos as photo, index (photo)}
-				<img src={photo} alt={`Foto ${product.name} ${index + 1}`} />
+			{#each data.photos as photo, index (photo.id)}
+				<img src={photo.src} srcset={photoSrcset(photo.id)} sizes="100vw" alt={`Foto ${product.name} ${index + 1}`} />
 			{/each}
 		</div>
 		<div class="dots" role="group" aria-label="Pilih foto">
-			{#each data.photos as photo, index (photo)}
+			{#each data.photos as photo, index (photo.id)}
 				<button
 					type="button"
 					class="dot"

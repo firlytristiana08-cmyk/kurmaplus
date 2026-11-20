@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { formatRupiah } from '#lib/format';
+	import { photoSrcset } from '#lib/photos';
+import { formatRupiah } from '#lib/format';
 	import PageFooter from '#lib/components/PageFooter.svelte';
 	import PageHeader from '#lib/components/PageHeader.svelte';
 	import type { KatalogData } from './+page.server';
@@ -59,6 +60,8 @@
 						{#if product.photos[0]}
 							<img
 								src={product.photos[0].src}
+								srcset={photoSrcset(product.photos[0].id)}
+								sizes="(max-width: 640px) 45vw, 230px"
 								alt={`Foto ${product.name}`}
 								width="430"
 								height="430"

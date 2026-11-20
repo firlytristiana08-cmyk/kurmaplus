@@ -4,6 +4,7 @@
 // validasi perpindahan status (BA-01..BA-05). Halaman tidak menulis langsung
 // ke tabel. Berjalan di atas dua driver (SQLite pratinjau / Postgres produksi).
 
+import type { PhotoTiers } from "#lib/photos";
 import type { Db } from "./db";
 import { getDb, getSettings } from "./db";
 import type { OrderStatus } from "./orders";
@@ -653,7 +654,7 @@ function slugify(name: string): string {
 export interface NewProductInput {
   name: string;
   description: string;
-  photos: string[];
+  photos: PhotoTiers[];
   variants: NewVariantInput[];
 }
 
@@ -677,9 +678,11 @@ export async function adminCreateProduct(
   if (input.photos.length > MAX_PRODUCT_PHOTOS) {
     return { ok: false, error: `Maksimal ${MAX_PRODUCT_PHOTOS} foto per produk.` };
   }
-  for (const value of input.photos) {
-    const photoIssue = photoValueError(value);
-    if (photoIssue) return { ok: false, error: photoIssue };
+  for (const photo of input.photos) {
+    for (const value of [photo.lg, photo.md, photo.sm]) {
+      const photoIssue = photoValueError(value);
+      if (photoIssue) return { ok: false, error: photoIssue };
+    }
   }
   for (const variant of input.variants) {
     if (variant.label.trim() === "") return { ok: false, error: "Nama ukuran wajib diisi." };
@@ -821,20 +824,21 @@ export async function adminDeleteProduct(
   });
 }
 
-// Simpan daftar foto baru sebagai baris product_photos (urut sesuai pilihan).
-async function insertProductPhotos(tx: Db, productId: number, photos: string[]): Promise<void> {
+// Simpan daftar foto baru sebagai baris product_photos (urut sesuai pilihan)
+// beserta turunan 600px/1200px untuk srcset responsif.
+async function insertProductPhotos(tx: Db, productId: number, photos: PhotoTiers[]): Promise<void> {
   let sort = 0;
   for (const photo of photos) {
-    const v = photo.trim();
-    if (v === "") continue;
+    const lg = photo.lg.trim();
+    if (lg === "") continue;
     const next = await tx.get<{ id: number }>(
       "SELECT COALESCE(MAX(id), 0) + 1 AS id FROM product_photos",
       [],
     );
     const photoId = next?.id ?? 1;
     await tx.run(
-      "INSERT INTO product_photos (id, product_id, sort_order, data) VALUES (?, ?, ?, ?)",
-      [photoId, productId, sort, v],
+      "INSERT INTO product_photos (id, product_id, sort_order, data, data_sm, data_md) VALUES (?, ?, ?, ?, ?, ?)",
+      [photoId, productId, sort, lg, photo.sm.trim(), photo.md.trim()],
     );
     sort += 1;
   }
@@ -842,18 +846,20 @@ async function insertProductPhotos(tx: Db, productId: number, photos: string[]):
 
 export async function adminAddProductPhotos(
   productId: number,
-  photos: string[],
+  photos: PhotoTiers[],
   actor: string,
   now = new Date(),
 ): Promise<AdminResult> {
-  const items = photos.map((p) => p.trim()).filter((p) => p !== "");
+  const items = photos.filter((p) => p.lg.trim() !== "");
   if (items.length === 0) return fail("Pilih minimal satu foto.");
   if (items.length > MAX_PRODUCT_PHOTOS) {
     return fail(`Maksimal ${MAX_PRODUCT_PHOTOS} foto per produk.`);
   }
-  for (const value of items) {
-    const photoIssue = photoValueError(value);
-    if (photoIssue) return fail(photoIssue);
+  for (const photo of items) {
+    for (const value of [photo.lg, photo.md, photo.sm]) {
+      const photoIssue = photoValueError(value);
+      if (photoIssue) return fail(photoIssue);
+    }
   }
   const db = await getDb();
   const at = now.toISOString();

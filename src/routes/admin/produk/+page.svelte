@@ -10,7 +10,7 @@
 		const photosByProduct = new Map<number, string>();
 		for (const photo of data.photos) {
 			if (!photosByProduct.has(photo.product_id)) {
-				photosByProduct.set(photo.product_id, `/api/foto/${photo.id}`);
+				photosByProduct.set(photo.product_id, `/api/foto/${photo.id}?w=600`);
 			}
 		}
 		return data.products.map((product) => ({

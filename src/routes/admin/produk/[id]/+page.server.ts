@@ -2,6 +2,7 @@
 // produk — masing-masing aksi terpisah di halaman ini.
 
 import { fail, redirect } from "@sveltejs/kit";
+import { parsePhotoInput } from "#lib/photos";
 import {
   adminAddProductPhotos,
   adminAdjustStock,
@@ -57,7 +58,7 @@ export const load: PageServerLoad = async ({ cookies, params }) => {
   );
   return {
     product,
-    photos: photos.map((photo) => ({ id: photo.id, src: `/api/foto/${photo.id}` })),
+    photos: photos.map((photo) => ({ id: photo.id, src: `/api/foto/${photo.id}?w=600` })),
     variants,
     threshold: Number(settings.low_stock_threshold ?? "10"),
     isDev: import.meta.env.DEV,
@@ -98,8 +99,8 @@ export const actions: Actions = {
     const form = await request.formData();
     const photos = form
       .getAll("photos")
-      .map((v) => String(v ?? "").trim())
-      .filter((v) => v !== "");
+      .map((v) => parsePhotoInput(String(v ?? "")))
+      .filter((photo) => photo.lg !== "");
     const result = await adminAddProductPhotos(Number(params.id), photos, session.email);
     if (!result.ok) return fail(400, { message: result.error });
     return { saved: true };

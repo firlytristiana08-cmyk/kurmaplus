@@ -5,10 +5,11 @@
 	import BackLink from '#lib/components/BackLink.svelte';
 	import { adminEnhance } from '#lib/admin-feedback';
 	import PhotoPicker from '#lib/components/admin/PhotoPicker.svelte';
+	import type { PhotoTiers } from '#lib/photos';
 
 	let { form } = $props();
 
-	let photos = $state<string[]>([]);
+	let photos = $state<PhotoTiers[]>([]);
 	let rowSeq = 0;
 	let newRows = $state<number[]>([0]);
 
@@ -53,7 +54,7 @@
 			</div>
 			<PhotoPicker bind:photos />
 			{#each photos as photo, index (index)}
-				<input type="hidden" name="photos" value={photo} />
+				<input type="hidden" name="photos" value={JSON.stringify(photo)} />
 			{/each}
 		</div>
 
