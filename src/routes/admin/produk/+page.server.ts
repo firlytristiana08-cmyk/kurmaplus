@@ -5,7 +5,9 @@
 import { fail } from "@sveltejs/kit";
 import {
   adminAdjustStock,
+  adminCreateProduct,
   adminCreateVariant,
+  adminDeleteProduct,
   adminDeleteVariant,
   adminUpdateProduct,
   adminUpdateVariant,
@@ -68,6 +70,41 @@ export const load: PageServerLoad = async ({ cookies }) => {
 };
 
 export const actions: Actions = {
+  tambah_produk: async ({ cookies, request }) => {
+    const session = await requireAdmin(cookies);
+    const form = await request.formData();
+    const labels = form.getAll("v_label").map((v) => String(v ?? ""));
+    const weights = form.getAll("v_weight").map((v) => String(v ?? ""));
+    const prices = form.getAll("v_price").map((v) => String(v ?? ""));
+    const stocks = form.getAll("v_stock").map((v) => String(v ?? ""));
+    const variants = labels.map((label, i) => ({
+      label,
+      weightGrams: Number((weights[i] ?? "").replace(/[^\d]/g, "")),
+      priceIdr: Number((prices[i] ?? "").replace(/[^\d]/g, "")),
+      stock: Number((stocks[i] ?? "").replace(/[^\d]/g, "") || "0"),
+    }));
+    const result = await adminCreateProduct(
+      {
+        name: String(form.get("name") ?? ""),
+        description: String(form.get("description") ?? ""),
+        photo: emptyToNull(String(form.get("photo") ?? "")),
+        photo2: emptyToNull(String(form.get("photo_2") ?? "")),
+        photo3: emptyToNull(String(form.get("photo_3") ?? "")),
+        variants,
+      },
+      session.email,
+    );
+    if (!result.ok) return fail(400, { message: result.error });
+    return { created: true };
+  },
+  hapus_produk: async ({ cookies, request }) => {
+    const session = await requireAdmin(cookies);
+    const form = await request.formData();
+    const result = await adminDeleteProduct(Number(form.get("product_id")), session.email);
+    if (!result.ok) return fail(400, { message: result.error });
+    return { deleted: true };
+  },
+
   detail: async ({ cookies, request }) => {
     const session = await requireAdmin(cookies);
     const form = await request.formData();

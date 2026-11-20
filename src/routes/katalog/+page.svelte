@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { formatRupiah } from '#lib/format';
+	import { formatRupiah, photoSrc } from '#lib/format';
 	import PageFooter from '#lib/components/PageFooter.svelte';
 	import PageHeader from '#lib/components/PageHeader.svelte';
 	import type { KatalogData } from './+page.server';
@@ -58,7 +58,7 @@
 					<div class="product-photo">
 						{#if product.photo}
 							<img
-								src={`/images/${product.photo}`}
+								src={photoSrc(product.photo)}
 								alt={`Foto ${product.name}`}
 								width="430"
 								height="430"

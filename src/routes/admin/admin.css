@@ -630,6 +630,23 @@ h3,
 	text-overflow: ellipsis;
 }
 
+/* Unggah foto produk: pratinjau kotak + tombol aksi di sebelahnya. */
+.photo-row {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	flex-wrap: wrap;
+}
+
+.photo-thumb {
+	width: 84px;
+	height: 84px;
+	object-fit: cover;
+	border: 1px solid var(--sand);
+	border-radius: var(--radius-s);
+	background: var(--card);
+}
+
 /* Umpan balik aksi: spinner kecil di tombol saat diproses + toast singkat. */
 .is-busy {
 	pointer-events: none;

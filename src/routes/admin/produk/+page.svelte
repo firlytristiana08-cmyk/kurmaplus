@@ -4,7 +4,7 @@
 	// bercatatan (BA-08); perubahan harga hanya untuk pesanan baru (BA-09).
 	import { enhance } from '$app/forms';
 	import { adminEnhance } from '#lib/admin-feedback';
-	import { formatDateTimeId, formatRupiah } from '#lib/format';
+	import { formatDateTimeId, formatRupiah, photoSrc } from '#lib/format';
 
 	let { data, form } = $props();
 
@@ -55,6 +55,69 @@
 	});
 
 	let editing = $state<number | null>(null);
+
+	// --- Tambah produk ---
+	let adding = $state(false);
+	let rowSeq = 0;
+	let newRows = $state<number[]>([0]);
+
+	function addRow(): void {
+		rowSeq += 1;
+		newRows = [...newRows, rowSeq];
+	}
+
+	function removeRow(key: number): void {
+		if (newRows.length > 1) newRows = newRows.filter((k) => k !== key);
+	}
+
+	// --- Unggah foto: dikecilkan di perangkat (maks 1600px, WebP) ---
+	async function fileToDataUrl(file: File): Promise<string> {
+		const bitmap = await createImageBitmap(file);
+		const scale = Math.min(1, 1600 / Math.max(bitmap.width, bitmap.height));
+		const canvas = document.createElement('canvas');
+		canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+		canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+		const ctx = canvas.getContext('2d');
+		if (!ctx) return '';
+		ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+		return canvas.toDataURL('image/webp', 0.9);
+	}
+
+	async function onPhotoPicked(event: Event, key: string): Promise<void> {
+		const input = event.currentTarget as HTMLInputElement;
+		const file = input.files?.[0];
+		if (!file || !input.form) return;
+		if (file.size > 10 * 1024 * 1024) {
+			window.alert('Ukuran foto maksimal 10 MB.');
+			input.value = '';
+			return;
+		}
+		const dataUrl = await fileToDataUrl(file);
+		if (dataUrl === '') return;
+		const hidden = input.form.querySelector<HTMLInputElement>(`input[data-photo-value="${key}"]`);
+		const preview = input.form.querySelector<HTMLImageElement>(`img[data-photo-preview="${key}"]`);
+		if (hidden) hidden.value = dataUrl;
+		if (preview) {
+			preview.src = dataUrl;
+			preview.hidden = false;
+		}
+		input.value = '';
+	}
+
+	function clearPhoto(event: Event, key: string): void {
+		const button = event.currentTarget as HTMLButtonElement;
+		const form = button.form ?? button.closest('form');
+		if (!form) return;
+		const hidden = form.querySelector<HTMLInputElement>(`input[data-photo-value="${key}"]`);
+		const preview = form.querySelector<HTMLImageElement>(`img[data-photo-preview="${key}"]`);
+		const file = form.querySelector<HTMLInputElement>(`input[data-photo-file="${key}"]`);
+		if (hidden) hidden.value = '';
+		if (preview) {
+			preview.src = '';
+			preview.hidden = true;
+		}
+		if (file) file.value = '';
+	}
 </script>
 
 <svelte:head>
@@ -72,6 +135,78 @@
 
 	{#if form?.message}
 		<p class="error-box">{form.message}</p>
+	{/if}
+
+	{#snippet photoField(key: string, slotName: string, labelText: string, current: string | null)}
+		<div class="field">
+			<label for={`file-${key}`}>{labelText}</label>
+			<div class="photo-row">
+				<img
+					class="photo-thumb"
+					data-photo-preview={key}
+					src={photoSrc(current)}
+					alt="Pratinjau foto"
+					hidden={!current}
+				/>
+				<input
+					id={`file-${key}`}
+					type="file"
+					accept="image/*"
+					data-photo-file={key}
+					onchange={(event) => onPhotoPicked(event, key)}
+				/>
+				<button class="btn-mini" type="button" onclick={(event) => clearPhoto(event, key)}>
+					Hapus foto
+				</button>
+			</div>
+			<input type="hidden" name={slotName} value={current ?? ''} data-photo-value={key} />
+		</div>
+	{/snippet}
+
+	<div class="section-head">
+		<h2>Produk</h2>
+		<div class="btn-row" style="margin: 0">
+			<button class="btn-mini is-rust" type="button" onclick={() => (adding = !adding)}>
+				{adding ? 'Tutup form' : 'Tambah produk'}
+			</button>
+		</div>
+	</div>
+
+	{#if adding}
+		<form
+			class="surface"
+			method="POST"
+			action="?/tambah_produk"
+			use:enhance={adminEnhance('Produk baru ditambahkan.', { reset: true })}
+		>
+			<div class="field">
+				<label for="nama-baru">Nama produk</label>
+				<input id="nama-baru" name="name" type="text" required />
+			</div>
+			<div class="field">
+				<label for="desc-baru">Deskripsi (tampil di halaman produk)</label>
+				<textarea id="desc-baru" name="description" rows="4" required></textarea>
+			</div>
+			{@render photoField('n-1', 'photo', 'Foto utama', null)}
+			{@render photoField('n-2', 'photo_2', 'Foto kedua (opsional)', null)}
+			{@render photoField('n-3', 'photo_3', 'Foto ketiga (opsional)', null)}
+			<p class="muted" style="margin: 0.5rem 0 0.25rem; font-size: 0.8125rem">Varian (ukuran) yang dijual</p>
+			{#each newRows as rowKey (rowKey)}
+				<div class="btn-row" style="margin: 0 0 0.5rem">
+					<input name="v_label" type="text" placeholder="Ukuran, mis. 500 gr" aria-label="Nama ukuran" required style="min-height: 44px; max-width: 8.5rem" />
+					<input name="v_weight" type="number" min="1" step="1" placeholder="Berat (gram)" aria-label="Berat gram" required style="min-height: 44px; max-width: 7rem" />
+					<input name="v_price" type="text" inputmode="numeric" placeholder="Harga (rupiah)" aria-label="Harga" required style="min-height: 44px; max-width: 8.5rem" />
+					<input name="v_stock" type="number" min="0" step="1" placeholder="Stok awal" aria-label="Stok awal" value="0" required style="min-height: 44px; max-width: 6.5rem" />
+					{#if newRows.length > 1}
+						<button class="btn-mini" type="button" onclick={() => removeRow(rowKey)}>Hapus baris</button>
+					{/if}
+				</div>
+			{/each}
+			<div class="btn-row" style="margin: 0">
+				<button class="btn-mini" type="button" onclick={addRow}>+ Varian lain</button>
+				<button class="btn-mini is-rust" type="submit">Simpan produk</button>
+			</div>
+		</form>
 	{/if}
 
 	{#each products as product (product.id)}
@@ -94,6 +229,19 @@
 					<input type="hidden" name="active" value={product.active ? '0' : '1'} />
 					<button class="btn-mini" type="submit">{product.active ? 'Nonaktifkan' : 'Aktifkan'}</button>
 				</form>
+				<form
+					method="POST"
+					action="?/hapus_produk"
+					use:enhance={adminEnhance('Produk dihapus.')}
+					onsubmit={(event) => {
+						if (!window.confirm(`Hapus produk ${product.name} beserta seluruh variannya? Tidak bisa dibatalkan.`)) {
+							event.preventDefault();
+						}
+					}}
+				>
+					<input type="hidden" name="product_id" value={product.id} />
+					<button class="btn-mini is-danger" type="submit">Hapus produk</button>
+				</form>
 			</div>
 		</div>
 
@@ -108,18 +256,9 @@
 					<label for="desc-{product.id}">Deskripsi (tampil di halaman produk)</label>
 					<textarea id="desc-{product.id}" name="description" rows="5" required>{product.description}</textarea>
 				</div>
-				<div class="field">
-					<label for="photo-{product.id}">Foto utama (nama berkas di folder images)</label>
-					<input id="photo-{product.id}" name="photo" type="text" value={product.photo ?? ''} placeholder="mis. sukari.webp" />
-				</div>
-				<div class="field">
-					<label for="photo2-{product.id}">Foto kedua (opsional)</label>
-					<input id="photo2-{product.id}" name="photo_2" type="text" value={product.photo2 ?? ''} placeholder="mis. sukari-2.webp" />
-				</div>
-				<div class="field">
-					<label for="photo3-{product.id}">Foto ketiga (opsional)</label>
-					<input id="photo3-{product.id}" name="photo_3" type="text" value={product.photo3 ?? ''} placeholder="mis. sukari-3.webp" />
-				</div>
+				{@render photoField(`e${product.id}-1`, 'photo', 'Foto utama', product.photo)}
+				{@render photoField(`e${product.id}-2`, 'photo_2', 'Foto kedua (opsional)', product.photo2)}
+				{@render photoField(`e${product.id}-3`, 'photo_3', 'Foto ketiga (opsional)', product.photo3)}
 				<div class="field">
 					<label for="sort-{product.id}">Urutan tampil di katalog (kecil = lebih dulu)</label>
 					<input id="sort-{product.id}" name="sort_order" type="number" min="0" step="1" value={product.sort} />

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { formatRupiah, formatWeight } from '#lib/format';
+	import { formatRupiah, formatWeight, photoSrc } from '#lib/format';
 	import { cart, type CartItem } from '#lib/cart.svelte';
 	import PageFooter from '#lib/components/PageFooter.svelte';
 	import { stickyBar } from '#lib/sticky-bar';
@@ -67,7 +67,7 @@
 				<li class="cart-row">
 					<img
 						class="thumb"
-						src={`/images/${row.photo}`}
+						src={photoSrc(row.photo)}
 						alt=""
 						width="72"
 						height="72"

@@ -624,6 +624,208 @@ export async function adminDeleteVariant(
   });
 }
 
+// Foto bisa berupa URL data (hasil unggah, base64) atau nama berkas lama
+// di folder /images/. Batas 1,5 juta karakter ≈ 1 MB biner per foto.
+function photoValueError(value: string | null | undefined): string | null {
+  if (value === undefined || value === null) return null;
+  const v = value.trim();
+  if (v === "") return null;
+  if (v.startsWith("data:")) {
+    if (v.length > 1_500_000) {
+      return "Ukuran foto terlalu besar — maksimal sekitar 1 MB per foto.";
+    }
+    return null;
+  }
+  if (v.length > 200) return "Nama berkas foto maksimal 200 karakter.";
+  return null;
+}
+
+function slugify(name: string): string {
+  return (
+    name
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "") || "produk"
+  );
+}
+
+export interface NewProductInput {
+  name: string;
+  description: string;
+  photo: string | null;
+  photo2: string | null;
+  photo3: string | null;
+  variants: NewVariantInput[];
+}
+
+export type CreateProductResult =
+  | { ok: true; productId: number; variantIds: number[] }
+  | { ok: false; error: string };
+
+export async function adminCreateProduct(
+  input: NewProductInput,
+  actor: string,
+  now = new Date(),
+): Promise<CreateProductResult> {
+  if (input.name.trim() === "") return { ok: false, error: "Nama produk wajib diisi." };
+  if (input.description.trim() === "") return { ok: false, error: "Deskripsi wajib diisi." };
+  if (input.variants.length === 0) {
+    return { ok: false, error: "Produk baru minimal punya satu varian." };
+  }
+  for (const value of [input.photo, input.photo2, input.photo3]) {
+    const photoIssue = photoValueError(value);
+    if (photoIssue) return { ok: false, error: photoIssue };
+  }
+  for (const variant of input.variants) {
+    if (variant.label.trim() === "") return { ok: false, error: "Nama ukuran wajib diisi." };
+    if (!Number.isInteger(variant.weightGrams) || variant.weightGrams <= 0) {
+      return { ok: false, error: "Berat harus bilangan bulat lebih dari nol (gram)." };
+    }
+    if (!Number.isInteger(variant.priceIdr) || variant.priceIdr <= 0) {
+      return { ok: false, error: "Harga harus rupiah bulat lebih dari nol." };
+    }
+    if (!Number.isInteger(variant.stock) || variant.stock < 0) {
+      return { ok: false, error: "Stok awal tidak boleh negatif." };
+    }
+  }
+  const db = await getDb();
+  const at = now.toISOString();
+  return db.transaction(async (tx) => {
+    const created = await tx.get<{ id: number }>(
+      "SELECT COALESCE(MAX(id), 0) + 1 AS id FROM products",
+      [],
+    );
+    const productId = created?.id ?? 1;
+    // Slug unik dari nama produk.
+    const base = slugify(input.name);
+    let slug = base;
+    for (let i = 2; ; i++) {
+      const taken = await tx.get<{ id: number }>("SELECT id FROM products WHERE slug = ?", [slug]);
+      if (!taken) break;
+      slug = `${base}-${i}`;
+    }
+    const sortRow = await tx.get<{ next: number }>(
+      "SELECT COALESCE(MAX(sort_order), 0) + 1 AS next FROM products",
+      [],
+    );
+    await tx.run(
+      "INSERT INTO products (id, slug, name, description, photo, photo_2, photo_3, sort_order, is_active, is_best_seller) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 0)",
+      [
+        productId,
+        slug,
+        input.name.trim(),
+        input.description.trim(),
+        input.photo?.trim() || null,
+        input.photo2?.trim() || null,
+        input.photo3?.trim() || null,
+        sortRow?.next ?? 1,
+      ],
+    );
+    const variantIds: number[] = [];
+    for (const variant of input.variants) {
+      const next = await tx.get<{ id: number }>(
+        "SELECT COALESCE(MAX(id), 0) + 1 AS id FROM variants",
+        [],
+      );
+      const variantId = next?.id ?? 1;
+      variantIds.push(variantId);
+      await tx.run(
+        "INSERT INTO variants (id, product_id, label, weight_grams, price_idr, stock, is_active) VALUES (?, ?, ?, ?, ?, ?, 1)",
+        [
+          variantId,
+          productId,
+          variant.label.trim(),
+          variant.weightGrams,
+          variant.priceIdr,
+          variant.stock,
+        ],
+      );
+      if (variant.stock > 0) {
+        await tx.run(
+          "INSERT INTO stock_movements (id, variant_id, delta, reason, order_id, actor, created_at) VALUES (?, ?, ?, 'stock_initial', NULL, ?, ?)",
+          [crypto.randomUUID(), variantId, variant.stock, actor, at],
+        );
+      }
+    }
+    await writeAudit(tx, {
+      actor,
+      entity: "product",
+      entityId: String(productId),
+      action: "product_created",
+      before: null,
+      after: {
+        slug,
+        name: input.name.trim(),
+        description: input.description.trim(),
+        photo: input.photo?.trim() || null,
+        photo_2: input.photo2?.trim() || null,
+        photo_3: input.photo3?.trim() || null,
+        variants: input.variants,
+      },
+      at,
+    });
+    return { ok: true as const, productId, variantIds };
+  });
+}
+
+export async function adminDeleteProduct(
+  productId: number,
+  actor: string,
+  now = new Date(),
+): Promise<AdminResult> {
+  const db = await getDb();
+  const at = now.toISOString();
+  return db.transaction(async (tx) => {
+    const row = await tx.get<{
+      id: number;
+      slug: string;
+      name: string;
+      description: string;
+      photo: string | null;
+      photo_2: string | null;
+      photo_3: string | null;
+      sort_order: number;
+      is_active: number;
+      is_best_seller: number;
+    }>(
+      "SELECT id, slug, name, description, photo, photo_2, photo_3, sort_order, is_active, is_best_seller FROM products WHERE id = ?",
+      [productId],
+    );
+    if (!row) return fail("Produk tidak ditemukan.");
+    const variants = await tx.all<{
+      id: number;
+      label: string;
+      weight_grams: number;
+      price_idr: number;
+      stock: number;
+      is_active: number;
+    }>(
+      "SELECT id, label, weight_grams, price_idr, stock, is_active FROM variants WHERE product_id = ?",
+      [productId],
+    );
+    // Hapus permanen: produk + varian + riwayat stoknya. Item pesanan lama
+    // tetap utuh (nama & harga tersimpan saat transaksi) — kolom variant_id
+    // pada order_items tidak lagi dirujuk setelah varian dihapus.
+    await tx.run(
+      "DELETE FROM stock_movements WHERE variant_id IN (SELECT id FROM variants WHERE product_id = ?)",
+      [productId],
+    );
+    await tx.run("DELETE FROM variants WHERE product_id = ?", [productId]);
+    await tx.run("DELETE FROM products WHERE id = ?", [productId]);
+    await writeAudit(tx, {
+      actor,
+      entity: "product",
+      entityId: String(productId),
+      action: "product_deleted",
+      before: { ...row, variants },
+      after: null,
+      at,
+    });
+    return { ok: true as const };
+  });
+}
+
 export interface ProductPatch {
   isActive?: boolean;
   name?: string;
@@ -646,9 +848,8 @@ export async function adminUpdateProduct(
     return fail("Deskripsi wajib diisi.");
   }
   for (const value of [patch.photo, patch.photo2, patch.photo3]) {
-    if (value !== undefined && value !== null && value.length > 200) {
-      return fail("Nama berkas foto maksimal 200 karakter.");
-    }
+    const photoIssue = photoValueError(value);
+    if (photoIssue) return fail(photoIssue);
   }
   if (
     patch.sortOrder !== undefined &&

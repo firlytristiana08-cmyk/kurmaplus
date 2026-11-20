@@ -212,6 +212,31 @@ describe("admin: stok, ongkir, tanggal, pengaturan", () => {
     expect(report.orderCount).toBeGreaterThan(0);
     expect(report.omzetIdr).toBeGreaterThan(0);
   });
+
+  it("produk: tambah & hapus permanen — riwayat pesanan tetap utuh", async () => {
+    const created = await admin.adminCreateProduct(
+      {
+        name: "Produk Tes Hapus",
+        description: "Hanya untuk tes.",
+        photo: null,
+        photo2: null,
+        photo3: null,
+        variants: [{ label: "1 kg", weightGrams: 1000, priceIdr: 50000, stock: 2 }],
+      },
+      "tes",
+      now,
+    );
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+    await newOrder("TESTHPS1", created.variantIds[0], 1);
+    const removed = await admin.adminDeleteProduct(created.productId, "tes", now);
+    expect(removed.ok).toBe(true);
+    const detail = await admin.adminOrderDetail("TESTHPS1");
+    expect(detail?.items.length).toBe(1);
+    expect((detail?.items[0].name ?? "").length).toBeGreaterThan(0);
+    const again = await admin.adminDeleteProduct(created.productId, "tes", now);
+    expect(again.ok).toBe(false);
+  });
 });
 
 describe("admin: manajemen detail produk & varian (tugas 90)", () => {
