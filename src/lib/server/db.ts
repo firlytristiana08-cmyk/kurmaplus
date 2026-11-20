@@ -303,6 +303,24 @@ function openSqlite(): Db {
     raw.exec(readFileSync(path.join(process.cwd(), "db/seed-demo.sql"), "utf8"));
     raw.exec(readFileSync(path.join(process.cwd(), "db/seed-demo-admin.sql"), "utf8"));
   }
+  // Produk dari berkas seed bisa masuk SETELAH migrasi 0010 berjalan. Saat
+  // galeri masih kosong sama sekali, salin foto kolom lama ke product_photos
+  // (idempoten; dijaga agar foto yang sengaja dihapus admin tidak hidup lagi).
+  const galleryEmpty = sqliteGet<{ n: number }>(
+    raw,
+    "SELECT COUNT(*) AS n FROM product_photos",
+    [],
+  );
+  if ((galleryEmpty?.n ?? 0) === 0) {
+    raw.exec(`
+      INSERT INTO product_photos (product_id, sort_order, data)
+        SELECT id, 0, photo FROM products WHERE photo IS NOT NULL AND photo <> '';
+      INSERT INTO product_photos (product_id, sort_order, data)
+        SELECT id, 1, photo_2 FROM products WHERE photo_2 IS NOT NULL AND photo_2 <> '';
+      INSERT INTO product_photos (product_id, sort_order, data)
+        SELECT id, 2, photo_3 FROM products WHERE photo_3 IS NOT NULL AND photo_3 <> '';
+    `);
+  }
   return new SqliteDb(raw);
 }
 
@@ -441,15 +459,18 @@ async function photosOf(db: Db, productId: number): Promise<{ id: number; src: s
   return rows.map((row) => ({ id: row.id, src: photoApiSrc(row.id) }));
 }
 
-async function toProductView(db: Db, row: ProductRow): Promise<ProductView> {
-  const variants = await variantsOf(db, row.id);
+function buildProductView(
+  row: ProductRow,
+  variants: VariantView[],
+  photos: { id: number; src: string }[],
+): ProductView {
   const prices = variants.map((variant) => variant.priceIdr);
   return {
     id: row.id,
     slug: row.slug,
     name: row.name,
     description: row.description,
-    photos: await photosOf(db, row.id),
+    photos,
     isBestSeller: row.is_best_seller === 1,
     variants,
     minPriceIdr: prices.length > 0 ? Math.min(...prices) : 0,
@@ -457,16 +478,41 @@ async function toProductView(db: Db, row: ProductRow): Promise<ProductView> {
   };
 }
 
+async function toProductView(db: Db, row: ProductRow): Promise<ProductView> {
+  return buildProductView(row, await variantsOf(db, row.id), await photosOf(db, row.id));
+}
+
 export async function listProducts(): Promise<ProductView[]> {
   const db = await getDb();
   const rows = await db.all<ProductRow>(
     "SELECT id, slug, name, description, is_best_seller FROM products WHERE is_active = 1 ORDER BY sort_order",
   );
-  const products: ProductView[] = [];
-  for (const row of rows) {
-    products.push(await toProductView(db, row));
-  }
-  return products;
+  if (rows.length === 0) return [];
+  // Varian & foto semua produk diambil sekali (bukan per produk) — katalog
+  // tetap cepat walau jumlah produk bertambah.
+  const variantRows = await db.all<VariantRow>(
+    "SELECT id, product_id, label, weight_grams, price_idr, stock FROM variants WHERE is_active = 1 ORDER BY weight_grams",
+  );
+  const photoRows = await db.all<{ id: number; product_id: number }>(
+    "SELECT id, product_id FROM product_photos ORDER BY product_id, sort_order, id",
+  );
+  return rows.map((row) =>
+    buildProductView(
+      row,
+      variantRows
+        .filter((variant) => variant.product_id === row.id)
+        .map((variant) => ({
+          id: variant.id,
+          label: variant.label,
+          weightGrams: variant.weight_grams,
+          priceIdr: variant.price_idr,
+          stock: variant.stock,
+        })),
+      photoRows
+        .filter((photo) => photo.product_id === row.id)
+        .map((photo) => ({ id: photo.id, src: photoApiSrc(photo.id) })),
+    ),
+  );
 }
 
 // Jumlah terjual per produk (pesanan berstatus lunas s/d selesai) — untuk

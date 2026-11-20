@@ -1,6 +1,6 @@
 // Sajikan foto produk dari database (URL data) dengan cache panjang —
 // halaman tidak menyematkan URL data di HTML, bobot tetap ringan (tugas 116).
-import { error, redirect } from "@sveltejs/kit";
+import { error } from "@sveltejs/kit";
 import { getDb } from "#lib/server/db";
 import type { RequestHandler } from "./$types";
 
@@ -12,8 +12,15 @@ export const GET: RequestHandler = async ({ params }) => {
   if (!row) throw error(404, "Foto tidak ditemukan");
   const value = row.data.trim();
   if (!value.startsWith("data:")) {
-    // Nama berkas lama di folder statis.
-    throw redirect(302, `/images/${value}`);
+    // Nama berkas lama di folder statis — arahkan dengan cache singkat agar
+    // galeri tidak bolak-balik ke database di tiap gambar.
+    return new Response(null, {
+      status: 302,
+      headers: {
+        location: `/images/${value}`,
+        "cache-control": "public, max-age=86400",
+      },
+    });
   }
   const comma = value.indexOf(",");
   const meta = value.slice(5, comma);
