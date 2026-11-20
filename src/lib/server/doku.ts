@@ -25,13 +25,17 @@ const encoder = new TextEncoder();
 export function loadDokuConfig(env: Record<string, string | undefined>): DokuConfig | null {
   const clientId = env.DOKU_CLIENT_ID;
   const secretKey = env.DOKU_SECRET_KEY;
-  if (!clientId || !secretKey) {
+  const baseUrl = env.DOKU_BASE_URL;
+  // Pengaman go-live: di produksi alamat API wajib diisi eksplisit — jangan
+  // sampai pembayaran nyata diam-diam diarahkan ke sandbox.
+  const isProduction = env.VERCEL_ENV === "production" || env.NODE_ENV === "production";
+  if (!clientId || !secretKey || (isProduction && !baseUrl)) {
     return null;
   }
   return {
     clientId,
     secretKey,
-    baseUrl: env.DOKU_BASE_URL ?? "https://api-sandbox.doku.com",
+    baseUrl: baseUrl ?? "https://api-sandbox.doku.com",
   };
 }
 
@@ -125,6 +129,7 @@ export interface DokuCheckoutPayload {
   paymentDueMinutes: number;
   customer: { name: string; phone: string; address: string; city: string; email?: string };
   callbackUrl: string;
+  notificationUrl: string;
   lineItems: { name: string; quantity: number; price: number }[];
 }
 
@@ -160,6 +165,11 @@ export async function createCheckoutPayment(
     },
     payment: {
       payment_due_date: payload.paymentDueMinutes,
+    },
+    additional_info: {
+      // Jaring pengaman ganda: URL notifikasi dikirim per transaksi, di luar
+      // pengaturan Payment Notification URL di dashboard DOKU.
+      override_notification_url: payload.notificationUrl,
     },
     customer: {
       name: payload.customer.name,
