@@ -218,9 +218,7 @@ describe("admin: stok, ongkir, tanggal, pengaturan", () => {
       {
         name: "Produk Tes Hapus",
         description: "Hanya untuk tes.",
-        photo: null,
-        photo2: null,
-        photo3: null,
+        photos: ["data:image/webp;base64,AAAA"],
         variants: [{ label: "1 kg", weightGrams: 1000, priceIdr: 50000, stock: 2 }],
       },
       "tes",
@@ -256,9 +254,6 @@ describe("admin: manajemen detail produk & varian (tugas 90)", () => {
       {
         name: "Kurma Sukari Premium",
         description: "Deskripsi baru hasil suntingan admin.",
-        photo: "sukari-new.webp",
-        photo2: "sukari-new-2.webp",
-        photo3: null,
         sortOrder: 7,
         isBestSeller: true,
       },
@@ -270,21 +265,21 @@ describe("admin: manajemen detail produk & varian (tugas 90)", () => {
     const row = await dbi.get<{
       name: string;
       description: string;
-      photo: string | null;
-      photo_2: string | null;
-      photo_3: string | null;
       sort_order: number;
       is_best_seller: number;
-    }>(
-      "SELECT name, description, photo, photo_2, photo_3, sort_order, is_best_seller FROM products WHERE id = 1",
-      [],
-    );
+    }>("SELECT name, description, sort_order, is_best_seller FROM products WHERE id = 1", []);
     expect(row?.name).toBe("Kurma Sukari Premium");
-    expect(row?.photo).toBe("sukari-new.webp");
-    expect(row?.photo_2).toBe("sukari-new-2.webp");
-    expect(row?.photo_3).toBeNull();
     expect(row?.sort_order).toBe(7);
     expect(row?.is_best_seller).toBe(1);
+    const added = await admin.adminAddProductPhotos(1, ["data:image/webp;base64,AAAA"], "tes", now);
+    expect(added.ok).toBe(true);
+    const photo = await dbi.get<{ id: number; data: string }>(
+      "SELECT id, data FROM product_photos WHERE product_id = 1 ORDER BY id DESC LIMIT 1",
+      [],
+    );
+    expect(photo?.data).toBe("data:image/webp;base64,AAAA");
+    const removedPhoto = await admin.adminDeleteProductPhoto(photo?.id ?? 0, "tes", now);
+    expect(removedPhoto.ok).toBe(true);
     const invalid = await admin.adminUpdateProduct(1, { name: "  " }, "tes", now);
     expect(invalid.ok).toBe(false);
   });

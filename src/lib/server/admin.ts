@@ -653,11 +653,12 @@ function slugify(name: string): string {
 export interface NewProductInput {
   name: string;
   description: string;
-  photo: string | null;
-  photo2: string | null;
-  photo3: string | null;
+  photos: string[];
   variants: NewVariantInput[];
 }
+
+// Maksimal foto per produk — wajar untuk galeri katalog kecil.
+export const MAX_PRODUCT_PHOTOS = 20;
 
 export type CreateProductResult =
   | { ok: true; productId: number; variantIds: number[] }
@@ -673,7 +674,10 @@ export async function adminCreateProduct(
   if (input.variants.length === 0) {
     return { ok: false, error: "Produk baru minimal punya satu varian." };
   }
-  for (const value of [input.photo, input.photo2, input.photo3]) {
+  if (input.photos.length > MAX_PRODUCT_PHOTOS) {
+    return { ok: false, error: `Maksimal ${MAX_PRODUCT_PHOTOS} foto per produk.` };
+  }
+  for (const value of input.photos) {
     const photoIssue = photoValueError(value);
     if (photoIssue) return { ok: false, error: photoIssue };
   }
@@ -710,18 +714,10 @@ export async function adminCreateProduct(
       [],
     );
     await tx.run(
-      "INSERT INTO products (id, slug, name, description, photo, photo_2, photo_3, sort_order, is_active, is_best_seller) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 0)",
-      [
-        productId,
-        slug,
-        input.name.trim(),
-        input.description.trim(),
-        input.photo?.trim() || null,
-        input.photo2?.trim() || null,
-        input.photo3?.trim() || null,
-        sortRow?.next ?? 1,
-      ],
+      "INSERT INTO products (id, slug, name, description, sort_order, is_active, is_best_seller) VALUES (?, ?, ?, ?, ?, 1, 0)",
+      [productId, slug, input.name.trim(), input.description.trim(), sortRow?.next ?? 1],
     );
+    await insertProductPhotos(tx, productId, input.photos);
     const variantIds: number[] = [];
     for (const variant of input.variants) {
       const next = await tx.get<{ id: number }>(
@@ -758,9 +754,7 @@ export async function adminCreateProduct(
         slug,
         name: input.name.trim(),
         description: input.description.trim(),
-        photo: input.photo?.trim() || null,
-        photo_2: input.photo2?.trim() || null,
-        photo_3: input.photo3?.trim() || null,
+        photos: input.photos.length,
         variants: input.variants,
       },
       at,
@@ -807,6 +801,7 @@ export async function adminDeleteProduct(
     // Hapus permanen: produk + varian + riwayat stoknya. Item pesanan lama
     // tetap utuh (nama & harga tersimpan saat transaksi) — kolom variant_id
     // pada order_items tidak lagi dirujuk setelah varian dihapus.
+    await tx.run("DELETE FROM product_photos WHERE product_id = ?", [productId]);
     await tx.run(
       "DELETE FROM stock_movements WHERE variant_id IN (SELECT id FROM variants WHERE product_id = ?)",
       [productId],
@@ -826,13 +821,107 @@ export async function adminDeleteProduct(
   });
 }
 
+// Simpan daftar foto baru sebagai baris product_photos (urut sesuai pilihan).
+async function insertProductPhotos(tx: Db, productId: number, photos: string[]): Promise<void> {
+  let sort = 0;
+  for (const photo of photos) {
+    const v = photo.trim();
+    if (v === "") continue;
+    const next = await tx.get<{ id: number }>(
+      "SELECT COALESCE(MAX(id), 0) + 1 AS id FROM product_photos",
+      [],
+    );
+    const photoId = next?.id ?? 1;
+    await tx.run(
+      "INSERT INTO product_photos (id, product_id, sort_order, data) VALUES (?, ?, ?, ?)",
+      [photoId, productId, sort, v],
+    );
+    sort += 1;
+  }
+}
+
+export async function adminAddProductPhotos(
+  productId: number,
+  photos: string[],
+  actor: string,
+  now = new Date(),
+): Promise<AdminResult> {
+  const items = photos.map((p) => p.trim()).filter((p) => p !== "");
+  if (items.length === 0) return fail("Pilih minimal satu foto.");
+  if (items.length > MAX_PRODUCT_PHOTOS) {
+    return fail(`Maksimal ${MAX_PRODUCT_PHOTOS} foto per produk.`);
+  }
+  for (const value of items) {
+    const photoIssue = photoValueError(value);
+    if (photoIssue) return fail(photoIssue);
+  }
+  const db = await getDb();
+  const at = now.toISOString();
+  return db.transaction(async (tx) => {
+    const product = await tx.get<{ id: number }>("SELECT id FROM products WHERE id = ?", [
+      productId,
+    ]);
+    if (!product) return fail("Produk tidak ditemukan.");
+    const existing = await tx.get<{ n: number }>(
+      "SELECT COUNT(*) AS n FROM product_photos WHERE product_id = ?",
+      [productId],
+    );
+    if ((existing?.n ?? 0) + items.length > MAX_PRODUCT_PHOTOS) {
+      return fail(`Maksimal ${MAX_PRODUCT_PHOTOS} foto per produk.`);
+    }
+    const sortRow = await tx.get<{ next: number }>(
+      "SELECT COALESCE(MAX(sort_order), -1) + 1 AS next FROM product_photos WHERE product_id = ?",
+      [productId],
+    );
+    await insertProductPhotos(tx, productId, items);
+    await writeAudit(tx, {
+      actor,
+      entity: "product",
+      entityId: String(productId),
+      action: "product_photos_added",
+      before: null,
+      after: { added: items.length, from_sort: sortRow?.next ?? 0 },
+      at,
+    });
+    return { ok: true as const };
+  });
+}
+
+export async function adminDeleteProductPhoto(
+  photoId: number,
+  actor: string,
+  now = new Date(),
+): Promise<AdminResult> {
+  const db = await getDb();
+  const at = now.toISOString();
+  return db.transaction(async (tx) => {
+    const row = await tx.get<{ id: number; product_id: number; sort_order: number; data: string }>(
+      "SELECT id, product_id, sort_order, data FROM product_photos WHERE id = ?",
+      [photoId],
+    );
+    if (!row) return fail("Foto tidak ditemukan.");
+    await tx.run("DELETE FROM product_photos WHERE id = ?", [photoId]);
+    await writeAudit(tx, {
+      actor,
+      entity: "product",
+      entityId: String(row.product_id),
+      action: "product_photo_deleted",
+      before: {
+        photo_id: row.id,
+        sort_order: row.sort_order,
+        kind: row.data.startsWith("data:") ? "unggahan" : "berkas",
+      },
+      after: null,
+      at,
+    });
+    return { ok: true as const };
+  });
+}
+
 export interface ProductPatch {
   isActive?: boolean;
   name?: string;
   description?: string;
-  photo?: string | null;
-  photo2?: string | null;
-  photo3?: string | null;
   sortOrder?: number;
   isBestSeller?: boolean;
 }
@@ -847,10 +936,6 @@ export async function adminUpdateProduct(
   if (patch.description !== undefined && patch.description.trim() === "") {
     return fail("Deskripsi wajib diisi.");
   }
-  for (const value of [patch.photo, patch.photo2, patch.photo3]) {
-    const photoIssue = photoValueError(value);
-    if (photoIssue) return fail(photoIssue);
-  }
   if (
     patch.sortOrder !== undefined &&
     (!Number.isInteger(patch.sortOrder) || patch.sortOrder < 0)
@@ -864,36 +949,27 @@ export async function adminUpdateProduct(
       id: number;
       name: string;
       description: string;
-      photo: string | null;
-      photo_2: string | null;
-      photo_3: string | null;
       sort_order: number;
       is_active: number;
       is_best_seller: number;
     }>(
-      "SELECT id, name, description, photo, photo_2, photo_3, sort_order, is_active, is_best_seller FROM products WHERE id = ?",
+      "SELECT id, name, description, sort_order, is_active, is_best_seller FROM products WHERE id = ?",
       [productId],
     );
     if (!row) return fail("Produk tidak ditemukan.");
     const after = {
       name: patch.name?.trim() ?? row.name,
       description: patch.description?.trim() ?? row.description,
-      photo: patch.photo === undefined ? row.photo : patch.photo?.trim() || null,
-      photo_2: patch.photo2 === undefined ? row.photo_2 : patch.photo2?.trim() || null,
-      photo_3: patch.photo3 === undefined ? row.photo_3 : patch.photo3?.trim() || null,
       sort_order: patch.sortOrder ?? row.sort_order,
       is_active: patch.isActive === undefined ? row.is_active : patch.isActive ? 1 : 0,
       is_best_seller:
         patch.isBestSeller === undefined ? row.is_best_seller : patch.isBestSeller ? 1 : 0,
     };
     await tx.run(
-      "UPDATE products SET name = ?, description = ?, photo = ?, photo_2 = ?, photo_3 = ?, sort_order = ?, is_active = ?, is_best_seller = ? WHERE id = ?",
+      "UPDATE products SET name = ?, description = ?, sort_order = ?, is_active = ?, is_best_seller = ? WHERE id = ?",
       [
         after.name,
         after.description,
-        after.photo,
-        after.photo_2,
-        after.photo_3,
         after.sort_order,
         after.is_active,
         after.is_best_seller,
@@ -908,9 +984,6 @@ export async function adminUpdateProduct(
       before: {
         name: row.name,
         description: row.description,
-        photo: row.photo,
-        photo_2: row.photo_2,
-        photo_3: row.photo_3,
         sort_order: row.sort_order,
         is_active: row.is_active,
         is_best_seller: row.is_best_seller,

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { formatRupiah, photoSrc } from '#lib/format';
+	import { formatRupiah } from '#lib/format';
 	import PageFooter from '#lib/components/PageFooter.svelte';
 	import PageHeader from '#lib/components/PageHeader.svelte';
 	import type { KatalogData } from './+page.server';
@@ -56,9 +56,9 @@
 			<li>
 				<a class="product-card" href={`/kurma/${product.slug}`}>
 					<div class="product-photo">
-						{#if product.photo}
+						{#if product.photos[0]}
 							<img
-								src={photoSrc(product.photo)}
+								src={product.photos[0].src}
 								alt={`Foto ${product.name}`}
 								width="430"
 								height="430"

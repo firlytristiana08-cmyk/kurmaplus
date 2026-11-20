@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { formatRupiah, formatWeight, photoSrc } from '#lib/format';
+	import { formatRupiah, formatWeight } from '#lib/format';
 	import { cart, type CartItem } from '#lib/cart.svelte';
 	import PageFooter from '#lib/components/PageFooter.svelte';
 	import { stickyBar } from '#lib/sticky-bar';
@@ -36,7 +36,7 @@
 						weightGrams: variant.weightGrams,
 						priceIdr: variant.priceIdr,
 						stock: variant.stock,
-						photo: product.photo,
+						photo: product.photos[0]?.src ?? null,
 						slug: product.slug
 					});
 				}
@@ -67,7 +67,7 @@
 				<li class="cart-row">
 					<img
 						class="thumb"
-						src={photoSrc(row.photo)}
+						src={row.photo}
 						alt=""
 						width="72"
 						height="72"

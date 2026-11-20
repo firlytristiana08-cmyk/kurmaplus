@@ -11,9 +11,7 @@ export const load = async ({ params }): Promise<ProductData> => {
   if (!product) {
     error(404, "Produk tidak ditemukan.");
   }
-  // Galeri foto: kolom photo, photo_2, photo_3 — semuanya diatur di admin.
-  const photos = [product.photo, product.photo2, product.photo3].filter((file): file is string =>
-    Boolean(file),
-  );
+  // Galeri foto: baris product_photos — semuanya diatur di admin.
+  const photos = product.photos.map((entry) => entry.src);
   return { product, photos };
 };

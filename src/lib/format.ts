@@ -38,14 +38,3 @@ export function formatWeight(grams: number): string {
   }
   return `${grams} gr`;
 }
-
-// Sumber foto produk: URL data (unggahan) dipakai langsung, selain itu
-// nama berkas lama di folder /images/.
-export function photoSrc(photo: string | null | undefined): string {
-  const value = (photo ?? "").trim();
-  if (value === "") return "";
-  if (value.startsWith("data:") || value.startsWith("http:") || value.startsWith("https:")) {
-    return value;
-  }
-  return `/images/${value}`;
-}

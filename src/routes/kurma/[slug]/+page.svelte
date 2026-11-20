@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { formatRupiah, formatWeight, photoSrc } from '#lib/format';
+	import { formatRupiah, formatWeight } from '#lib/format';
 	import { cart, setDirectBuy } from '#lib/cart.svelte';
 	import PageFooter from '#lib/components/PageFooter.svelte';
 	import { stickyBar } from '#lib/sticky-bar';
@@ -110,7 +110,7 @@
 					{#each data.photos as photo, index (photo)}
 						<button type="button" class="slide" onclick={() => openLightbox(index)}>
 							<img
-								src={photoSrc(photo)}
+								src={photo}
 								alt={`Foto ${product.name} ${index + 1}`}
 								width="600"
 								height="600"
@@ -131,11 +131,11 @@
 					{/each}
 				</div>
 			</div>
-		{:else if product.photo}
+		{:else if product.photos[0]}
 			<button type="button" class="photo-btn" onclick={() => openLightbox(0)}>
 				<img
 					class="photo"
-					src={photoSrc(product.photo)}
+					src={product.photos[0].src}
 					alt={`Foto ${product.name}`}
 					width="430"
 					height="430"
@@ -256,7 +256,7 @@
 			role="presentation"
 		>
 			{#each data.photos as photo, index (photo)}
-				<img src={photoSrc(photo)} alt={`Foto ${product.name} ${index + 1}`} />
+				<img src={photo} alt={`Foto ${product.name} ${index + 1}`} />
 			{/each}
 		</div>
 		<div class="dots" role="group" aria-label="Pilih foto">
