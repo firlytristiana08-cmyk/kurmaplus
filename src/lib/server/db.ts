@@ -818,47 +818,67 @@ export async function recordWebhookEvent(requestId: string, now: Date): Promise<
   return result.changes === 1;
 }
 
+interface ExpirableOrder {
+  id: number;
+  code: string;
+}
+
+// Satu pesanan menunggu bayar ditutup: stok kembali + catatan audit sistem.
+async function expireOrderTx(tx: Db, order: ExpirableOrder, now: Date): Promise<void> {
+  const items = await tx.all<{ variant_id: number; qty: number }>(
+    "SELECT variant_id, qty FROM order_items WHERE order_id = ?",
+    [order.id],
+  );
+  for (const item of items) {
+    await tx.run("UPDATE variants SET stock = stock + ? WHERE id = ?", [item.qty, item.variant_id]);
+    // PRD Portal Admin: pengembalian stok dicatat di stock_movements.
+    await tx.run(
+      "INSERT INTO stock_movements (id, variant_id, delta, reason, order_id, actor, created_at) VALUES (?, ?, ?, 'expire_return', ?, 'sistem', ?)",
+      [crypto.randomUUID(), item.variant_id, item.qty, order.id, now.toISOString()],
+    );
+  }
+  await tx.run("UPDATE orders SET status = 'expired' WHERE id = ?", [order.id]);
+  // PRD Portal Admin: aksi sistem dicatat di log audit.
+  await tx.run(
+    "INSERT INTO audit_log (id, actor, entity, entity_id, action, before_json, after_json, created_at) VALUES (?, 'sistem', 'order', ?, 'order_expired', ?, ?, ?)",
+    [
+      crypto.randomUUID(),
+      order.code,
+      JSON.stringify({ status: "pending_payment" }),
+      JSON.stringify({ status: "expired" }),
+      now.toISOString(),
+    ],
+  );
+}
+
 // FR-13: pesanan melewati batas waktu menjadi kedaluwarsa dan stok kembali.
 export async function expireStaleOrders(now: Date): Promise<number> {
   const db = await getDb();
   return db.transaction(async (tx) => {
-    const stale = await tx.all<{ id: number; code: string }>(
+    const stale = await tx.all<ExpirableOrder>(
       "SELECT id, code FROM orders WHERE status = 'pending_payment' AND expires_at <= ?",
       [now.toISOString()],
     );
-    if (stale.length === 0) {
-      return 0;
-    }
     for (const order of stale) {
-      const items = await tx.all<{ variant_id: number; qty: number }>(
-        "SELECT variant_id, qty FROM order_items WHERE order_id = ?",
-        [order.id],
-      );
-      for (const item of items) {
-        await tx.run("UPDATE variants SET stock = stock + ? WHERE id = ?", [
-          item.qty,
-          item.variant_id,
-        ]);
-        // PRD Portal Admin: pengembalian stok dicatat di stock_movements.
-        await tx.run(
-          "INSERT INTO stock_movements (id, variant_id, delta, reason, order_id, actor, created_at) VALUES (?, ?, ?, 'expire_return', ?, 'sistem', ?)",
-          [crypto.randomUUID(), item.variant_id, item.qty, order.id, now.toISOString()],
-        );
-      }
-      await tx.run("UPDATE orders SET status = 'expired' WHERE id = ?", [order.id]);
-      // PRD Portal Admin: aksi sistem dicatat di log audit.
-      await tx.run(
-        "INSERT INTO audit_log (id, actor, entity, entity_id, action, before_json, after_json, created_at) VALUES (?, 'sistem', 'order', ?, 'order_expired', ?, ?, ?)",
-        [
-          crypto.randomUUID(),
-          order.code,
-          JSON.stringify({ status: "pending_payment" }),
-          JSON.stringify({ status: "expired" }),
-          now.toISOString(),
-        ],
-      );
+      await expireOrderTx(tx, order, now);
     }
     return stale.length;
+  });
+}
+
+// Notifikasi kedaluwarsa dari DOKU (sejalan dengan email ke pembeli): tutup
+// pesanan yang masih menunggu bayar. Pesanan yang sudah lunas tidak pernah
+// diturunkan statusnya.
+export async function expireOrderByInvoice(invoiceNumber: string, now: Date): Promise<boolean> {
+  const db = await getDb();
+  return db.transaction(async (tx) => {
+    const order = await tx.get<ExpirableOrder>(
+      "SELECT id, code FROM orders WHERE code = ? AND status = 'pending_payment'",
+      [invoiceNumber],
+    );
+    if (!order) return false;
+    await expireOrderTx(tx, order, now);
+    return true;
   });
 }
 

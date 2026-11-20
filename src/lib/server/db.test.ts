@@ -78,6 +78,20 @@ describe("db: stok, pembayaran, kedaluwarsa (BR-09, BR-11..BR-13, FR-09..FR-13)"
     expect((await db.getProductBySlug("tunisia"))?.variants[0]?.stock).toBe(before);
   });
 
+  it("notifikasi kedaluwarsa DOKU menutup pesanan yang masih menunggu bayar", async () => {
+    const before = (await db.getProductBySlug("ajwa"))?.variants[0]?.stock ?? -1;
+    const result = await makeOrder("ORDER004", 4, 2);
+    expect(result.ok).toBe(true);
+    // Lunas tidak boleh diturunkan oleh notifikasi kedaluwarsa.
+    expect(await db.expireOrderByInvoice("ORDER001", now)).toBe(false);
+    expect((await db.getOrderByCode("ORDER001"))?.status).toBe("paid");
+    expect(await db.expireOrderByInvoice("ORDER004", now)).toBe(true);
+    expect((await db.getOrderByCode("ORDER004"))?.status).toBe("expired");
+    expect((await db.getProductBySlug("ajwa"))?.variants[0]?.stock).toBe(before);
+    // Idempoten: notifikasi kedua tidak mengubah apa pun.
+    expect(await db.expireOrderByInvoice("ORDER004", now)).toBe(false);
+  });
+
   it("lacak hanya cocok dengan kode dan 4 digit terakhir WhatsApp", async () => {
     expect((await db.findOrderByCodeAndPhoneTail("ORDER001", "7890"))?.code).toBe("ORDER001");
     expect(await db.findOrderByCodeAndPhoneTail("ORDER001", "0000")).toBeNull();

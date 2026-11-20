@@ -3,10 +3,13 @@
 
 import { adminListOrders } from "#lib/server/admin";
 import { requireAdmin } from "#lib/server/admin-auth";
+import { expireStaleOrders } from "#lib/server/db";
 import type { PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async ({ cookies, url }) => {
   await requireAdmin(cookies);
+  // Sinkronkan status: pesanan yang masa bayarnya habis ikut ditutup sistem.
+  await expireStaleOrders(new Date());
   const filter = {
     status: url.searchParams.get("status") ?? undefined,
     deliveryDate: url.searchParams.get("tanggal") ?? undefined,
