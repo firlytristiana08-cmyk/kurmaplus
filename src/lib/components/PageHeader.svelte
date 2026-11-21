@@ -3,6 +3,8 @@
 	import BackLink from './BackLink.svelte';
 	import Wordmark from './Wordmark.svelte';
 
+	let { backFixed = false }: { backFixed?: boolean } = $props();
+
 	// Angka keranjang tampil di semua halaman.
 	$effect(() => {
 		cart.hydrate();
@@ -32,7 +34,7 @@
 </header>
 
 <!-- Tombol kembali berada di luar navbar, di atas konten halaman. -->
-<BackLink />
+<BackLink fixed={backFixed} />
 
 <style>
 	/* Navbar tetap terlihat di atas saat halaman di-scroll. */

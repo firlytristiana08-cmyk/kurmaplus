@@ -90,7 +90,7 @@
 	<meta name="description" content="Status pesanan KURMAPLUS Anda." />
 </svelte:head>
 
-<PageHeader />
+<PageHeader backFixed />
 
 <main class="wrap">
 	<section class="status-head">
@@ -192,6 +192,7 @@
 		Chat WhatsApp KURMAPLUS
 	</a>
 	<p class="hint">Pesan otomatis berisi kode pesanan {order.code} dan nama Anda.</p>
+	<a class="shop-again" href="/katalog">Lanjut belanja</a>
 </main>
 
 <PageFooter />
@@ -240,6 +241,22 @@
 <style>
 	.status-head {
 		padding: 1.25rem 0 1.25rem;
+	}
+
+	.shop-again {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		min-height: 48px;
+		margin-top: 0.5rem;
+		color: var(--ink);
+		font-size: 0.9375rem;
+		font-weight: 700;
+		text-decoration: none;
+	}
+
+	.shop-again:hover {
+		text-decoration: underline;
 	}
 
 	.status-head .info-box {

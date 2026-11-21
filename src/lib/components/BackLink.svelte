@@ -1,9 +1,11 @@
 <script lang="ts">
 	// Tombol teks "Kembali" dengan ikon di awal, berada di luar navbar.
 	// `href` = tujuan cadangan bila tidak ada riwayat peramban (mis. halaman anak admin).
-	let { href = '/' }: { href?: string } = $props();
+	let { href = '/', fixed = false }: { href?: string; fixed?: boolean } = $props();
 	function goBack(event: MouseEvent): void {
-		if (window.history.length > 1) {
+		// fixed: selalu ke href (mis. halaman rangkuman pesanan → beranda),
+		// jangan kembali ke halaman bayar/form checkout lewat riwayat.
+		if (!fixed && window.history.length > 1) {
 			event.preventDefault();
 			window.history.back();
 		}
