@@ -1,5 +1,6 @@
 import { type Actions, fail, redirect } from "@sveltejs/kit";
 import * as v from "valibot";
+import { publicBaseUrl } from "#lib/server/base-url";
 import {
   bookedCounts,
   createOrder,
@@ -224,8 +225,8 @@ export const actions: Actions = {
               address: parsed.output.address,
               city: parsed.output.city,
             },
-            callbackUrl: `${url.origin}/pesanan/${code}?dari=pembayaran`,
-            notificationUrl: `${url.origin}/api/webhook/doku`,
+            callbackUrl: `${publicBaseUrl(url.origin)}/pesanan/${code}?dari=pembayaran`,
+            notificationUrl: `${publicBaseUrl(url.origin)}/api/webhook/doku`,
             lineItems,
           },
           now,

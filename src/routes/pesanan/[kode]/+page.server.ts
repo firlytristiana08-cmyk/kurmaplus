@@ -1,4 +1,5 @@
 import { type Actions, error, fail, redirect } from "@sveltejs/kit";
+import { publicBaseUrl } from "#lib/server/base-url";
 import {
   expireStaleOrders,
   getOrderByCode,
@@ -81,8 +82,8 @@ export const actions: Actions = {
           address: order.address,
           city: order.city,
         },
-        callbackUrl: `${url.origin}/pesanan/${order.code}?dari=pembayaran`,
-        notificationUrl: `${url.origin}/api/webhook/doku`,
+        callbackUrl: `${publicBaseUrl(url.origin)}/pesanan/${order.code}?dari=pembayaran`,
+        notificationUrl: `${publicBaseUrl(url.origin)}/api/webhook/doku`,
         lineItems: order.items.map((item) => ({
           name: item.name,
           quantity: item.qty,

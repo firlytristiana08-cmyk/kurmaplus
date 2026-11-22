@@ -14,7 +14,11 @@
   "vars": {
     "SUPABASE_PROJECT_REF": "dmwtrtcehxjcweoanbsx",
     "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_GWV5rs9AQat9BTn-yN7UZQ_DlANs5Qm",
-    "SUPABASE_URL": "https://dmwtrtcehxjcweoanbsx.supabase.co"
+    "SUPABASE_URL": "https://dmwtrtcehxjcweoanbsx.supabase.co",
+    // Alamat publik untuk callback & URL notifikasi DOKU. Kosong = pakai
+    // origin permintaan (perilaku lama). Worker dev memakai berkas terpisah
+    // (wrangler.dev.jsonc) yang mengisi nilai ini dengan alamat worker dev.
+    "PUBLIC_BASE_URL": ""
   },
   // Hyperdrive = layanan pool + cache koneksi Supabase (disarankan).
   // Dibuat 22 Nov 2026 dari dasbor Cloudflare (Storage & Databases →
