@@ -11,8 +11,10 @@ const DEV_SESSION_PARAM = "sesi";
 const DEV_SESSION_VALUE = "demo";
 
 export const handle: Handle = async ({ event, resolve }) => {
-  // Cloudflare Workers: binding (mis. Hyperdrive) hanya tersedia per-request.
-  setPlatformEnv((event.platform as { env?: unknown } | undefined)?.env);
+  // Cloudflare Workers: binding (mis. Hyperdrive) hanya tersedia lewat env
+  // runtime. Platform diteruskan apa adanya — setPlatformEnv menerima objek
+  // env langsung maupun bentuk { env }.
+  setPlatformEnv(event.platform);
   if (
     import.meta.env.DEV &&
     event.url.pathname.startsWith("/admin") &&
