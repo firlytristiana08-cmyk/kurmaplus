@@ -9,6 +9,8 @@
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",
+    "build:dev": "KURMAPLUS_ENV=dev vite build",
+    "deploy:dev": "KURMAPLUS_ENV=dev vite build && npx wrangler deploy --config wrangler.dev.jsonc --name kurmaplus-dev",
     "prebuild": "node scripts/check-db.mjs",
     "preview": "vite preview",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",

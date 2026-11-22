@@ -15,6 +15,12 @@ import { defineConfig } from "vitest/config";
 //   pengembangan lokal TIDAK berubah sama sekali.
 // Jangan deteksi lewat CF_PAGES: adapter-cloudflare v9 menolak env tersebut.
 
+// Lingkungan Cloudflare: `KURMAPLUS_ENV=dev` memakai Worker TERPISAH untuk
+// pengujian (DOKU sandbox) — nama worker & var diambil dari wrangler.dev.jsonc.
+// Tanpa variabel itu semuanya tetap seperti biasa (wrangler.jsonc → produksi).
+const isDevWorker = process.env.KURMAPLUS_ENV === "dev";
+const cloudflareConfigPath = isDevWorker ? "./wrangler.dev.jsonc" : undefined;
+
 // Klien pengganti untuk server dev: gaya CSS tetap ter-inject, tetapi TANPA
 // websocket, ping, atau muat ulang halaman. Klien Vite bawaan memuat ulang
 // halaman sendiri saat koneksi putus-nyambung lewat proksi pratinjau — itulah
@@ -202,7 +208,9 @@ export default defineConfig(({ command }) => {
       devStableClient(),
       sveltekit({
         preprocess: vitePreprocess(),
-        adapter: useCloudflare ? adapterCloudflare() : adapterAuto(),
+        adapter: useCloudflare
+          ? adapterCloudflare({ config: cloudflareConfigPath })
+          : adapterAuto(),
       }),
     ],
     server: {

@@ -1,0 +1,33 @@
+{
+  // Worker TERPISAH untuk pengujian di development (DOKU sandbox).
+  // Produksi tetap memakai wrangler.jsonc (Worker `kurmaplus`) dan sama sekali
+  // tidak terpengaruh berkas ini.
+  //
+  // Deploy: `npm run deploy:dev` (setara
+  // `npx wrangler deploy --config wrangler.dev.jsonc --name kurmaplus-dev`).
+  // Hal yang TIDAK diubah dibanding produksi: skrip build (`.wrangler/deploy/
+  // config.json` menunjuk ke konfigurasi dev), database Supabase (sengaja sama
+  // — pilihan I), dan Hyperdrive (id yang sama, lihat catatan di bawah).
+  "name": "kurmaplus-dev",
+  "compatibility_date": "2026-11-14",
+  "compatibility_flags": ["nodejs_compat"],
+  // Jangan isi `main` — adapter-cloudflare yang menentukannya.
+  "vars": {
+    // Database: SENGAJA sama dengan produksi (pilihan I). Pesanan uji akan
+    // ikut tercatat di database produksi.
+    "SUPABASE_PROJECT_REF": "dmwtrtcehxjcweoanbsx",
+    "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_GWV5rs9AQat9BTn-yN7UZQ_DlANs5Qm",
+    "SUPABASE_URL": "https://dmwtrtcehxjcweoanbsx.supabase.co",
+    // DOKU SANDBOX. Bukan rahasia, jadi aman di sini. Client ID & Secret Key
+    // TIDAK boleh ada di berkas ini — isi sebagai Secret di dasbor Cloudflare
+    // (Worker kurmaplus-dev → Settings → Variables and Secrets).
+    "DOKU_BASE_URL": "https://api-sandbox.doku.com",
+    // Alamat Worker dev. Dipakai untuk callback & URL notifikasi DOKU, supaya
+    // worker dev tidak pernah mengirim notifikasi ke domain produksi.
+    "PUBLIC_BASE_URL": "https://kurmaplus-dev.hasbidiqi16.workers.dev"
+  },
+  // Hyperdrive: memakai konfigurasi yang sama dengan produksi karena
+  // database-nya memang sama (pilihan I). String koneksi pooler Supabase
+  // tersimpan di konfigurasi Hyperdrive tersebut.
+  "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "1d5eb7ff8e964e1cac3ffd01efcec00f" }]
+}
