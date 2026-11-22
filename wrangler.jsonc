@@ -6,10 +6,8 @@
   "compatibility_date": "2026-11-14",
   "compatibility_flags": ["nodejs_compat"],
   // Hyperdrive = layanan pool + cache koneksi Supabase (disarankan).
-  // Cara pasang: dasbor Cloudflare → Storage & Databases → Hyperdrive →
-  // Create (tempel string koneksi pooler Supabase) → salin ID-nya ke sini,
-  // lalu hapus awalan komentar blok di bawah. Tanpa Hyperdrive aplikasi tetap
-  // jalan memakai SUPABASE_PROJECT_REF + SUPABASE_DB_PASSWORD (koneksi
-  // langsung ke pooler), tetapi lebih cepat + hemat egress dengan Hyperdrive.
-  // "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "ISI_ID_HYPERDRIVE" }]
+  // Dibuat 22 Nov 2026 dari dasbor Cloudflare (Storage & Databases →
+  // Hyperdrive → Connect database → public database). String koneksi pooler
+  // Supabase tersimpan di konfigurasi Hyperdrive tersebut.
+  "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "1d5eb7ff8e964e1cac3ffd01efcec00f" }]
 }
