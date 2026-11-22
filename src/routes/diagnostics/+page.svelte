@@ -33,10 +33,23 @@
 		</div>
 	{/each}
 
+	<h2 style="margin: 1.5rem 0 0.5rem">Jalur koneksi database (uji terpisah)</h2>
+	<p class="muted" style="margin: 0 0 0.75rem">
+		Setiap jalur diuji sendiri-sendiri — perbandingan hasilnya menunjukkan persis di mana koneksi
+		terputus.
+	</p>
+	{#each data.probes as probe (probe.name)}
+		<div class={probe.ok ? 'info-box' : 'error-box'}>
+			<strong>{probe.name} — {probe.ok ? 'LULUS' : 'GAGAL'}</strong>
+			<p style="margin: 0.25rem 0 0"><code>{probe.target}</code></p>
+			<p style="margin: 0.25rem 0 0">{probe.detail}</p>
+		</div>
+	{/each}
+
 	<div class="surface">
 		<p class="muted" style="margin: 0">
 			Info: URL notifikasi yang didaftarkan di dashboard DOKU sandbox harus
-			<code>https://kurmaplus.vercel.app/api/webhook/doku</code>.
+			<code>https://kurmaplus.workers.dev/api/webhook/doku</code>.
 		</p>
 	</div>
 </main>
