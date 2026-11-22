@@ -134,8 +134,20 @@ class SqliteDb implements Db {
 
 // ---------- Driver: Postgres Supabase ----------
 
+// Galat koneksi PostgreSQL tidak boleh lolos ke EventEmitter sebagai galat tak
+// tertangkap — di workerd satu galat tak tertangkap mematikan seluruh isolate
+// (Error 1101). Ubah menjadi galat promise biasa yang bisa ditangani pemanggil.
+function reportPgError(error: unknown): never {
+  const code = (error as { code?: string }).code ?? (error as Error).name;
+  process.stderr.write(`KURMAPLUS: kueri PostgreSQL gagal (${code}).\n`);
+  throw error;
+}
+
 async function pgAll<T>(client: Pool | PoolClient, sql: string, params: SqlValue[]): Promise<T[]> {
-  const result = await client.query(toPostgresPlaceholders(sql), params as unknown[]);
+  await ensureRuntimeEnv();
+  const result = await client
+    .query(toPostgresPlaceholders(sql), params as unknown[])
+    .catch(reportPgError);
   return result.rows as T[];
 }
 
@@ -153,7 +165,10 @@ async function pgRun(
   sql: string,
   params: SqlValue[],
 ): Promise<{ changes: number }> {
-  const result = await client.query(toPostgresPlaceholders(sql), params as unknown[]);
+  await ensureRuntimeEnv();
+  const result = await client
+    .query(toPostgresPlaceholders(sql), params as unknown[])
+    .catch(reportPgError);
   return { changes: result.rowCount ?? 0 };
 }
 
@@ -375,10 +390,26 @@ async function openPostgres(target: PostgresTarget): Promise<Db> {
     connectionString: target.url,
     max: 4,
     connectionTimeoutMillis: 5_000,
+    // Workers tidak boleh memakai satu koneksi lintas request ("Cannot perform
+    // I/O on behalf of a different request"): koneksi yang sudah sekali dipakai
+    // dipensiunkan sehingga request berikutnya mengambil koneksi segar dari pool
+    // Hyperdrive. Tanpa ini katalog hidup pada request pertama lalu 500 pada
+    // request berikutnya di isolate yang sama.
+    maxUses: 1,
     // Hyperdrive sudah menangani TLS ke Supabase dari sisinya; koneksi lokal ke
     // Hyperdrive tidak memakai SSL. Koneksi langsung ke pooler memakai TLS
     // longgar seperti sebelumnya.
     ...(target.viaHyperdrive ? {} : { ssl: { rejectUnauthorized: false } }),
+    // Koneksi diam yang diputus server memancarkan 'error'; tanpa penanganan,
+    // EventEmitter melempar galat tak tertangkap dan seluruh isolate Worker
+    // mati (Error 1101). Catat saja — pool akan membuka koneksi baru.
+    ...(target.viaHyperdrive
+      ? {
+          onError: (error: Error) => {
+            process.stderr.write(`KURMAPLUS: koneksi PostgreSQL terputus (${error.message}).\n`);
+          },
+        }
+      : {}),
   });
   try {
     await pool.query("SELECT 1");
@@ -429,7 +460,14 @@ async function createDb(): Promise<Db> {
 
 export function getDb(): Promise<Db> {
   if (instance === null) {
-    instance = createDb();
+    // Kegagalan tidak boleh ter-cache: promise yang sudah ditolak akan membuat
+    // setiap request berikutnya di isolate yang sama ikut gagal (gejala katalog
+    // hidup lalu hilang terus-menerus). Buang lalu coba lagi pada request
+    // berikutnya.
+    instance = createDb().catch((error: unknown) => {
+      instance = null;
+      throw error;
+    });
   }
   return instance;
 }
