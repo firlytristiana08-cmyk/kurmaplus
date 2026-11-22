@@ -6,11 +6,14 @@ import { sveltekit } from "@sveltejs/kit/vite";
 import { vitePreprocess } from "@sveltejs/vite-plugin-svelte";
 import { defineConfig } from "vitest/config";
 
-// Pemilihan adapter: di Cloudflare Pages (CF_PAGES) pakai adapter-cloudflare
-// secara eksplisit; di tempat lain (Vercel/lokal) adapter-auto memilih sendiri
-// seperti sebelumnya — jejak rollback ke Vercel tetap terbuka lebar.
-const useCloudflare =
-  Boolean(process.env.CF_PAGES) || process.env.KURMAPLUS_ADAPTER === "cloudflare";
+// Pemilihan adapter:
+// - `vite build` (command "build"): adapter-cloudflare DEFAULT (target produksi
+//   = Cloudflare Workers), kecuali terdeteksi build Vercel/Netlify (env
+//   VERCEL/NETLIFY) → adapter-auto seperti dulu — jejak rollback ke Vercel
+//   tetap terbuka. KURMAPLUS_ADAPTER=cloudflare|auto bisa memaksa pilihan.
+// - `vite dev`/`vite preview` (command "serve"): adapter-auto — perilaku
+//   pengembangan lokal TIDAK berubah sama sekali.
+// Jangan deteksi lewat CF_PAGES: adapter-cloudflare v9 menolak env tersebut.
 
 // Klien pengganti untuk server dev: gaya CSS tetap ter-inject, tetapi TANPA
 // websocket, ping, atau muat ulang halaman. Klien Vite bawaan memuat ulang
@@ -188,42 +191,49 @@ function devStableClient() {
   };
 }
 
-export default defineConfig({
-  plugins: [
-    devStableClient(),
-    sveltekit({
-      preprocess: vitePreprocess(),
-      adapter: useCloudflare ? adapterCloudflare() : adapterAuto(),
-    }),
-  ],
-  server: {
-    // Pratinjau diakses lewat host proksi, bukan localhost.
-    host: true,
-    allowedHosts: true,
-    // Websocket HMR tidak stabil lewat proksi pratinjau dan bisa memicu
-    // muat ulang halaman sendiri; dimatikan agar tampilan tidak berkedip.
-    // Refresh manual selalu melihat perubahan terbaru (tanpa cache dev).
-    hmr: false,
-    // Pra-transformasi SEMUA halaman saat server mulai — kunjungan pertama
-    // di rute mana pun tidak menunggu kompilasi komponen Svelte.
-    warmup: {
-      clientFiles: [
-        "./src/routes/+layout.svelte",
-        "./src/routes/+page.svelte",
-        "./src/routes/katalog/+page.svelte",
-        "./src/routes/kurma/[slug]/+page.svelte",
-        "./src/routes/keranjang/+page.svelte",
-        "./src/routes/checkout/+page.svelte",
-        "./src/routes/lacak/+page.svelte",
-        "./src/routes/pesanan/[kode]/+page.svelte",
-        "./src/routes/info/+page.svelte",
-        "./src/routes/privasi/+page.svelte",
-        "./src/app.css",
-      ],
+export default defineConfig(({ command }) => {
+  // Lihat komentar "Pemilihan adapter" di atas.
+  const forced = process.env.KURMAPLUS_ADAPTER;
+  const useCloudflare =
+    command === "build" &&
+    (forced === "cloudflare" || (forced !== "auto" && !process.env.VERCEL && !process.env.NETLIFY));
+  return {
+    plugins: [
+      devStableClient(),
+      sveltekit({
+        preprocess: vitePreprocess(),
+        adapter: useCloudflare ? adapterCloudflare() : adapterAuto(),
+      }),
+    ],
+    server: {
+      // Pratinjau diakses lewat host proksi, bukan localhost.
+      host: true,
+      allowedHosts: true,
+      // Websocket HMR tidak stabil lewat proksi pratinjau dan bisa memicu
+      // muat ulang halaman sendiri; dimatikan agar tampilan tidak berkedip.
+      // Refresh manual selalu melihat perubahan terbaru (tanpa cache dev).
+      hmr: false,
+      // Pra-transformasi SEMUA halaman saat server mulai — kunjungan pertama
+      // di rute mana pun tidak menunggu kompilasi komponen Svelte.
+      warmup: {
+        clientFiles: [
+          "./src/routes/+layout.svelte",
+          "./src/routes/+page.svelte",
+          "./src/routes/katalog/+page.svelte",
+          "./src/routes/kurma/[slug]/+page.svelte",
+          "./src/routes/keranjang/+page.svelte",
+          "./src/routes/checkout/+page.svelte",
+          "./src/routes/lacak/+page.svelte",
+          "./src/routes/pesanan/[kode]/+page.svelte",
+          "./src/routes/info/+page.svelte",
+          "./src/routes/privasi/+page.svelte",
+          "./src/app.css",
+        ],
+      },
     },
-  },
-  test: {
-    include: ["src/**/*.test.ts"],
-    environment: "node",
-  },
+    test: {
+      include: ["src/**/*.test.ts"],
+      environment: "node",
+    },
+  };
 });
