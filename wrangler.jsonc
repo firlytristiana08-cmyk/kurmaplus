@@ -5,6 +5,12 @@
   "name": "kurmaplus",
   "compatibility_date": "2026-11-14",
   "compatibility_flags": ["nodejs_compat"],
+  // Variabel lingkungan non-rahasia. Yang BERISI SANDI/KUNCI
+  // (SUPABASE_DB_PASSWORD, DOKU_SECRET_KEY, DOKU_CLIENT_ID) JANGAN ditaruh di
+  // sini — simpan di dasbor Cloudflare (Settings → Variables and Secrets).
+  "vars": {
+    "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_GWV5rs9AQat9BTn-yN7UZQ_DlANs5Qm"
+  },
   // Hyperdrive = layanan pool + cache koneksi Supabase (disarankan).
   // Dibuat 22 Nov 2026 dari dasbor Cloudflare (Storage & Databases →
   // Hyperdrive → Connect database → public database). String koneksi pooler
