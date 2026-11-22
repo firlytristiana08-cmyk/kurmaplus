@@ -1,7 +1,7 @@
 // TODO(hapus): jalur diagnosis sementara untuk integrasi DOKU —
 // hapus rute ini setelah alur pembayaran stabil.
 import { Pool } from "pg";
-import { hyperdriveConnectionString } from "#lib/server/cf-env";
+import { ensureRuntimeEnv, hyperdriveConnectionString } from "#lib/server/cf-env";
 import { getDb, getSettings, pickPostgresUrl } from "#lib/server/db";
 import { checkStatus, loadDokuConfig } from "#lib/server/doku";
 import type { PageServerLoad } from "./$types";
@@ -193,6 +193,7 @@ export const load: PageServerLoad = async () => {
 
   // 6) Uji tiap jalur koneksi database secara terpisah (diagnosis galat 500).
   const probes: DiagProbe[] = [];
+  await ensureRuntimeEnv();
   const hd = hyperdriveConnectionString();
   if (hd) {
     probes.push(await probePostgres("Jalur Hyperdrive (binding HYPERDRIVE)", hd, true));
