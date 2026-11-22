@@ -24,7 +24,9 @@
     "DOKU_BASE_URL": "https://api-sandbox.doku.com",
     // Alamat Worker dev. Dipakai untuk callback & URL notifikasi DOKU, supaya
     // worker dev tidak pernah mengirim notifikasi ke domain produksi.
-    "PUBLIC_BASE_URL": "https://kurmaplus-dev.hasbidiqi16.workers.dev"
+    "PUBLIC_BASE_URL": "https://kurmaplus-dev.hasbidiqi16.workers.dev",
+    // Worker dev memang untuk DOKU sandbox.
+    "DOKU_ENV": "sandbox"
   },
   // Hyperdrive: memakai konfigurasi yang sama dengan produksi karena
   // database-nya memang sama (pilihan I). String koneksi pooler Supabase

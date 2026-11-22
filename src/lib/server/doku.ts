@@ -22,21 +22,53 @@ export interface DokuStatusResult {
 
 const encoder = new TextEncoder();
 
+const SANDBOX_BASE_URL = "https://api-sandbox.doku.com";
+
+// Pengaman go-live (fail-closed): pembayaran NYATA tidak boleh diam-diam
+// diarahkan ke sandbox.
+//
+// Kenapa tidak memakai NODE_ENV seperti sebelumnya: di Cloudflare Workers
+// adapter memakai `no_bundle`, sehingga wrangler tidak membangkitkan ulang
+// bundel dan `process.env.NODE_ENV` TIDAK terisi "production" saat deploy
+// (terbukti: nilainya kosong). Akibatnya proteksi lama tidak pernah aktif.
+// Karena itu lingkungan ditentukan lewat variabel eksplisit `DOKU_ENV`.
+//
+// Aturannya:
+// - `DOKU_ENV=production` → WAJIB `DOKU_BASE_URL`; tanpa itu konfigurasi
+//   ditolak (checkout jatuh ke mode simulasi, bukan menagih ke sandbox).
+// - `DOKU_ENV=sandbox` → sandbox, boleh tanpa `DOKU_BASE_URL`.
+// - `DOKU_ENV` kosong → aman untuk pengembangan lokal/Vercel lama: perilaku
+//   lama dipertahankan, KECUALI host produksi yang dikenal (lihat
+//   PRODUCTION_HOSTS) — di sana tetap wajib eksplisit.
+const PRODUCTION_HOSTS = ["kurmaplus.hasbidiqi16.workers.dev"];
+
+function isProductionContext(env: Record<string, string | undefined>): boolean {
+  const declared = (env.DOKU_ENV ?? "").trim().toLowerCase();
+  if (declared === "production" || declared === "live") return true;
+  if (declared === "sandbox" || declared === "dev" || declared === "development") return false;
+  if (env.VERCEL_ENV === "production") return true;
+  const host = (env.PUBLIC_BASE_URL ?? "").trim();
+  return PRODUCTION_HOSTS.some((known) => host.includes(known));
+}
+
 export function loadDokuConfig(env: Record<string, string | undefined>): DokuConfig | null {
   const clientId = env.DOKU_CLIENT_ID;
   const secretKey = env.DOKU_SECRET_KEY;
-  const baseUrl = env.DOKU_BASE_URL;
-  // Pengaman go-live: di produksi alamat API wajib diisi eksplisit — jangan
-  // sampai pembayaran nyata diam-diam diarahkan ke sandbox.
-  const isProduction = env.VERCEL_ENV === "production" || env.NODE_ENV === "production";
-  if (!clientId || !secretKey || (isProduction && !baseUrl)) {
+  const baseUrl = (env.DOKU_BASE_URL ?? "").trim();
+  if (!clientId || !secretKey) {
     return null;
   }
-  return {
-    clientId,
-    secretKey,
-    baseUrl: baseUrl ?? "https://api-sandbox.doku.com",
-  };
+  if (baseUrl !== "") {
+    // Alamat eksplisit selalu menang, tanpa tebakan.
+    return { clientId, secretKey, baseUrl };
+  }
+  if (isProductionContext(env)) {
+    // Gagal tertutup: lebih baik pembayaran daring dimatikan (pesanan tetap
+    // tersimpan dan bisa dibayar dari halaman pesanan) daripada dana pembeli
+    // diarahkan ke sandbox.
+    return null;
+  }
+  return { clientId, secretKey, baseUrl: SANDBOX_BASE_URL };
 }
 
 function toBase64(bytes: Uint8Array): string {

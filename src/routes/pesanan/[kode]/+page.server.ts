@@ -45,7 +45,10 @@ export const load = async ({ params, url }): Promise<OrderPageData> => {
   return {
     order,
     previewPayment: dokuConfig === null,
-    whatsappOwner: settings.whatsapp_owner ?? "6281234567890",
+    // Nomor toko berasal dari kunci yang memang bisa diedit admin
+    // (Admin → Pengaturan → Nomor WhatsApp toko). Kunci lama `whatsapp_owner`
+    // hanya dibaca sebagai cadangan; jangan pernah jatuh ke contoh angka.
+    whatsappOwner: settings.shop_whatsapp ?? settings.whatsapp_owner ?? "",
     paymentDueMinutes: Number(settings.payment_timeout_minutes),
     // Kembali dari halaman bayar DOKU (?dari=pembayaran): tampilkan modal status.
     showStatusModal: url.searchParams.has("dari") || url.searchParams.has("status"),

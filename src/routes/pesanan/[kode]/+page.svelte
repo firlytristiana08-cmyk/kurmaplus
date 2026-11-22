@@ -71,7 +71,13 @@
 			`Halo KURMAPLUS, saya ${order.customerName} ingin menanyakan pesanan ${order.code}.`
 		)
 	);
-	const whatsappUrl = $derived(`https://wa.me/${data.whatsappOwner}?text=${whatsappText}`);
+	// Nomor toko bisa belum diisi (Admin → Pengaturan). Dalam keadaan itu
+	// tautan WhatsApp disembunyikan, bukan menuju nomor contoh.
+	const whatsappUrl = $derived(
+		data.whatsappOwner.trim() === ""
+			? null
+			: `https://wa.me/${data.whatsappOwner}?text=${whatsappText}`
+	);
 
 	let loading = $state(false);
 	let showModal = $state(false);
@@ -183,6 +189,7 @@
 		</div>
 	</section>
 
+	{#if whatsappUrl}
 	<a class="btn btn-secondary" href={whatsappUrl} target="_blank" rel="noopener">
 		<svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
 			<path
@@ -192,6 +199,7 @@
 		Chat WhatsApp KURMAPLUS
 	</a>
 	<p class="hint">Pesan otomatis berisi kode pesanan {order.code} dan nama Anda.</p>
+	{/if}
 	<a class="shop-again" href="/katalog">Lanjut belanja</a>
 </main>
 
