@@ -2,20 +2,18 @@
 // SQL yang sama di atas dua driver: Postgres Supabase (dipakai bila kredensial
 // tersedia) dan node:sqlite lokal (fallback pengembangan; skema dan datanya
 // sama). Placeholder ditulis `?` dan diterjemahkan ke `$n` untuk Postgres.
+//
+// Catatan Cloudflare Workers: modul bawaan Node (node:sqlite, node:fs, node:dns)
+// diimpor MALAS (dynamic import) di jalur yang memakainya saja, agar modul ini
+// tetap bisa dimuat di runtime Workers yang tidak menyediakan node:sqlite.
 
-import { setDefaultResultOrder } from "node:dns";
-import { mkdirSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
-import { DatabaseSync } from "node:sqlite";
+import type { DatabaseSync } from "node:sqlite";
 import { Pool, type PoolClient, types } from "pg";
+import { hyperdriveConnectionString } from "./cf-env";
 import type { OrderStatus } from "./orders";
 import { generateOrderCode } from "./orders";
 import { subtotalIdr, totalIdr } from "./pricing";
-
-// Host Supabase me-resolve ke IPv6 lebih dulu, sedangkan jaringan serverless
-// (Vercel) tidak selalu memiliki jalur IPv6 (galat ENETUNREACH). Resolusi DNS
-// dipaksa mendahulukan IPv4 agar koneksi database selalu memakai jalur yang ada.
-setDefaultResultOrder("ipv4first");
 
 type SqlValue = string | number | bigint | null | Uint8Array;
 
@@ -240,37 +238,72 @@ function cleanEnv(value: string | undefined): string {
   return value.trim().replace(/^["']|["']$/g, "");
 }
 
-function connectionString(): string | null {
-  loadLocalEnv();
-  const url = cleanEnv(process.env.DATABASE_URL ?? process.env.SUPABASE_DB_URL);
-  if (url) {
-    return url;
+export interface PostgresTarget {
+  url: string;
+  viaHyperdrive: boolean;
+}
+
+// Urutan pemilihan koneksi Postgres (fungsi murni agar mudah diuji):
+// 1. Hyperdrive (Cloudflare Workers) — koneksi lokal ke layanan pool+cache.
+// 2. DATABASE_URL / SUPABASE_DB_URL — URL eksplisit.
+// 3. SUPABASE_PROJECT_REF + SUPABASE_DB_PASSWORD — pooler Supabase.
+export function pickPostgresUrl(input: {
+  hyperdrive?: string | undefined;
+  databaseUrl?: string | undefined;
+  supabaseDbUrl?: string | undefined;
+  projectRef?: string | undefined;
+  password?: string | undefined;
+  region?: string | undefined;
+}): PostgresTarget | null {
+  const hyperdrive = cleanEnv(input.hyperdrive);
+  if (hyperdrive) {
+    return { url: hyperdrive, viaHyperdrive: true };
   }
-  const ref = cleanEnv(process.env.SUPABASE_PROJECT_REF);
-  const password = cleanEnv(process.env.SUPABASE_DB_PASSWORD);
+  const url = cleanEnv(input.databaseUrl ?? input.supabaseDbUrl);
+  if (url) {
+    return { url, viaHyperdrive: false };
+  }
+  const ref = cleanEnv(input.projectRef);
+  const password = cleanEnv(input.password);
   if (ref && password) {
     // Password boleh mengandung karakter khusus; percent-encode agar URL
     // koneksi tidak rusak (driver pg akan decode kembali sebelum menyambung).
     //
     // Koneksi langsung `db.<ref>.supabase.co` me-resolve ke alamat IPv6 yang
-    // tidak dapat dijangkau dari jaringan Vercel (ENETUNREACH). Pooler Supabase
-    // adalah jalur serverless yang didukung (IPv4); mode sesi (port 5432)
-    // menjaga perilaku prepared statement seperti koneksi langsung. Jalur
-    // diverifikasi lewat `DB_CHECK` di log build — lihat scripts/check-db.mjs.
-    const region = cleanEnv(process.env.SUPABASE_REGION) || "ap-southeast-1";
-    return `postgresql://postgres.${ref}:${encodeURIComponent(password)}@aws-0-${region}.pooler.supabase.com:5432/postgres`;
+    // tidak dapat dijangkau dari jaringan serverless (ENETUNREACH). Pooler
+    // Supabase adalah jalur serverless yang didukung (IPv4); mode sesi
+    // (port 5432) menjaga perilaku prepared statement seperti koneksi
+    // langsung. Jalur diverifikasi lewat `DB_CHECK` di log build — lihat
+    // scripts/check-db.mjs.
+    const region = cleanEnv(input.region) || "ap-southeast-1";
+    return {
+      url: `postgresql://postgres.${ref}:${encodeURIComponent(password)}@aws-0-${region}.pooler.supabase.com:5432/postgres`,
+      viaHyperdrive: false,
+    };
   }
   return null;
 }
 
-function applyMigrations(raw: DatabaseSync): void {
+function resolveConnection(): PostgresTarget | null {
+  loadLocalEnv();
+  return pickPostgresUrl({
+    hyperdrive: hyperdriveConnectionString() ?? undefined,
+    databaseUrl: process.env.DATABASE_URL,
+    supabaseDbUrl: process.env.SUPABASE_DB_URL,
+    projectRef: process.env.SUPABASE_PROJECT_REF,
+    password: process.env.SUPABASE_DB_PASSWORD,
+    region: process.env.SUPABASE_REGION,
+  });
+}
+
+function applyMigrations(raw: DatabaseSync, fs: typeof import("node:fs")): void {
   // Pelacak migrasi: berkas di db/migrations dijalankan sekali per database,
   // sehingga ALTER TABLE pada migrasi berikutnya aman dijalankan berulang kali.
   raw.exec(
     "CREATE TABLE IF NOT EXISTS schema_migrations (name TEXT PRIMARY KEY, applied_at TEXT NOT NULL)",
   );
   const dir = path.join(process.cwd(), "db", "migrations");
-  for (const file of readdirSync(dir).sort()) {
+  for (const file of fs.readdirSync(dir).sort()) {
     if (!file.endsWith(".sql")) continue;
     const done = sqliteGet<{ ok: number }>(
       raw,
@@ -278,7 +311,7 @@ function applyMigrations(raw: DatabaseSync): void {
       [file],
     );
     if (done) continue;
-    raw.exec(readFileSync(path.join(dir, file), "utf8"));
+    raw.exec(fs.readFileSync(path.join(dir, file), "utf8"));
     sqliteRun(raw, "INSERT INTO schema_migrations (name, applied_at) VALUES (?, ?)", [
       file,
       new Date().toISOString(),
@@ -286,22 +319,25 @@ function applyMigrations(raw: DatabaseSync): void {
   }
 }
 
-function openSqlite(): Db {
+async function openSqlite(): Promise<Db> {
+  // Modul bawaan Node hanya diimpor di jalur ini (pengembangan lokal); runtime
+  // Cloudflare Workers tidak menyediakan node:sqlite dan tidak pernah ke sini.
+  const [{ DatabaseSync }, fs] = await Promise.all([import("node:sqlite"), import("node:fs")]);
   // KURMAPLUS_DATA_DIR hanya untuk pengujian; produksi memakai .data.
   const dataDir = process.env.KURMAPLUS_DATA_DIR ?? path.join(process.cwd(), ".data");
-  mkdirSync(dataDir, { recursive: true });
+  fs.mkdirSync(dataDir, { recursive: true });
   const raw = new DatabaseSync(path.join(dataDir, "kurmaplus.db"));
-  applyMigrations(raw);
+  applyMigrations(raw, fs);
   const seeded = sqliteGet<{ n: number }>(raw, "SELECT COUNT(*) AS n FROM products", []);
   if ((seeded?.n ?? 0) === 0) {
-    raw.exec(readFileSync(path.join(process.cwd(), "db/seed.sql"), "utf8"));
+    raw.exec(fs.readFileSync(path.join(process.cwd(), "db/seed.sql"), "utf8"));
   }
   // Data demo (pesanan contoh) hanya untuk pengembangan/preview lokal — lihat
   // db/seed-demo.sql. Jalur Postgres/Supabase tidak pernah menjalankan ini.
   const demoSeeded = sqliteGet<{ n: number }>(raw, "SELECT COUNT(*) AS n FROM orders", []);
   if ((demoSeeded?.n ?? 0) === 0) {
-    raw.exec(readFileSync(path.join(process.cwd(), "db/seed-demo.sql"), "utf8"));
-    raw.exec(readFileSync(path.join(process.cwd(), "db/seed-demo-admin.sql"), "utf8"));
+    raw.exec(fs.readFileSync(path.join(process.cwd(), "db/seed-demo.sql"), "utf8"));
+    raw.exec(fs.readFileSync(path.join(process.cwd(), "db/seed-demo-admin.sql"), "utf8"));
   }
   // Produk dari berkas seed bisa masuk SETELAH migrasi 0010 berjalan. Saat
   // galeri masih kosong sama sekali, salin foto kolom lama ke product_photos
@@ -324,12 +360,25 @@ function openSqlite(): Db {
   return new SqliteDb(raw);
 }
 
-async function openPostgres(url: string): Promise<Db> {
+async function openPostgres(target: PostgresTarget): Promise<Db> {
+  // Host Supabase me-resolve ke IPv6 lebih dulu, sedangkan jaringan serverless
+  // tidak selalu memiliki jalur IPv6 (galat ENETUNREACH). Resolusi DNS dipaksa
+  // mendahulukan IPv4 bila runtime menyediakan node:dns (Vercel/lokal); di
+  // Cloudflare Workers resolusi mengikuti bawaan runtime.
+  try {
+    const dns = await import("node:dns");
+    dns.setDefaultResultOrder("ipv4first");
+  } catch {
+    /* runtime tanpa node:dns — tidak masalah */
+  }
   const pool = new Pool({
-    connectionString: url,
+    connectionString: target.url,
     max: 4,
     connectionTimeoutMillis: 5_000,
-    ssl: { rejectUnauthorized: false },
+    // Hyperdrive sudah menangani TLS ke Supabase dari sisinya; koneksi lokal ke
+    // Hyperdrive tidak memakai SSL. Koneksi langsung ke pooler memakai TLS
+    // longgar seperti sebelumnya.
+    ...(target.viaHyperdrive ? {} : { ssl: { rejectUnauthorized: false } }),
   });
   try {
     await pool.query("SELECT 1");
@@ -351,22 +400,22 @@ let instance: Promise<Db> | null = null;
 
 async function createDb(): Promise<Db> {
   const mode = process.env.KURMAPLUS_DB ?? "auto";
-  const url = connectionString();
-  if (mode === "sqlite" || (mode === "auto" && url === null)) {
+  const target = resolveConnection();
+  if (mode === "sqlite" || (mode === "auto" && target === null)) {
     return openSqlite();
   }
-  if (url === null) {
+  if (target === null) {
     throw new Error("KURMAPLUS_DB=supabase tetapi tidak ada DATABASE_URL/SUPABASE_PROJECT_REF");
   }
   if (mode === "supabase") {
-    return openPostgres(url);
+    return openPostgres(target);
   }
   // auto: utamakan Supabase; di luar produksi jatuh ke database lokal bila
   // jaringan tidak menjangkau Supabase (pratinjau sandbox).
   try {
-    return await openPostgres(url);
+    return await openPostgres(target);
   } catch (error) {
-    if (process.env.NODE_ENV === "production" || process.env.VERCEL) {
+    if (process.env.NODE_ENV === "production" || process.env.VERCEL || process.env.CF_PAGES) {
       throw error;
     }
     process.stderr.write(

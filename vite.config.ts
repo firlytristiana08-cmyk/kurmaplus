@@ -1,9 +1,16 @@
 /// <reference types="vitest/config" />
 import { gzipSync } from "node:zlib";
-import adapter from "@sveltejs/adapter-auto";
+import adapterAuto from "@sveltejs/adapter-auto";
+import adapterCloudflare from "@sveltejs/adapter-cloudflare";
 import { sveltekit } from "@sveltejs/kit/vite";
 import { vitePreprocess } from "@sveltejs/vite-plugin-svelte";
 import { defineConfig } from "vitest/config";
+
+// Pemilihan adapter: di Cloudflare Pages (CF_PAGES) pakai adapter-cloudflare
+// secara eksplisit; di tempat lain (Vercel/lokal) adapter-auto memilih sendiri
+// seperti sebelumnya — jejak rollback ke Vercel tetap terbuka lebar.
+const useCloudflare =
+  Boolean(process.env.CF_PAGES) || process.env.KURMAPLUS_ADAPTER === "cloudflare";
 
 // Klien pengganti untuk server dev: gaya CSS tetap ter-inject, tetapi TANPA
 // websocket, ping, atau muat ulang halaman. Klien Vite bawaan memuat ulang
@@ -186,7 +193,7 @@ export default defineConfig({
     devStableClient(),
     sveltekit({
       preprocess: vitePreprocess(),
-      adapter: adapter(),
+      adapter: useCloudflare ? adapterCloudflare() : adapterAuto(),
     }),
   ],
   server: {

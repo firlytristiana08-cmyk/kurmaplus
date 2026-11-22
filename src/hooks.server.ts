@@ -4,12 +4,15 @@
 // Set-Cookie sebagai cadangan bila browser menerimanya). Produksi tidak
 // terpengaruh — parameter diabaikan di luar mode DEV.
 import type { Handle } from "@sveltejs/kit/hooks";
+import { setPlatformEnv } from "./lib/server/cf-env";
 
 const DEV_TOKEN = "demo-owner";
 const DEV_SESSION_PARAM = "sesi";
 const DEV_SESSION_VALUE = "demo";
 
 export const handle: Handle = async ({ event, resolve }) => {
+  // Cloudflare Workers: binding (mis. Hyperdrive) hanya tersedia per-request.
+  setPlatformEnv((event.platform as { env?: unknown } | undefined)?.env);
   if (
     import.meta.env.DEV &&
     event.url.pathname.startsWith("/admin") &&

@@ -1,0 +1,11 @@
+# Cache aset statis di Cloudflare Workers (pengganti aturan di vercel.json).
+# Berkas _headers harus berada di root proyek — dibaca adapter-cloudflare.
+
+/images/*
+  Cache-Control: public, max-age=604800, stale-while-revalidate=86400
+
+/fonts/*
+  Cache-Control: public, max-age=604800, stale-while-revalidate=86400
+
+/icons/*
+  Cache-Control: public, max-age=604800, stale-while-revalidate=86400
