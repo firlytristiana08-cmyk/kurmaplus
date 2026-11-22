@@ -10,7 +10,7 @@
 import path from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import { Pool, type PoolClient, types } from "pg";
-import { hyperdriveConnectionString } from "./cf-env";
+import { ensureRuntimeEnv, hyperdriveConnectionString } from "./cf-env";
 import type { OrderStatus } from "./orders";
 import { generateOrderCode } from "./orders";
 import { subtotalIdr, totalIdr } from "./pricing";
@@ -400,6 +400,8 @@ let instance: Promise<Db> | null = null;
 
 async function createDb(): Promise<Db> {
   const mode = process.env.KURMAPLUS_DB ?? "auto";
+  // Muat env runtime workerd (binding Hyperdrive) sebelum memilih koneksi.
+  await ensureRuntimeEnv();
   const target = resolveConnection();
   if (mode === "sqlite" || (mode === "auto" && target === null)) {
     return openSqlite();
