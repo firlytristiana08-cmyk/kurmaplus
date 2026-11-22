@@ -110,6 +110,57 @@ describe("pengaman konfigurasi go-live", () => {
     expect(loadDokuConfig({ DOKU_CLIENT_ID: "x" })).toBeNull();
   });
 
+  // NODE_ENV tidak bisa diandalkan di Cloudflare (adapter memakai no_bundle,
+  // sehingga wrangler tidak membangkitkan ulang bundel dan NODE_ENV kosong).
+  // Karena itu DOKU_ENV dipakai eksplisit dan harus mengunci perilaku ini.
+  it("DOKU_ENV=production tanpa DOKU_BASE_URL ditolak walau NODE_ENV kosong", () => {
+    expect(
+      loadDokuConfig({
+        DOKU_CLIENT_ID: "x",
+        DOKU_SECRET_KEY: "y",
+        DOKU_ENV: "production",
+        PUBLIC_BASE_URL: "https://kurmaplus.hasbidiqi16.workers.dev",
+      }),
+    ).toBeNull();
+    const ok = loadDokuConfig({
+      DOKU_CLIENT_ID: "x",
+      DOKU_SECRET_KEY: "y",
+      DOKU_ENV: "production",
+      DOKU_BASE_URL: "https://api.doku.com",
+    });
+    expect(ok?.baseUrl).toBe("https://api.doku.com");
+  });
+
+  it("host produksi yang dikenal tetap wajib eksplisit meski DOKU_ENV kosong", () => {
+    expect(
+      loadDokuConfig({
+        DOKU_CLIENT_ID: "x",
+        DOKU_SECRET_KEY: "y",
+        PUBLIC_BASE_URL: "https://kurmaplus.hasbidiqi16.workers.dev",
+      }),
+    ).toBeNull();
+  });
+
+  it("DOKU_ENV=sandbox tetap boleh memakai sandbox (worker dev)", () => {
+    const cfg = loadDokuConfig({
+      DOKU_CLIENT_ID: "x",
+      DOKU_SECRET_KEY: "y",
+      DOKU_ENV: "sandbox",
+      PUBLIC_BASE_URL: "https://kurmaplus-dev.hasbidiqi16.workers.dev",
+    });
+    expect(cfg?.baseUrl).toBe("https://api-sandbox.doku.com");
+  });
+
+  it("DOKU_BASE_URL eksplisit selalu menang", () => {
+    const cfg = loadDokuConfig({
+      DOKU_CLIENT_ID: "x",
+      DOKU_SECRET_KEY: "y",
+      DOKU_ENV: "sandbox",
+      DOKU_BASE_URL: "https://api.doku.com",
+    });
+    expect(cfg?.baseUrl).toBe("https://api.doku.com");
+  });
+
   it("URL notifikasi dikirim di tiap permintaan pembayaran (jaring pengaman)", async () => {
     let captured = "";
     vi.stubGlobal("fetch", async (_url: unknown, init?: { body?: string }) => {
