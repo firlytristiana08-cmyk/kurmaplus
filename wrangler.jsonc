@@ -1,0 +1,13 @@
+{
+  // Konfigurasi Cloudflare Workers untuk KURMAPLUS. Dibaca oleh
+  // @sveltejs/adapter-cloudflare saat build (KURMAPLUS_ADAPTER=cloudflare)
+  // dan oleh `npx wrangler deploy`. Jangan isi `main` — adapter menentukannya.
+  "name": "kurmaplus",
+  "compatibility_date": "2026-11-14",
+  "compatibility_flags": ["nodejs_compat"],
+  // Hyperdrive = layanan pool + cache koneksi Supabase (disarankan).
+  // Dibuat 22 Nov 2026 dari dasbor Cloudflare (Storage & Databases →
+  // Hyperdrive → Connect database → public database). String koneksi pooler
+  // Supabase tersimpan di konfigurasi Hyperdrive tersebut.
+  "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "1d5eb7ff8e964e1cac3ffd01efcec00f" }]
+}
