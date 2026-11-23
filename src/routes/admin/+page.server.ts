@@ -5,13 +5,26 @@ import { fail } from "@sveltejs/kit";
 import { adminToday, adminToggleStore } from "#lib/server/admin";
 import { requireAdmin } from "#lib/server/admin-auth";
 import { expireStaleOrders } from "#lib/server/db";
+import { diagnoseDoku } from "#lib/server/doku-diag";
 import type { Actions, PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async ({ cookies }) => {
   await requireAdmin(cookies);
   // Sinkronkan status: pesanan yang masa bayarnya habis ikut ditutup sistem.
   await expireStaleOrders(new Date());
-  return { today: await adminToday(new Date()) };
+  // Status pembayaran daring ditampilkan langsung di Beranda, supaya admin
+  // tidak perlu membuka /diagnostics untuk tahu apakah DOKU masih aktif.
+  // Nilai rahasia TIDAK dikirim ke peramban — hanya keadaan dan sebabnya.
+  const doku = diagnoseDoku(process.env);
+  return {
+    today: await adminToday(new Date()),
+    payment: {
+      ok: doku.ok,
+      detail: doku.detail,
+      action: doku.action,
+      reason: doku.code,
+    },
+  };
 };
 
 export const actions: Actions = {

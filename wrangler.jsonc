@@ -23,7 +23,17 @@
     // DOKU_BASE_URL juga wajib diisi eksplisit, dan tanpa keduanya pembayaran
     // daring ditolak (fail-closed) supaya tidak ada dana pembeli yang
     // diarahkan ke sandbox.
-    "DOKU_ENV": "production"
+    "DOKU_ENV": "production",
+    // Alamat API DOKU produksi. BUKAN rahasia (alamat publik, sama seperti di
+    // wrangler.dev.jsonc), jadi memang tempatnya di sini.
+    //
+    // PENTING: `wrangler deploy` MENGGANTI daftar variabel di dasbor dengan
+    // isi blok `vars` ini. Sebelumnya kunci ini hanya hidup di dasbor saja,
+    // sehingga setiap deploy dari GitHub menghapusnya — dan karena produksi
+    // bersifat fail-closed, pembayaran daring ikut mati (pesanan 23 Nov 06:44
+    // tidak mendapat halaman bayar). Menaruhnya di sini membuat nilainya
+    // selalu ikut ter-deploy.
+    "DOKU_BASE_URL": "https://api.doku.com"
   },
   // Hyperdrive = layanan pool + cache koneksi Supabase (disarankan).
   // Dibuat 22 Nov 2026 dari dasbor Cloudflare (Storage & Databases →

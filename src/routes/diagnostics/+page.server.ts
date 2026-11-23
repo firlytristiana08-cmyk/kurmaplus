@@ -1,9 +1,11 @@
 // TODO(hapus): jalur diagnosis sementara untuk integrasi DOKU —
 // hapus rute ini setelah alur pembayaran stabil.
 import { Pool } from "pg";
+import { requireAdmin } from "#lib/server/admin-auth";
 import { ensureRuntimeEnv, hyperdriveConnectionString } from "#lib/server/cf-env";
 import { getDb, getSettings, pickPostgresUrl } from "#lib/server/db";
-import { checkStatus, loadDokuConfig } from "#lib/server/doku";
+import { checkStatus } from "#lib/server/doku";
+import { diagnoseDoku } from "#lib/server/doku-diag";
 import type { PageServerLoad } from "./$types";
 
 export interface DiagCheck {
@@ -61,18 +63,25 @@ async function probePostgres(
   }
 }
 
-export const load: PageServerLoad = async () => {
+export const load: PageServerLoad = async ({ cookies }) => {
+  // Rute ini membocorkan topologi (host/port database, jumlah baris tabel,
+  // status tiap layanan). Sebelumnya terbuka untuk siapa pun; sekarang wajib
+  // sesi admin — tanpa sesi langsung dialihkan ke /admin/masuk.
+  await requireAdmin(cookies);
+
   const checks: DiagCheck[] = [];
 
   // 1) Kredensial DOKU (nilai disamarkan, tidak pernah ditampilkan utuh).
-  const config = loadDokuConfig(process.env);
+  // diagnoseDoku membedakan "kredensial kosong" dari "DOKU_BASE_URL kosong di
+  // produksi (fail-closed)" supaya pesan tidak menyesatkan lagi.
+  const doku = diagnoseDoku(process.env);
+  const config = doku.config;
   if (config === null) {
     checks.push({
       name: "Kredensial DOKU",
       ok: false,
-      detail: "DOKU_CLIENT_ID atau DOKU_SECRET_KEY belum terisi di lingkungan ini.",
-      action:
-        "Isi kedua variabel di Cloudflare → Worker kurmaplus → Settings → Variables and Secrets (Secret), lalu redeploy.",
+      detail: doku.detail,
+      action: doku.action ?? undefined,
     });
   } else {
     const id = config.clientId;
@@ -82,6 +91,16 @@ export const load: PageServerLoad = async () => {
       ok: true,
       detail: `Client ID ${masked} terisi, Secret Key terisi, basis ${config.baseUrl}.`,
     });
+    // Catat bila alamat API datang dari repo (bukan dasbor) supaya jelas
+    // mengapa nilai ini tidak bisa hilang lagi saat deploy.
+    if ((process.env.DOKU_BASE_URL ?? "").trim() !== "") {
+      checks.push({
+        name: "Alamat API DOKU (sumber)",
+        ok: true,
+        detail:
+          "DOKU_BASE_URL terisi. Nilainya kini ikut wrangler.jsonc, sehingga tidak terhapus saat deploy ulang.",
+      });
+    }
 
     // 2) Koneksi + kredensial ke API DOKU (probe aman tanpa transaksi).
     try {

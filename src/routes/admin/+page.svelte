@@ -30,6 +30,32 @@
 		<p class="error-box">{form.message}</p>
 	{/if}
 
+	<!-- Status pembayaran daring: satu baris, selalu terlihat. Sebelumnya
+	     admin harus membuka /diagnostics untuk tahu DOKU mati atau hidup. -->
+	{#if data.payment.ok}
+		<p style="display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin: 0 0 1rem">
+			<span class="badge badge-ok">Pembayaran DOKU aktif</span>
+			<span class="muted">Pembeli diarahkan ke halaman bayar DOKU saat checkout.</span>
+		</p>
+	{:else}
+		<div class="surface" style="border-color: var(--rust)">
+			<p style="margin: 0 0 0.375rem">
+				<span class="badge badge-alert">Pembayaran DOKU belum aktif</span>
+			</p>
+			<p style="margin: 0 0 0.5rem">{data.payment.detail}</p>
+			{#if data.payment.action}
+				<p class="hint" style="margin: 0">
+					<strong>Tindakan:</strong>
+					{data.payment.action}
+				</p>
+			{/if}
+			<p class="hint" style="margin: 0.5rem 0 0">
+				Pesanan tetap tersimpan dan bisa dibayar dari halaman pesanan pembeli, jadi tidak ada dana
+				yang hilang.
+			</p>
+		</div>
+	{/if}
+
 	<!-- Ringkasan pesanan: angka per status — klik membuka daftar terfilter. -->
 	<div class="section-head">
 		<h2>Ringkasan pesanan</h2>
