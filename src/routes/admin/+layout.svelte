@@ -7,6 +7,7 @@
 
 	let { children }: { children: Snippet } = $props();
 	let toastMessage = $state('');
+	let toastTone = $state<'ok' | 'error'>('ok');
 
 	// Pratinjau/dev: bawa ?sesi=demo ke setiap navigasi admin (klik tautan,
 	// submit form) karena cookie bisa diblokir di dalam iframe pratinjau.
@@ -16,11 +17,22 @@
 	onMount(() => {
 		let timer: ReturnType<typeof setTimeout> | undefined;
 		const onToast = (event: Event): void => {
-			toastMessage = (event as CustomEvent<string>).detail;
+			// Dua bentuk yang diterima: string lama dan { message, tone }.
+			const detail = (event as CustomEvent<unknown>).detail;
+			const isObject = typeof detail === 'object' && detail !== null;
+			const value = isObject ? (detail as { message?: unknown }).message : detail;
+			if (typeof value !== 'string' || value.trim() === '') return;
+			toastMessage = value;
+			toastTone =
+				isObject && (detail as { tone?: unknown }).tone === 'error' ? 'error' : 'ok';
 			clearTimeout(timer);
-			timer = setTimeout(() => {
-				toastMessage = '';
-			}, 2600);
+			// Galat butuh waktu baca lebih lama daripada konfirmasi biasa.
+			timer = setTimeout(
+				() => {
+					toastMessage = '';
+				},
+				toastTone === 'error' ? 4200 : 2600,
+			);
 		};
 		window.addEventListener('kurma:toast', onToast);
 		return () => {
@@ -142,8 +154,12 @@
 	</nav>
 {/if}
 	{#if toastMessage}
-		<div class="toast" role="status">
-			<svg class="mk" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 6.5 4.7 9.2 10 3.4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" /></svg>
+		<div class="toast" class:is-error={toastTone === 'error'} role={toastTone === 'error' ? 'alert' : 'status'}>
+			{#if toastTone === 'error'}
+				<svg class="mk" viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="5" fill="none" stroke="currentColor" stroke-width="1.8" /><path d="M6 3.2v3.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" /><circle cx="6" cy="8.6" r="0.75" fill="currentColor" /></svg>
+			{:else}
+				<svg class="mk" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 6.5 4.7 9.2 10 3.4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" /></svg>
+			{/if}
 			{toastMessage}
 		</div>
 	{/if}

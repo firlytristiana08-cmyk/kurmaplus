@@ -60,11 +60,22 @@
 
 	// Ongkir hanya dua keadaan: belum dikonfirmasi / sudah dikonfirmasi.
 	const shippingConfirmed = $derived(order.shippingStatus === 'paid');
+	// Konfirmasi butuh nominal: tanpa angka, templat WhatsApp akan menyebut
+	// "ongkir sebesar Rp0". Server juga menolak, ini hanya pencegahan di UI.
+	// Nilai awal mengikuti data yang tersimpan; ketikan admin menimpanya.
+	let nominalTyped = $state<string | null>(null);
+	const nominalFilled = $derived(
+		nominalTyped === null ? order.shippingActualIdr != null : nominalTyped !== '',
+	);
 
 	async function copyText(text: string, label: string): Promise<void> {
 		try {
 			await navigator.clipboard.writeText(text);
-			window.dispatchEvent(new CustomEvent('kurma:toast', { detail: `${label} tersalin.` }));
+			window.dispatchEvent(
+				new CustomEvent('kurma:toast', {
+					detail: { message: `${label} tersalin.`, tone: 'ok' },
+				}),
+			);
 		} catch {
 			window.alert(`${label} gagal disalin — salin manual.`);
 		}
@@ -198,15 +209,33 @@
 		<form method="POST" action="?/ongkir" use:enhance={adminEnhance()}>
 			<div class="field">
 				<label for="nominal">Nominal ongkir dari aplikasi pengiriman</label>
-				<input id="nominal" name="nominal" type="text" inputmode="numeric" value={order.shippingActualIdr ?? ''} placeholder="mis. 25000" />
+				<input
+					id="nominal"
+					name="nominal"
+					type="text"
+					inputmode="numeric"
+					value={order.shippingActualIdr ?? ''}
+					placeholder="mis. 25000"
+					oninput={(event) => (nominalTyped = event.currentTarget.value.replace(/\D/g, ''))}
+				/>
 				<p class="hint">Tersimpan terpisah, tidak mengubah total pesanan, dan otomatis terisi di templat WhatsApp “Tagih ongkir”.</p>
 			</div>
 			<div class="btn-row">
-				<button class="btn-mini is-rust" type="submit" name="konfirmasi" value="1">Konfirmasi ongkir</button>
+				<button
+					class="btn-mini is-rust"
+					type="submit"
+					name="konfirmasi"
+					value="1"
+					disabled={!nominalFilled}
+					title={nominalFilled ? undefined : 'Isi nominal ongkir dulu'}
+				>Konfirmasi ongkir</button>
 				{#if shippingConfirmed}
 					<button class="btn-mini" type="submit" name="batal" value="1">Batalkan konfirmasi</button>
 				{/if}
 			</div>
+			{#if !nominalFilled}
+				<p class="hint">Tombol konfirmasi aktif setelah nominal diisi, supaya pesan WhatsApp tidak menyebut Rp0.</p>
+			{/if}
 		</form>
 	</div>
 

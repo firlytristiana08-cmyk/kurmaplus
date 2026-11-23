@@ -165,6 +165,42 @@ describe("admin: stok, ongkir, tanggal, pengaturan", () => {
     expect((await admin.adminOrderDetail("TESTCCCC"))?.shippingStatus).toBe("pending");
   });
 
+  it("ongkir: konfirmasi tanpa nominal ditolak (cegah Rp0 di WhatsApp)", async () => {
+    await newOrder("TESTDDDD", 1, 1);
+    // Belum ada nominal sama sekali.
+    const noAmount = await admin.adminSetShipping("TESTDDDD", { shippingStatus: "paid" }, "tes");
+    expect(noAmount.ok).toBe(false);
+    // Mengosongkan nominal sambil mengonfirmasi juga ditolak.
+    await admin.adminSetShipping("TESTDDDD", { shippingActualIdr: 20000 }, "tes");
+    const clearedAmount = await admin.adminSetShipping(
+      "TESTDDDD",
+      { shippingStatus: "paid", shippingActualIdr: null },
+      "tes",
+    );
+    expect(clearedAmount.ok).toBe(false);
+    // Dengan nominal, konfirmasi diterima.
+    const ok = await admin.adminSetShipping(
+      "TESTDDDD",
+      { shippingStatus: "paid", shippingActualIdr: 20000 },
+      "tes",
+    );
+    expect(ok.ok).toBe(true);
+    expect((await admin.adminOrderDetail("TESTDDDD"))?.shippingStatus).toBe("paid");
+  });
+
+  it("ongkir: klik tanpa perubahan tidak menambah baris audit", async () => {
+    await newOrder("TESTEEEE", 1, 1);
+    await admin.adminSetShipping("TESTEEEE", { shippingActualIdr: 30000 }, "tes");
+    const before = (await auditFor("TESTEEEE")).length;
+    // Aksi yang sama persis diulang: nilai tidak berubah.
+    const again = await admin.adminSetShipping("TESTEEEE", { shippingActualIdr: 30000 }, "tes");
+    expect(again.ok).toBe(true);
+    expect((await auditFor("TESTEEEE")).length).toBe(before);
+    // Perubahan nyata tetap tercatat.
+    await admin.adminSetShipping("TESTEEEE", { shippingActualIdr: 35000 }, "tes");
+    expect((await auditFor("TESTEEEE")).length).toBe(before + 1);
+  });
+
   it("ongkir: nilai lama di database dianggap belum dikonfirmasi", async () => {
     // Data lama (not_booked/booked/billed) tidak dimigrasi; normalisasi harus
     // memperlakukannya sebagai "pending" agar tidak perlu mengubah database.
