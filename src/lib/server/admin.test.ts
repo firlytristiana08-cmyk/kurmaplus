@@ -404,4 +404,37 @@ describe("admin: manajemen detail produk & varian (tugas 90)", () => {
     const deleted = await admin.adminDeleteVariant(cleanRow?.id ?? -1, "tes", now);
     expect(deleted.ok).toBe(true);
   });
+
+  it("daftar pesanan: paling baru di atas (created_at DESC)", async () => {
+    const lama = new Date("2026-11-15T08:00:00Z");
+    const baru = new Date("2026-11-15T09:30:00Z");
+    for (const [code, at] of [
+      ["TESTSORT1", lama],
+      ["TESTSORT2", baru],
+    ] as const) {
+      const created = await db.createOrder({
+        code,
+        customerName: "Uji Urutan",
+        customerPhone: "081200000009",
+        address: "Jalan Urutan No. 9",
+        city: "Jakarta Selatan",
+        lat: -6.2,
+        lng: 106.8,
+        courier: "Grab",
+        deliveryDate: "2026-11-21",
+        note: null,
+        items: [{ variantId: 1, qty: 1 }],
+        now: at,
+        paymentTimeoutMinutes: 60,
+      });
+      if (!created.ok) throw new Error("gagal membuat pesanan urutan");
+    }
+    const list = await admin.adminListOrders({ page: 1 });
+    const kode = list.rows.map((row) => row.code);
+    // Yang dibuat lebih baru harus muncul lebih atas.
+    expect(kode.indexOf("TESTSORT2")).toBeLessThan(kode.indexOf("TESTSORT1"));
+    // Seluruh baris terurut menurun menurut createdAt.
+    const waktu = list.rows.map((row) => row.createdAt);
+    expect(waktu).toEqual([...waktu].sort().reverse());
+  });
 });

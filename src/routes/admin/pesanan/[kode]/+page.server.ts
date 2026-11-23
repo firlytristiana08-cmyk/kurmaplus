@@ -17,6 +17,22 @@ import { expireStaleOrders, getSettings } from "#lib/server/db";
 import { checkStatus, loadDokuConfig } from "#lib/server/doku";
 import type { Actions, PageServerLoad } from "./$types";
 
+// Setelah aksi berhasil, kirim keadaan pesanan yang baru agar halaman tidak
+// perlu memuat ulang SEMUA datanya (settings, daftar, dsb). `refreshAll: false`
+// di sisi klien lalu hanya menerapkan hasil ini — memotong beberapa query dan
+// satu verifikasi sesi per klik. Bila pengambilan gagal, kembalikan objek
+// kosong supaya halaman memakai data terakhir yang sudah ada.
+async function freshOrder(
+  code: string,
+): Promise<{ order?: NonNullable<Awaited<ReturnType<typeof adminOrderDetail>>> }> {
+  try {
+    const order = await adminOrderDetail(code);
+    return order ? { order } : {};
+  } catch {
+    return {};
+  }
+}
+
 export const load: PageServerLoad = async ({ cookies, params }) => {
   await requireAdmin(cookies);
   // Sinkronkan status: pesanan yang masa bayarnya habis ikut ditutup sistem.
@@ -51,7 +67,7 @@ export const actions: Actions = {
       restoreStock,
     });
     if (!result.ok) return fail(400, { message: result.error });
-    return { done: true };
+    return { done: true, ...(await freshOrder(params.kode)) };
   },
   bayar_manual: async ({ cookies, request, params }) => {
     const session = await requireAdmin(cookies);
@@ -62,7 +78,7 @@ export const actions: Actions = {
       session.email,
     );
     if (!result.ok) return fail(400, { message: result.error });
-    return { done: true };
+    return { done: true, ...(await freshOrder(params.kode)) };
   },
   // Ongkir disimpan sebagai: nominal + satu tombol konfirmasi. Nominal yang
   // tersimpan otomatis dipakai templat WhatsApp "Tagih ongkir".
@@ -79,7 +95,7 @@ export const actions: Actions = {
     }
     const result = await adminSetShipping(params.kode, patch, session.email);
     if (!result.ok) return fail(400, { message: result.error });
-    return { done: true };
+    return { done: true, ...(await freshOrder(params.kode)) };
   },
   tanggal: async ({ cookies, request, params }) => {
     const session = await requireAdmin(cookies);
@@ -91,14 +107,14 @@ export const actions: Actions = {
       session.email,
     );
     if (!result.ok) return fail(400, { message: result.error });
-    return { done: true };
+    return { done: true, ...(await freshOrder(params.kode)) };
   },
   catatan: async ({ cookies, request, params }) => {
     const session = await requireAdmin(cookies);
     const form = await request.formData();
     const result = await adminSaveNote(params.kode, String(form.get("note") ?? ""), session.email);
     if (!result.ok) return fail(400, { message: result.error });
-    return { done: true };
+    return { done: true, ...(await freshOrder(params.kode)) };
   },
   refund: async ({ cookies, request, params }) => {
     const session = await requireAdmin(cookies);
@@ -109,7 +125,7 @@ export const actions: Actions = {
       session.email,
     );
     if (!result.ok) return fail(400, { message: result.error });
-    return { done: true };
+    return { done: true, ...(await freshOrder(params.kode)) };
   },
   cek_doku: async ({ params }) => {
     const config = loadDokuConfig(process.env);

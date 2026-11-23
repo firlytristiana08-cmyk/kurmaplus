@@ -35,7 +35,9 @@
 <main class="wrap">
 	<header class="admin-head">
 		<h1>Pesanan</h1>
-		<p class="muted page-sub">{list.total} pesanan cocok dengan saringan.</p>
+		<p class="muted page-sub">
+			{list.total} pesanan cocok dengan saringan · terbaru di atas
+		</p>
 	</header>
 
 	<form class="filters" method="GET" action="/admin/pesanan">

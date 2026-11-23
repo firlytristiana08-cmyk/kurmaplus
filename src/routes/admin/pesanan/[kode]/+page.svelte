@@ -10,7 +10,20 @@
 	import { formatDateId, formatDateTimeId, formatRupiah } from '#lib/format';
 
 	let { data, form } = $props();
-	const order = $derived(data.order);
+
+	// Keadaan pesanan yang ditampilkan. Aksi mengembalikan pesanan terbaru
+	// (`freshOrder`), jadi setelah berhasil kita cukup menimpanya — tanpa
+	// memuat ulang seluruh data halaman (settings, daftar, dsb).
+	let localOrder = $state<typeof data.order | null>(null);
+	const order = $derived(localOrder ?? data.order);
+
+	// Dipakai semua aksi di halaman ini supaya hasilnya langsung terpakai.
+	const localEnhance = (pesan?: string) =>
+		adminEnhance<{ order?: typeof data.order }>(pesan, {
+			local: (hasil) => {
+				if (hasil?.order) localOrder = hasil.order;
+			},
+		});
 
 	const forward: Partial<Record<OrderStatus, OrderStatus>> = {
 		paid: 'packed',
@@ -206,7 +219,7 @@
 				<span class="badge badge-wait">Belum dikonfirmasi</span>
 			{/if}
 		</p>
-		<form method="POST" action="?/ongkir" use:enhance={adminEnhance()}>
+		<form method="POST" action="?/ongkir" use:enhance={localEnhance()}>
 			<div class="field">
 				<label for="nominal">Nominal ongkir dari aplikasi pengiriman</label>
 				<input
@@ -290,7 +303,7 @@
 	<!-- Catatan internal (AD-11) -->
 	<div class="surface">
 		<h3 style="margin-top: 0">Catatan internal</h3>
-		<form method="POST" action="?/catatan" use:enhance={adminEnhance()}>
+		<form method="POST" action="?/catatan" use:enhance={localEnhance()}>
 			<div class="field">
 				<label for="catatan" class="visually-hidden" style="position: absolute; left: -9999px">Catatan internal</label>
 				<textarea id="catatan" name="note" placeholder="Tulis catatan untuk diri sendiri…">{order.internalNote ?? ''}</textarea>
@@ -309,7 +322,7 @@
 					Tercatat {order.refundNotedAt ? formatDateTimeId(order.refundNotedAt) : ''} — {order.refundNote}
 				</p>
 			{/if}
-			<form method="POST" action="?/refund" use:enhance={adminEnhance()}>
+			<form method="POST" action="?/refund" use:enhance={localEnhance()}>
 				<div class="field">
 					<label for="catatan-refund">Catatan pengembalian (dilakukan di dashboard DOKU)</label>
 					<input id="catatan-refund" name="note" type="text" placeholder="mis. dana dikembalikan via transfer, 20 Nov" required />
@@ -343,7 +356,7 @@
 		<h2>Aksi lain</h2>
 	</div>
 	<div class="surface">
-		<form method="POST" action="?/tanggal" use:enhance={adminEnhance()}>
+		<form method="POST" action="?/tanggal" use:enhance={localEnhance()}>
 			<h3 style="margin-top: 0">Pindah tanggal kirim</h3>
 			<p class="muted">Hanya Sabtu atau Minggu (BA-07). Pembeli perlu diberi tahu lewat WhatsApp.</p>
 			<div class="field">
@@ -363,7 +376,7 @@
 			<form
 				method="POST"
 				action="?/status"
-				use:enhance={adminEnhance('Status pesanan diperbarui.')}
+				use:enhance={localEnhance('Status pesanan diperbarui.')}
 				onsubmit={(event) => {
 					if (!window.confirm(`Batalkan pesanan ${order.code}? Tindakan tercatat di log audit.`)) {
 						event.preventDefault();
@@ -452,7 +465,7 @@
 				<form
 					method="POST"
 					action="?/status"
-					use:enhance={adminEnhance('Status pesanan diperbarui.')}
+					use:enhance={localEnhance('Status pesanan diperbarui.')}
 					onsubmit={(event) => {
 						if (!window.confirm(`${forwardLabel[forward[order.status] ?? '']}? Perpindahan status tercatat di log audit.`)) {
 							event.preventDefault();
@@ -470,7 +483,7 @@
 				<form
 					method="POST"
 					action="?/status"
-					use:enhance={adminEnhance('Status pesanan diperbarui.')}
+					use:enhance={localEnhance('Status pesanan diperbarui.')}
 					onsubmit={(event) => {
 						const reason = window.prompt('Koreksi mundur satu langkah — alasan (wajib):');
 						if (reason === null || reason.trim() === '') {
