@@ -4,9 +4,28 @@
 	import PageFooter from '#lib/components/PageFooter.svelte';
 	import { stickyBar } from '#lib/sticky-bar';
 	import PageHeader from '#lib/components/PageHeader.svelte';
+	import PersetujuanOngkir from '#lib/components/PersetujuanOngkir.svelte';
+	import { goto } from '$app/navigation';
 	import type { CartData } from './+page.server';
 
 	let { data }: { data: CartData } = $props();
+
+	// Dialog persetujuan ongkir muncul SEBELUM pindah ke checkout. Ongkir
+	// Grab/Gojek dibayar ke kurir, bukan termasuk total di halaman bayar —
+	// pembeli harus setuju dulu agar tidak merasa ditagih dua kali.
+	let setujuTerbuka = $state(false);
+
+	function bukaPersetujuan(event: MouseEvent): void {
+		// Diperlakukan sebagai tautan biasa bila JavaScript belum jalan:
+		// tanpa ini, pembeli yang menunggu hidrasi tetap bisa ke checkout.
+		event.preventDefault();
+		setujuTerbuka = true;
+	}
+
+	function lanjutKeCheckout(): void {
+		setujuTerbuka = false;
+		goto('/checkout');
+	}
 
 	$effect(() => {
 		cart.hydrate();
@@ -123,10 +142,18 @@
 {#if rows.length > 0}
 	<div class="sticky-bar" use:stickyBar>
 		<div class="sticky-inner">
-			<a class="btn" href="/checkout">Lanjut ke checkout</a>
+			<!-- `href` tetap ada: tanpa JavaScript ini tautan biasa ke checkout.
+			     Dengan JavaScript, klik ditahan dulu untuk dialog persetujuan. -->
+			<a class="btn" href="/checkout" onclick={bukaPersetujuan}>Lanjut ke checkout</a>
 		</div>
 	</div>
 {/if}
+
+<PersetujuanOngkir
+	terbuka={setujuTerbuka}
+	onlanjut={lanjutKeCheckout}
+	onkembali={() => (setujuTerbuka = false)}
+/>
 
 <PageFooter />
 

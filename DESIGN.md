@@ -378,8 +378,20 @@ Setiap elemen dengan `role="dialog"` **wajib** memakai `use:focusDialog`
 
 1. memindahkan fokus ke isi pertama,
 2. menjebak Tab/Shift+Tab di dalam dialog,
-3. mengembalikan fokus ke elemen pemicu saat ditutup,
-4. mengunci gulir latar selama terbuka.
+3. mengembalikan fokus ke elemen pemicu saat ditutup.
+
+**Gulir latar TIDAK dikunci oleh aksi itu.** Komponen yang membuka dialog wajib
+mengunci sendiri lewat `$effect` (lihat `PersetujuanOngkir.svelte`), dan
+memulihkan nilai `overflow` sebelumnya saat ditutup:
+
+```svelte
+$effect(() => {
+  if (!terbuka) return;
+  const sebelumnya = document.body.style.overflow;
+  document.body.style.overflow = 'hidden';
+  return () => { document.body.style.overflow = sebelumnya; };
+});
+```
 
 `aria-modal="true"` tanpa ini adalah kebohongan: pembaca layar tetap membaca
 halaman di belakang.
