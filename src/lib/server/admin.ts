@@ -1384,6 +1384,24 @@ export interface TodaySummary {
     locked: number;
   }[];
   counts: { pending_payment: number; paid: number; packed: number; shipped: number };
+  // Ringkasan pendapatan (BA-06: ongkir TIDAK dihitung sebagai pendapatan).
+  // "Lunas" = total pesanan yang sudah dibayar, mencakup yang masih dikerjakan
+  // maupun yang sudah selesai — supaya angkanya tidak turun saat pesanan
+  // berpindah dari "dikirim" ke "selesai".
+  revenue: {
+    /** Omzet seluruh pesanan berbayar, sepanjang waktu. */
+    totalIdr: number;
+    /** Jumlah pesanan yang membentuk totalIdr. */
+    orderCount: number;
+    /** Omzet pesanan yang dibuat hari ini (zona Asia/Jakarta). */
+    todayIdr: number;
+    /** Jumlah pesanan yang membentuk todayIdr. */
+    todayCount: number;
+    /** Sudah dibayar tetapi belum selesai (masih perlu dikerjakan). */
+    inProgressIdr: number;
+    /** Diterima pada 30 hari terakhir. */
+    last30Idr: number;
+  };
   threshold: number;
   storeOpen: boolean;
   openCheckoutDate: string;
@@ -1484,11 +1502,50 @@ export async function adminToday(now = new Date()): Promise<TodaySummary> {
       locked: row.locked,
     }));
 
+  // ---------- Ringkasan pendapatan ----------
+  // Ongkir tidak dihitung (BA-06): total_idr memang sudah tidak memuat ongkir,
+  // karena ongkir ditagih terpisah ke kurir (shipping_actual_idr).
+  const PAID_STATUSES = "('paid', 'packed', 'shipped', 'done')";
+  const revenueTotals = await db.get<{ total: number; n: number }>(
+    `SELECT COALESCE(SUM(total_idr), 0) AS total, COUNT(*) AS n
+		 FROM orders WHERE status IN ${PAID_STATUSES}`,
+  );
+  const revenueInProgress = await db.get<{ total: number }>(
+    `SELECT COALESCE(SUM(total_idr), 0) AS total
+		 FROM orders WHERE status IN ('paid', 'packed', 'shipped')`,
+  );
+  // Batas "hari ini" memakai zona Asia/Jakarta (UTC+7), sama seperti rekap
+  // akhir pekan di atas — supaya pesanan pukul 00:30 WIB tidak terhitung
+  // sebagai kemarin.
+  const jakartaNow = new Date(now.getTime() + 7 * 3_600_000);
+  const todayStartUtc = new Date(
+    Date.UTC(jakartaNow.getUTCFullYear(), jakartaNow.getUTCMonth(), jakartaNow.getUTCDate()) -
+      7 * 3_600_000,
+  ).toISOString();
+  const revenueToday = await db.get<{ total: number; n: number }>(
+    `SELECT COALESCE(SUM(total_idr), 0) AS total, COUNT(*) AS n
+		 FROM orders WHERE status IN ${PAID_STATUSES} AND created_at >= ?`,
+    [todayStartUtc],
+  );
+  const revenueLast30 = await db.get<{ total: number }>(
+    `SELECT COALESCE(SUM(total_idr), 0) AS total
+		 FROM orders WHERE status IN ${PAID_STATUSES} AND created_at >= ?`,
+    [new Date(now.getTime() - 30 * 24 * 3_600_000).toISOString()],
+  );
+
   return {
     needAction: needRows.map(toLine),
     weekend,
     counts,
     lowStock,
+    revenue: {
+      totalIdr: revenueTotals?.total ?? 0,
+      orderCount: revenueTotals?.n ?? 0,
+      todayIdr: revenueToday?.total ?? 0,
+      todayCount: revenueToday?.n ?? 0,
+      inProgressIdr: revenueInProgress?.total ?? 0,
+      last30Idr: revenueLast30?.total ?? 0,
+    },
     threshold,
     storeOpen: settings.store_open !== "0",
     openCheckoutDate: isoDate(now),
