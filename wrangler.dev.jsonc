@@ -31,5 +31,9 @@
   // Hyperdrive: memakai konfigurasi yang sama dengan produksi karena
   // database-nya memang sama (pilihan I). String koneksi pooler Supabase
   // tersimpan di konfigurasi Hyperdrive tersebut.
+  // Pengaman sama seperti produksi: jangan sampai deploy menghapus nilai yang
+  // diisi di dasbor (Worker dev pun menyimpan DOKU_CLIENT_ID/SECRET_KEY untuk
+  // sandbox). Lihat wrangler.jsonc dan cloudflare/workers-sdk#8871.
+  "keep_vars": true,
   "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "1d5eb7ff8e964e1cac3ffd01efcec00f" }]
 }
