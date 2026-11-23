@@ -2,8 +2,9 @@
 	import { photoSrcset } from '#lib/photos';
 import { goto } from '$app/navigation';
 	import { formatRupiah, formatWeight } from '#lib/format';
-	import { cart, setDirectBuy } from '#lib/cart.svelte';
+	import { cart, setDirectBuy , clearDirectBuy} from '#lib/cart.svelte';
 	import PageFooter from '#lib/components/PageFooter.svelte';
+	import PersetujuanOngkir from '#lib/components/PersetujuanOngkir.svelte';
 	import { stickyBar } from '#lib/sticky-bar';
 	import PageHeader from '#lib/components/PageHeader.svelte';
 	import { focusDialog } from '#lib/focus-dialog';
@@ -42,12 +43,30 @@ import { goto } from '$app/navigation';
 		cartDialog = true;
 	}
 
+	// "Beli langsung" juga melewati dialog persetujuan ongkir, karena checkout
+	// yang dibuka tetap memakai Grab/Gojek dengan ongkir dibayar ke kurir.
+	let setujuTerbuka = $state(false);
+
 	function buyNow(): void {
 		if (!selectedVariant || selectedVariant.stock < 1) return;
+		// Isi "beli langsung" disiapkan lebih dulu; checkout baru dibuka
+		// setelah pembeli menyetujui ketentuan ongkir.
+		setDirectBuy([{ variantId: selectedVariant.id, qty }]);
+		setujuTerbuka = true;
+	}
+
+	function lanjutKeCheckout(): void {
+		setujuTerbuka = false;
 		// Beli langsung: checkout hanya item ini — keranjang tidak ikut dan
 		// tidak disentuh.
-		setDirectBuy([{ variantId: selectedVariant.id, qty }]);
 		goto('/checkout?beli=1');
+	}
+
+	// Batal: barang "beli langsung" yang tadi disiapkan dibuang lagi, supaya
+	// tidak tertinggal dan diam-diam terpakai pada kunjungan berikutnya.
+	function batalPersetujuan(): void {
+		setujuTerbuka = false;
+		clearDirectBuy();
 	}
 
 	function slideIndexOf(track: HTMLElement): number {
@@ -308,6 +327,12 @@ import { goto } from '$app/navigation';
 		</div>
 	</div>
 {/if}
+
+<PersetujuanOngkir
+	terbuka={setujuTerbuka}
+	onlanjut={lanjutKeCheckout}
+	onkembali={batalPersetujuan}
+/>
 
 <PageFooter />
 

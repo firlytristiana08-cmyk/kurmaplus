@@ -21,3 +21,7 @@ dist/
 # Cadangan data nyata yang berisi PII (nama, nomor HP, alamat, URL
 # pembayaran). Repo ini PUBLIK — berkas cadangan TIDAK boleh ikut ter-commit.
 backup-data-*.md
+
+# Folder kerja agen (berisi unggahan sementara, bukan aset situs).
+# Aset publik tempatnya di static/ — lihat DESIGN.md.
+.arenaplus/
