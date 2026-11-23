@@ -1,5 +1,11 @@
-// Status pesanan (PRD Model data): tipe, label Indonesia, dan aturan transisi.
+// Status pesanan (PRD Model data): tipe dan label Indonesia.
 // Modul bersama (dipakai halaman pesanan di browser dan lapisan server).
+//
+// Catatan: aturan transisi TIDAK didefinisikan di sini. Satu-satunya sumber
+// kebenaran adalah adminChangeStatus() di src/lib/server/admin.ts, yang
+// mengizinkan koreksi mundur (dengan alasan wajib) — sesuatu yang tidak bisa
+// diwakili tabel transisi sederhana. Dulu ada canTransition() di sini, tetapi
+// tidak pernah dipakai dan justru bertentangan dengan perilaku tersebut.
 
 export type OrderStatus =
   | "pending_payment"
@@ -9,28 +15,6 @@ export type OrderStatus =
   | "done"
   | "expired"
   | "cancelled";
-
-const ALLOWED_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
-  pending_payment: ["paid", "expired", "cancelled"],
-  paid: ["packed", "cancelled"],
-  packed: ["shipped", "cancelled"],
-  shipped: ["done"],
-  done: [],
-  expired: [],
-  cancelled: [],
-};
-
-// Pesanan yang sudah dibayar tidak pernah kembali menjadi kedaluwarsa;
-// transisi hanya maju mengikuti urutan alur.
-export function canTransition(from: OrderStatus, to: OrderStatus): boolean {
-  if (from === to) {
-    return false;
-  }
-  if (from === "paid" && to === "expired") {
-    return false;
-  }
-  return ALLOWED_TRANSITIONS[from].includes(to);
-}
 
 export const STATUS_LABEL_ID: Record<OrderStatus, string> = {
   pending_payment: "Menunggu bayar",

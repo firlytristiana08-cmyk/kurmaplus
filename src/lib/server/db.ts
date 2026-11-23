@@ -715,11 +715,6 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
             available: 0,
           });
         }
-        // PRD Portal Admin: penguncian stok meninggalkan baris stock_movements.
-        await tx.run(
-          "INSERT INTO stock_movements (id, variant_id, delta, reason, order_id, actor, created_at) VALUES (?, ?, ?, 'lock_order', ?, 'sistem', ?)",
-          [crypto.randomUUID(), item.variantId, -item.qty, null, input.now.toISOString()],
-        );
         lines.push({ priceIdr: variant.price_idr, qty: item.qty });
         snapshots.push({
           variantId: item.variantId,
@@ -768,6 +763,13 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
         await tx.run(
           "INSERT INTO order_items (order_id, variant_id, name_snapshot, price_snapshot, qty) VALUES (?, ?, ?, ?, ?)",
           [order.id, snapshot.variantId, snapshot.name, snapshot.priceIdr, snapshot.qty],
+        );
+        // PRD Portal Admin: penguncian stok meninggalkan baris stock_movements.
+        // Dicatat SETELAH order.id diketahui supaya jejak stok bisa ditelusuri
+        // ke pesanannya (sebelumnya order_id selalu NULL).
+        await tx.run(
+          "INSERT INTO stock_movements (id, variant_id, delta, reason, order_id, actor, created_at) VALUES (?, ?, ?, 'lock_order', ?, 'sistem', ?)",
+          [crypto.randomUUID(), snapshot.variantId, -snapshot.qty, order.id, createdAt],
         );
       }
       await tx.run(

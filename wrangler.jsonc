@@ -39,24 +39,5 @@
   // Dibuat 22 Nov 2026 dari dasbor Cloudflare (Storage & Databases →
   // Hyperdrive → Connect database → public database). String koneksi pooler
   // Supabase tersimpan di konfigurasi Hyperdrive tersebut.
-  // ---------------------------------------------------------------------
-  // PENGAMAN RAHASIA (dibaca `wrangler deploy`, termasuk Workers Builds).
-  //
-  // Masalah nyata: setiap deploy dari GitHub (Workers Builds) MENGHAPUS
-  // variabel yang diisi di dasbor, karena wrangler menganggap berkas ini
-  // sumber kebenaran tunggal (perilaku seperti terraform). Itu sebabnya
-  // DOKU_CLIENT_ID dan DOKU_SECRET_KEY berulang kali hilang sehingga
-  // pembayaran daring mati. Rujukan: cloudflare/workers-sdk#8871.
-  //
-  // keep_vars = true → nilai yang diisi di dasbor TIDAK disentuh deploy.
-  //   Nilai rahasia tetap tidak pernah masuk repo/git.
-  // secrets.required → deploy DIHENTIKAN (bukan diam-diam jalan tanpa kunci)
-  //   bila salah satu secret wajib tidak ada di Worker. Lebih baik build
-  //   gagal dan versi lama tetap hidup daripada situs tayang tanpa pembayaran.
-  // ---------------------------------------------------------------------
-  "keep_vars": true,
-  "secrets": {
-    "required": ["DOKU_CLIENT_ID", "DOKU_SECRET_KEY", "SUPABASE_DB_PASSWORD"]
-  },
   "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "1d5eb7ff8e964e1cac3ffd01efcec00f" }]
 }

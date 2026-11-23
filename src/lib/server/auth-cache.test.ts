@@ -5,7 +5,7 @@
 // 2. Keamanan: hasil GAGAL tidak pernah di-cache, dan kunci cache tidak
 //    menyimpan token mentah.
 import { describe, expect, it } from "vitest";
-import { TtlCache, cacheKeyForToken } from "./auth-cache";
+import { cacheKeyForToken, TtlCache } from "./auth-cache";
 
 describe("TtlCache", () => {
   it("mengembalikan nilai yang masih berlaku", () => {
