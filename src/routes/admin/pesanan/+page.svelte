@@ -53,10 +53,8 @@
 		</div>
 		<div class="chip-scroll">
 			<a class="chip" class:is-active={!filter.shippingStatus} href={pageUrl({ ongkir: null })}>Ongkir: semua</a>
-			<a class="chip" class:is-active={filter.shippingStatus === 'not_booked'} href={pageUrl({ ongkir: 'not_booked', hal: null })}>Belum dipesan</a>
-			<a class="chip" class:is-active={filter.shippingStatus === 'booked'} href={pageUrl({ ongkir: 'booked', hal: null })}>Kurir dipesan</a>
-			<a class="chip" class:is-active={filter.shippingStatus === 'billed'} href={pageUrl({ ongkir: 'billed', hal: null })}>Ditagih</a>
-			<a class="chip" class:is-active={filter.shippingStatus === 'paid'} href={pageUrl({ ongkir: 'paid', hal: null })}>Lunas</a>
+			<a class="chip" class:is-active={filter.shippingStatus === 'pending'} href={pageUrl({ ongkir: 'pending', hal: null })}>Belum dikonfirmasi</a>
+			<a class="chip" class:is-active={filter.shippingStatus === 'paid'} href={pageUrl({ ongkir: 'paid', hal: null })}>Sudah dikonfirmasi</a>
 		</div>
 		<div class="chip-row">
 			<label class="chip" style="cursor: default">
@@ -91,13 +89,7 @@
 						<div class="row-l2 tabular">
 							{formatDateId(order.deliveryDate)} · {order.city} · {order.courier} ·
 							{formatRupiah(order.totalIdr)} · ongkir
-							{order.shippingStatus === 'paid'
-								? 'lunas'
-								: order.shippingStatus === 'billed'
-									? 'ditagih'
-									: order.shippingStatus === 'booked'
-										? 'dipesan'
-										: 'belum dipesan'}
+							{order.shippingStatus === 'paid' ? 'dikonfirmasi' : 'belum dikonfirmasi'}
 						</div>
 					</div>
 					<div class="row-side" aria-hidden="true">›</div>
