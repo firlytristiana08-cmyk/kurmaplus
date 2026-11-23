@@ -1325,9 +1325,13 @@ export async function adminOrderDetail(code: string): Promise<AdminOrderDetail |
     before_json: string | null;
     after_json: string | null;
     created_at: string;
-  }>("SELECT * FROM audit_log WHERE entity = 'order' AND entity_id = ? ORDER BY created_at DESC", [
-    code,
-  ]);
+  }>(
+    // Dibatasi: sebelumnya tanpa LIMIT, sehingga satu pesanan yang sering
+    // disentuh ikut menarik seluruh riwayatnya pada setiap pemuatan halaman.
+    // Riwayat panjang tetap tersedia di halaman Log.
+    "SELECT * FROM audit_log WHERE entity = 'order' AND entity_id = ? ORDER BY created_at DESC LIMIT 30",
+    [code],
+  );
   return {
     ...toLine(row),
     email: row.email,

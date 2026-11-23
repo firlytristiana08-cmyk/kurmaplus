@@ -4,8 +4,10 @@
 
 import { fail, redirect } from "@sveltejs/kit";
 import {
+  ADMIN_COOKIE,
   adminSignIn,
   clearAdminSession,
+  forgetAdminSession,
   readAdminSession,
   setDevSession,
 } from "#lib/server/admin-auth";
@@ -34,6 +36,11 @@ export const actions: Actions = {
     redirect(303, "/admin");
   },
   keluar: async ({ cookies }) => {
+    // Buang hasil verifikasi yang di-cache untuk token ini, lalu hapus cookie.
+    // Tanpa ini, token yang baru dipakai bisa tetap dianggap sah sampai TTL
+    // habis bila cookie-nya masih tersimpan di peramban lain.
+    const token = cookies.get(ADMIN_COOKIE);
+    if (token) await forgetAdminSession(token);
     clearAdminSession(cookies);
     redirect(303, "/admin/masuk");
   },
