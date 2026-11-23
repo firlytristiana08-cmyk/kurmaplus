@@ -1035,7 +1035,6 @@ export const SETTING_KEYS = [
   "store_open",
   "closed_dates",
   "shop_whatsapp",
-  "shipping_info_text",
   "low_stock_threshold",
   "wa_templates",
   "notify_chat_id",
@@ -1071,9 +1070,6 @@ export function validateSettings(patch: Record<string, string>): string | null {
       }
       case "shop_whatsapp":
         if (!/^\d{8,15}$/.test(value)) return "Nomor WhatsApp harus digit 8–15 (format 62…).";
-        break;
-      case "shipping_info_text":
-        if (value.length > 300) return "Teks info ongkir maksimal 300 karakter.";
         break;
       case "low_stock_threshold":
         if (!/^\d+$/.test(value)) return "Ambang stok menipis harus bilangan bulat ≥ 0.";

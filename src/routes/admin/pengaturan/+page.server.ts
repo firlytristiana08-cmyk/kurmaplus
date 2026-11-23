@@ -30,7 +30,6 @@ export const actions: Actions = {
       store_open: String(form.get("store_open") ?? "1") === "1" ? "1" : "0",
       closed_dates: JSON.stringify(closedDates),
       shop_whatsapp: String(form.get("shop_whatsapp") ?? "").replace(/[^\d]/g, ""),
-      shipping_info_text: String(form.get("shipping_info_text") ?? "").trim(),
       low_stock_threshold: String(form.get("low_stock_threshold") ?? "").trim(),
       order_cutoff_weekday: String(form.get("order_cutoff_weekday") ?? "").trim(),
       order_cutoff_time: String(form.get("order_cutoff_time") ?? "").trim(),
