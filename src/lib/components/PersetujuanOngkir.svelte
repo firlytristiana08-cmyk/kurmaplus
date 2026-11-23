@@ -73,8 +73,8 @@
 
 			<div id="persetujuan-ongkir-isi" class="modal-isi">
 				<p>
-					Untuk pengiriman <strong>Grab atau Gojek</strong>, ongkir <strong>tidak termasuk</strong
-					>total di halaman bayar.
+					Untuk pengiriman <strong>Grab atau Gojek</strong>, ongkir <strong>tidak termasuk</strong> total
+					di halaman bayar.
 				</p>
 				<p>
 					Ongkir ditanggung Anda dan <strong>dibayar langsung ke kurir</strong> saat barang sampai.
