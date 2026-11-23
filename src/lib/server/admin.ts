@@ -1257,7 +1257,7 @@ export async function adminListOrders(filter: OrderFilter): Promise<{
   const page = Math.min(Math.max(1, filter.page ?? 1), pages);
   const rows = await db.all<AdminOrderRow>(
     `SELECT code, status, customer_name, customer_phone, city, delivery_date, courier, total_idr, created_at, shipping_status, shipping_actual_idr
-\t\t FROM orders ${clause} ORDER BY delivery_date ASC, created_at DESC LIMIT ? OFFSET ?`,
+    FROM orders ${clause} ORDER BY created_at DESC, delivery_date ASC LIMIT ? OFFSET ?`,
     [...params, PAGE_SIZE, (page - 1) * PAGE_SIZE],
   );
   return { rows: rows.map(toLine), total, page, pages };
@@ -1396,7 +1396,7 @@ export async function adminToday(now = new Date()): Promise<TodaySummary> {
 
   const needRows = await db.all<AdminOrderRow>(
     `SELECT code, status, customer_name, customer_phone, city, delivery_date, courier, total_idr, created_at, shipping_status, shipping_actual_idr
-\t\t FROM orders WHERE status IN ('paid', 'packed', 'shipped') ORDER BY delivery_date ASC, created_at ASC LIMIT 10`,
+    FROM orders WHERE status IN ('paid', 'packed', 'shipped') ORDER BY created_at DESC LIMIT 10`,
   );
 
   // Rekap akhir pekan terdekat (Sabtu & Minggu) untuk pesanan yang masih

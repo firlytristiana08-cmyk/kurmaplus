@@ -13,6 +13,11 @@
 // permanen sampai halaman dimuat ulang. Semua jalur sekarang memakai
 // try/finally supaya tombol selalu bisa diklik lagi.
 //
+// Kecepatan: bawaan SvelteKit mengambil ulang SELURUH data halaman sesudah
+// aksi sukses. Untuk halaman yang aksinya sudah mengembalikan keadaan terbaru
+// (lihat `freshOrder` di halaman pesanan), refresh penuh itu tidak perlu —
+// berikan opsi `local` untuk memakai hasil aksi secara langsung.
+//
 // Isian form TIDAK dikosongkan setelah simpan (reset bawaan SvelteKit membuat
 // field yang tidak diubah jadi kosong); form tambah data baru meminta
 // reset: true agar bersih untuk isian berikutnya.
@@ -20,6 +25,15 @@
 export interface ToastDetail {
   message: string;
   tone?: "ok" | "error";
+}
+
+export interface AdminEnhanceOptions<T = unknown> {
+  reset?: boolean;
+  /**
+   * Bila diisi, hasil aksi sukses dipakai langsung (tanpa muat ulang seluruh
+   * data halaman). Callback menerima `result.data` dari aksi.
+   */
+  local?: (data: T) => void;
 }
 
 function notify(message: string, tone: "ok" | "error"): void {
@@ -43,7 +57,10 @@ function revealErrorBox(): void {
   });
 }
 
-export function adminEnhance(message = "Perubahan tersimpan.", options: { reset?: boolean } = {}) {
+export function adminEnhance<T = unknown>(
+  message = "Perubahan tersimpan.",
+  options: AdminEnhanceOptions<T> = {},
+) {
   return ({
     formElement,
     submitter,
@@ -79,13 +96,19 @@ export function adminEnhance(message = "Perubahan tersimpan.", options: { reset?
       }) => Promise<void>;
     }) => {
       try {
-        // `refreshAll` bawaan hanya untuk sukses. Hasil gagal pun butuh data
-        // segar (mis. status sebenarnya sesudah aksi ditolak) tanpa memicu
-        // navigasi ulang.
-        await update({
-          reset: options.reset ?? false,
-          refreshAll: result.type !== "redirect",
-        });
+        if (result.type === "success" && options.local) {
+          // Langsung pakai hasil aksi: tidak ada muat ulang data halaman.
+          await update({ reset: options.reset ?? false, refreshAll: false });
+          options.local(result.data as T);
+        } else {
+          // `refreshAll` bawaan hanya untuk sukses. Hasil gagal pun butuh data
+          // segar (mis. status sebenarnya sesudah aksi ditolak) tanpa memicu
+          // navigasi ulang.
+          await update({
+            reset: options.reset ?? false,
+            refreshAll: result.type !== "redirect",
+          });
+        }
         if (result.type === "success") {
           notify(message, "ok");
         } else if (result.type === "failure") {

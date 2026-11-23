@@ -187,6 +187,46 @@ describe("adminEnhance: pesan sampai ke admin", () => {
     expect(update).toHaveBeenCalledWith({ reset: true, refreshAll: true });
   });
 
+  it("opsi local: pakai hasil aksi tanpa muat ulang seluruh data", async () => {
+    const { form, button } = fakeForm();
+    const seen: unknown[] = [];
+    const submit = adminEnhance<{ order?: { code: string } }>("Tersimpan.", {
+      local: (data) => seen.push(data),
+    })({
+      action: new URL("http://localhost/admin"),
+      formData: new FormData(),
+      formElement: form as unknown as HTMLFormElement,
+      controller: new AbortController(),
+      submitter: button as unknown as HTMLElement,
+      cancel: vi.fn(),
+    });
+    const update = vi.fn<UpdateFn>(async () => {});
+    await call(submit as never, { type: "success", data: { order: { code: "ABC" } } }, update);
+    // refreshAll WAJIB false: data halaman tidak diambil ulang.
+    expect(update).toHaveBeenCalledWith({ reset: false, refreshAll: false });
+    expect(seen).toEqual([{ order: { code: "ABC" } }]);
+    expect(toasts).toEqual([{ message: "Tersimpan.", tone: "ok" }]);
+  });
+
+  it("opsi local tidak dipakai saat gagal (tetap ambil data segar)", async () => {
+    const { form, button } = fakeForm();
+    const seen: unknown[] = [];
+    const submit = adminEnhance<{ order?: unknown }>("Tersimpan.", {
+      local: (data) => seen.push(data),
+    })({
+      action: new URL("http://localhost/admin"),
+      formData: new FormData(),
+      formElement: form as unknown as HTMLFormElement,
+      controller: new AbortController(),
+      submitter: button as unknown as HTMLElement,
+      cancel: vi.fn(),
+    });
+    const update = vi.fn<UpdateFn>(async () => {});
+    await call(submit as never, { type: "failure", data: { message: "ditolak" } }, update);
+    expect(update).toHaveBeenCalledWith({ reset: false, refreshAll: true });
+    expect(seen).toEqual([]);
+  });
+
   it("membatalkan kiriman ganda saat form masih sibuk", () => {
     const { form } = fakeForm();
     form.classList.add("is-busy");
