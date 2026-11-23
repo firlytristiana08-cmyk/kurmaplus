@@ -17,3 +17,7 @@ dist/
 .env.*
 !.env.example
 .dev.vars
+
+# Cadangan data nyata yang berisi PII (nama, nomor HP, alamat, URL
+# pembayaran). Repo ini PUBLIK — berkas cadangan TIDAK boleh ikut ter-commit.
+backup-data-*.md
