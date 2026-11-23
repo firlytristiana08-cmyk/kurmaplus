@@ -158,3 +158,51 @@ Kenapa dimatikan, bukan diatur ulang:
 Kalau kelak butuh cache lagi untuk katalog, buat konfigurasi Hyperdrive KEDUA
 dengan `--caching-disabled` untuk jalur admin/pasca-tulis — jangan mengaktifkan
 cache pada jalur yang menulis.
+
+## 6. Migrasi skema — otomatis, dan cara memeriksanya
+
+Migrasi dikirim sebagai modul `src/lib/server/migrasi.ts` yang ikut ke bundel
+Worker, lalu dijalankan otomatis saat koneksi database pertama dibuka. Tidak
+ada langkah manual.
+
+Versi sebelumnya membaca folder `db/migrations` dari disk. **Itu tidak pernah
+berjalan di produksi**: bundel Worker tidak memuat folder `db/`, dan galatnya
+tertelan penjaga "jangan matikan toko". Skema Supabase tidak pernah berubah
+selama berbulan-bulan tanpa ada yang tahu.
+
+**Periksa setelah setiap deploy yang menyentuh skema:**
+
+```sql
+SELECT name FROM schema_migrations ORDER BY name DESC LIMIT 5;
+```
+
+Kalau daftarnya kosong, migrasi **tidak** berjalan — jangan percaya tampilan
+halaman. Pernah terjadi: URL foto menampilkan `?v=1` sehingga tampak benar,
+padahal nilai itu berasal dari jalur cadangan saat kolomnya tidak ada.
+
+**Mencatat migrasi "sudah jalan" hanya dari keberadaan kolom itu keliru.**
+Migrasi juga mengubah DATA (mis. `UPDATE settings`). Periksa isinya juga:
+
+```sql
+SELECT column_name FROM information_schema.columns
+WHERE table_name = 'product_photos';
+SELECT count(*) FROM product_photos;   -- galeri tidak boleh berisi foto kembar
+```
+
+## 7. Galeri foto & urutan id
+
+Id foto dibuat dari tabel `product_photo_seq` yang hanya bergerak maju. Ini
+penting karena foto produk diganti dengan hapus-lalu-tambah: dengan `MAX(id)+1`,
+mengganti foto berid terbesar memberi id yang SAMA, sehingga URL-nya identik
+dengan yang lama dan foto pengganti tertahan cache (header `immutable` satu
+tahun + service worker yang cache-dulu).
+
+Bila tabel sequence tidak bisa dipakai, kode turun ke `MAX(id)+1` dan
+penambahan produk **tetap berhasil**. Prinsipnya: kegagalan sequence hanya
+boleh membuat foto tertahan cache (gejala lama), tidak boleh membuat admin
+tidak bisa bekerja.
+
+Migrasi `0010_product_photos.sql` menyalin kolom `photo`/`photo_2`/`photo_3`
+ke tabel galeri. Penjaganya memeriksa **slot yang sama** (`product_id` +
+`sort_order`), bukan sekadar "produk sudah punya foto" — bentuk kedua membuat
+hanya foto pertama yang tersalin. Berkas ini kini aman dijalankan berulang.
