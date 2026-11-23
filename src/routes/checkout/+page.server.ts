@@ -31,7 +31,6 @@ export interface CheckoutData {
   cities: readonly string[];
   previewPayment: boolean;
   storeOpen: boolean;
-  shippingInfoText: string;
   directMode: boolean;
 }
 
@@ -60,7 +59,6 @@ export const load = async ({ url }): Promise<CheckoutData> => {
     cities: JABODETABEK_CITIES,
     previewPayment: loadDokuConfig(process.env) === null,
     storeOpen: settings.store_open !== "0",
-    shippingInfoText: settings.shipping_info_text ?? "",
     directMode: url.searchParams.has("beli"),
   };
 };

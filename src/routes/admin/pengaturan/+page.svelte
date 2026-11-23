@@ -57,10 +57,6 @@
 				<label for="shop_whatsapp">Nomor WhatsApp toko (format 62…)</label>
 				<input id="shop_whatsapp" name="shop_whatsapp" type="text" inputmode="numeric" value={s.shop_whatsapp ?? ''} />
 			</div>
-			<div class="field">
-				<label for="shipping_info_text">Teks info ongkir</label>
-				<textarea id="shipping_info_text" name="shipping_info_text">{s.shipping_info_text ?? ''}</textarea>
-			</div>
 		</div>
 
 		<div class="surface">
