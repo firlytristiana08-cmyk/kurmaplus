@@ -721,23 +721,8 @@ button.is-busy::after {
 	height: 1.125rem;
 }
 
-/* ===== Akar masalah jarak (audit desain S-1) =====
-   app.css memberi h1/h2/h3 `margin: 0 0 0.5rem` dan p `margin: 0 0 0.75rem`.
-   Di dalam kartu, margin itu selalu perlu dinolkan — itulah asal ~50 penimpaan
-   `style="margin: 0"` / `margin-top: 0`. Aturan aliran di bawah menyelesaikannya
-   sekali untuk semua kartu: anak pertama tidak menyisakan ruang di atas, anak
-   terakhir tidak menyisakan ruang di bawah. Tidak perlu kelas utilitas. */
-.admin-scope .surface > :first-child,
-.admin-scope .info-box > :first-child,
-.admin-scope .error-box > :first-child {
-	margin-top: 0;
-}
-
-.admin-scope .surface > :last-child,
-.admin-scope .info-box > :last-child,
-.admin-scope .error-box > :last-child {
-	margin-bottom: 0;
-}
+/* Aturan aliran `.surface > :first-child/:last-child` sekarang GLOBAL di
+   app.css — berlaku untuk portal pelanggan juga, tidak diulang di sini. */
 
 /* Paragraf pengantar langsung di bawah tajuk halaman. */
 .admin-scope .admin-head > :last-child {

@@ -65,7 +65,7 @@
 						</div>
 					</div>
 
-					<a class="splash-btn" href="/katalog">
+					<a class="btn splash-btn" href="/katalog">
 						<!-- Ikon tas belanja filled, warna mengikuti teks tombol (putih). -->
 						<svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
 							<path d="M7.3 8.7v-.4a4.7 4.7 0 0 1 9.4 0v.4h-2.3v-.4a2.4 2.4 0 0 0-4.8 0v.4H7.3Z" />
@@ -230,39 +230,12 @@
 		line-height: 1.35;
 	}
 
+	/* Tombol utama memakai `.btn` global (radius, bayangan, keadaan aktif,
+	   fokus). Dulu gaya itu disalin ulang di sini dengan radius 0.8125rem —
+	   satu-satunya sisa nilai radius lepas di portal pelanggan. */
 	.splash-btn {
-		display: flex;
-		width: 100%;
-		min-height: 50px;
-		align-items: center;
-		justify-content: center;
-		gap: 0.5rem;
 		margin-top: 0.9375rem;
-		padding: 0.72rem 1rem;
-		border-radius: 0.8125rem;
-		background: var(--rust);
-		color: #fffdf8;
-		font-family: 'Figtree', system-ui, sans-serif;
-		font-size: 0.96875rem;
-		font-weight: 700;
-		letter-spacing: -0.005em;
-		text-decoration: none;
-		box-shadow:
-			0 8px 16px -8px rgb(171 55 16 / 0.85),
-			inset 0 1px 0 rgb(255 255 255 / 0.22);
-		transition:
-			transform 150ms ease-out,
-			background-color 150ms ease-out;
-	}
-
-	.splash-btn:active {
-		transform: scale(0.975);
-		background: var(--rust-press);
-	}
-
-	.splash-btn:focus-visible {
-		outline: 3px solid var(--olive);
-		outline-offset: 2px;
+		padding-inline: 1rem;
 	}
 
 	.btn-icon {

@@ -172,6 +172,25 @@ img {
 	padding: 1.125rem;
 }
 
+/* Aturan aliran di dalam kotak berbingkai.
+   h1/h2/h3 punya margin-bottom 0.5rem dan p 0.75rem — berguna di antara
+   paragraf, tetapi salah di tepi kotak: anak pertama menyisakan ruang kosong
+   di bawah padding atas, anak terakhir menambah ruang di atas padding bawah,
+   sehingga kotak yang sama terlihat punya padding berbeda-beda.
+   Dua aturan ini menyelesaikannya sekali untuk seluruh produk (portal
+   pelanggan dan admin), menggantikan puluhan `style="margin: 0"`. */
+.surface > :first-child,
+.info-box > :first-child,
+.error-box > :first-child {
+	margin-top: 0;
+}
+
+.surface > :last-child,
+.info-box > :last-child,
+.error-box > :last-child {
+	margin-bottom: 0;
+}
+
 .divider {
 	border: none;
 	border-top: 1px solid var(--sand);
@@ -427,4 +446,25 @@ textarea:focus-visible {
 		animation: none !important;
 		transition: none !important;
 	}
+}
+
+/* ===== Fokus keyboard di seluruh portal pelanggan =====
+   Hanya sebagian komponen yang punya :focus-visible (tombol utama, input,
+   kartu katalog). Sisanya — tombol jumlah, tombol hapus, chip, titik galeri,
+   tombol tutup foto — memakai garis fokus bawaan peramban yang hampir tak
+   terlihat di atas latar krem, atau tidak terlihat sama sekali di atas latar
+   gelap lightbox. Aturan berikut memberi satu garis fokus yang konsisten
+   tanpa mengganggu tampilan saat memakai tetikus.
+
+   Memakai `:where()` agar kekhususannya nol — komponen tetap boleh menimpanya
+   bila perlu, dan tidak ada perang kekhususan. */
+:where(button, [href], input, select, textarea, [tabindex]):focus-visible {
+	outline: 3px solid var(--rust);
+	outline-offset: 2px;
+	border-radius: 4px;
+}
+
+/* Di atas latar gelap (lightbox, panel foto) rus tidak terbaca — pakai kertas. */
+:where(.lightbox, .modal-backdrop, .cart-dialog) :where(button, [href], [tabindex]):focus-visible {
+	outline-color: var(--paper);
 }
