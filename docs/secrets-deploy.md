@@ -20,22 +20,48 @@ Kesimpulan dari perbandingan itu:
 > hilang.** Jadi solusinya bukan menambahkan `keep_vars`, melainkan memastikan
 > nilainya disimpan sebagai **Secret** — bukan sebagai Text/Variable.
 
-## Akar masalah
+## Akar masalah — bukti dari kode Wrangler
 
-Wrangler memperlakukan berkas konfigurasi sebagai **sumber kebenaran tunggal**,
-seperti terraform. Dikutip dari skema konfigurasi Wrangler sendiri:
+Dibuktikan langsung dari `node_modules/wrangler/wrangler-dist/cli.js`
+(wrangler **4.166.0**), bukan dari dokumentasi.
 
-> "By default, the Wrangler configuration file is the source of truth for your
-> environment configuration, like a terraform file. **If you change your vars in
-> the dashboard, wrangler _will_ override/delete them on its next deploy.**"
+Saat deploy, wrangler mengirim daftar `keep_bindings` ke API Cloudflare —
+inilah daftar tipe binding yang **dipertahankan** dan tidak dihapus:
 
-Deploy Workers Builds menjalankan langkah ini: hapus dulu var lama, lalu tulis
-yang ada di konfigurasi — apa pun yang hanya ada di dasbor ikut terhapus.
-Laporan serupa: [cloudflare/workers-sdk#8871](https://github.com/cloudflare/workers-sdk/issues/8871).
+```js
+// baris 62722 — hanya diisi bila keep_vars aktif
+if (keepVars) {
+  keep_bindings.push("plain_text", "json");   // ← Variabel/Text
+}
+if (keepSecrets) {
+  keep_bindings.push("secret_text", "secret_key");   // ← Secret
+}
+```
 
-Menurut dokumentasi Cloudflare, **secret tidak dihapus** oleh deploy. Karena
-`DOKU_CLIENT_ID` tetap hilang, kemungkinan besar nilainya tersimpan sebagai
-**Text/Variable**, sehingga ikut proses hapus-tulis di atas.
+Dan di jalur deploy, `keepSecrets` **selalu `true`** (ditulis mati, bukan dari config):
+
+```js
+// baris 70224 & 70630 (deploy) · 74058 & 216414 (versions upload)
+keepVars,              // ← dari config
+keepSecrets: true,     // ← SELALU true, tidak bisa dimatikan
+```
+
+### Artinya
+
+| Tipe di dasbor | Dipertahankan saat deploy? |
+|---|---|
+| **Secret** | ✅ **Selalu** — tanpa perlu setelan apa pun |
+| **Text / Variabel** | ❌ Dihapus, kecuali `keep_vars: true` |
+
+**Karena `DOKU_CLIENT_ID` hilang berulang, nilainya hampir pasti tersimpan
+sebagai Text, bukan Secret.** Penyebab paling umum: saat menekan **Add** di
+dasbor Cloudflare, pilihan tipe bawaan adalah **Text** — kalau tidak diubah
+manual ke **Secret**, nilainya akan tersimpan sebagai variabel biasa dan
+terhapus pada deploy berikutnya.
+
+> Catatan penting: `keep_vars: true` **bukan** solusi dan justru pernah
+> menggagalkan semua build (PR #36). Untuk secret, setelan itu tidak diperlukan
+> sama sekali — secret sudah selalu dipertahankan.
 
 ## Solusi
 
