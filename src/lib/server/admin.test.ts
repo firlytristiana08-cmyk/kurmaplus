@@ -259,6 +259,52 @@ describe("admin: stok, ongkir, tanggal, pengaturan", () => {
     expect(today.lowStock.every((row) => row.stock < 12)).toBe(true);
   });
 
+  it("beranda: pendapatan hanya menghitung pesanan lunas (tanpa ongkir)", async () => {
+    const today = await admin.adminToday(new Date("2026-11-16T02:00:00Z"));
+    const rev = today.revenue;
+
+    // Angka harus masuk akal dan konsisten satu sama lain.
+    expect(rev.totalIdr).toBeGreaterThan(0);
+    expect(rev.orderCount).toBeGreaterThan(0);
+    expect(rev.inProgressIdr).toBeLessThanOrEqual(rev.totalIdr);
+    expect(rev.last30Idr).toBeLessThanOrEqual(rev.totalIdr);
+
+    // "Masih dikerjakan" hanya dari status paid/packed/shipped.
+    const dbi = await db.getDb();
+    const expected = await dbi.get<{ total: number }>(
+      "SELECT COALESCE(SUM(total_idr), 0) AS total FROM orders WHERE status IN ('paid', 'packed', 'shipped')",
+    );
+    expect(rev.inProgressIdr).toBe(expected?.total ?? 0);
+
+    // "Lunas" mencakup pesanan selesai juga, jadi tidak boleh turun saat
+    // pesanan berpindah dari dikirim ke selesai.
+    const semua = await dbi.get<{ total: number }>(
+      "SELECT COALESCE(SUM(total_idr), 0) AS total FROM orders WHERE status IN ('paid', 'packed', 'shipped', 'done')",
+    );
+    expect(rev.totalIdr).toBe(semua?.total ?? 0);
+  });
+
+  it("beranda: pesanan belum bayar/kedaluwarsa TIDAK dihitung pendapatan", async () => {
+    // Buat pesanan yang tidak dibayar, lalu pastikan angka pendapatan tidak naik.
+    const sebelum = (await admin.adminToday(new Date("2026-11-16T02:00:00Z"))).revenue.totalIdr;
+    await newOrder("BELUMBAY1", 1, 1);
+    const sesudah = (await admin.adminToday(new Date("2026-11-16T02:00:00Z"))).revenue.totalIdr;
+    expect(sesudah).toBe(sebelum);
+  });
+
+  it("beranda: batas 'hari ini' memakai zona Asia/Jakarta (UTC+7)", async () => {
+    // 2026-11-16T17:30Z = 17 Nov 00:30 WIB → harus dihitung sebagai "hari ini"
+    // saat sekarang 2026-11-17T01:00Z, bukan sebagai kemarin.
+    const sekarang = new Date("2026-11-17T01:00:00Z");
+    const rev = (await admin.adminToday(sekarang)).revenue;
+    const dbi = await db.getDb();
+    // Pesanan dibuat pada 16 Nov 17:30Z masuk hari ini (WIB 17 Nov).
+    const batas = await dbi.get<{ total: number }>(
+      "SELECT COALESCE(SUM(total_idr), 0) AS total FROM orders WHERE status IN ('paid','packed','shipped','done') AND created_at >= '2026-11-16T17:00:00.000Z'",
+    );
+    expect(rev.todayIdr).toBe(batas?.total ?? 0);
+  });
+
   it("laporan menghitung omzet tanpa ongkir (AD-21, BA-06)", async () => {
     const report = await admin.adminReport("2026-11-01", "2026-11-30");
     expect(report.orderCount).toBeGreaterThan(0);
