@@ -8,6 +8,7 @@
 
 import type { Cookies } from "@sveltejs/kit";
 import { redirect } from "@sveltejs/kit";
+import { TtlCache, cacheKeyForToken } from "./auth-cache";
 import { getDb } from "./db";
 
 export const ADMIN_COOKIE = "kurma_admin_session";
@@ -75,11 +76,33 @@ async function verifySupabaseToken(token: string): Promise<AdminSession | null> 
   }
 }
 
+// Cache hasil verifikasi yang SAH saja (lihat auth-cache.ts). Satu klik tombol
+// admin sebelumnya memicu 3 verifikasi = 6 panggilan jaringan; dengan cache
+// hanya tersisa 1 verifikasi untuk request pertama dalam jendela TTL.
+// Hasil gagal TIDAK pernah di-cache: token palsu/kadaluarsa tetap ditolak.
+const SESSION_CACHE_TTL_MS = Number(process.env.KURMAPLUS_SESSION_CACHE_MS ?? 60_000);
+const sessionCache = new TtlCache<AdminSession>(SESSION_CACHE_TTL_MS);
+
 export async function readAdminSession(cookies: Cookies): Promise<AdminSession | null> {
   const token = cookies.get(ADMIN_COOKIE);
   if (!token) return null;
   if (import.meta.env.DEV && token === DEV_TOKEN) return DEV_SESSION;
-  return verifySupabaseToken(token);
+
+  const key = await cacheKeyForToken(token);
+  const cached = sessionCache.get(key);
+  if (cached) return cached;
+
+  const session = await verifySupabaseToken(token);
+  // Hanya simpan hasil yang sah.
+  if (session) sessionCache.set(key, session);
+  return session;
+}
+
+// Dipakai saat masuk/keluar akun supaya tidak ada sesi basi yang terpakai.
+export function forgetAdminSession(token: string): Promise<void> {
+  return cacheKeyForToken(token).then((key) => {
+    sessionCache.delete(key);
+  });
 }
 
 export function setDevSession(cookies: Cookies): void {
