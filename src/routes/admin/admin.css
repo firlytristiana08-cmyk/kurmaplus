@@ -689,21 +689,41 @@ button.is-busy::after {
 	}
 }
 
+/* Notifikasi admin di TENGAH layar. Sebelumnya menempel 5.5rem dari bawah —
+   tepat di belakang bilah tab navigasi dan di luar pandangan saat admin
+   berada di bagian atas halaman. Ditengah: terlihat dari posisi gulir mana
+   pun, baik di ponsel maupun desktop. */
 .toast {
 	position: fixed;
 	left: 50%;
-	bottom: 5.5rem;
+	top: 50%;
+	transform: translate(-50%, -50%);
 	z-index: 60;
 	display: flex;
 	align-items: center;
 	gap: 0.5rem;
+	width: max-content;
 	max-width: min(26rem, calc(100vw - 2rem));
-	transform: translateX(-50%);
 	padding: 0.75rem 1.125rem;
 	border: 1.5px solid var(--olive);
 	border-radius: 0.8125rem;
 	background: var(--card);
 	color: var(--olive);
 	font-weight: 700;
+	line-height: 1.35;
+	text-align: left;
 	box-shadow: 0 6px 24px rgba(45, 38, 75, 0.16);
+}
+
+/* Nada galat: warna rus/rputih agar langsung terbaca sebagai masalah. */
+.toast.is-error {
+	border-color: var(--rust);
+	color: var(--rust);
+	background: color-mix(in srgb, var(--rust) 8%, var(--card));
+}
+
+.toast .mk {
+	flex: none;
+	width: 1.125rem;
+	height: 1.125rem;
 }

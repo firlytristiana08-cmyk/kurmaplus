@@ -280,6 +280,12 @@ export async function adminSetShipping(
   ) {
     return fail("Nominal ongkir harus bilangan bulat ≥ 0.");
   }
+  // Ongkir hanya boleh dikonfirmasi bila nominalnya sudah dicatat: templat
+  // WhatsApp "Tagih ongkir" mengambil angka ini, sehingga konfirmasi tanpa
+  // nominal akan mengirim "ongkir sebesar Rp0" ke pembeli.
+  if (patch.shippingStatus === "paid" && patch.shippingActualIdr === null) {
+    return fail("Isi nominal ongkir sebelum mengonfirmasi.");
+  }
   const db = await getDb();
   const at = now.toISOString();
   return db.transaction(async (tx) => {
@@ -302,6 +308,20 @@ export async function adminSetShipping(
     const nextAmount =
       patch.shippingActualIdr !== undefined ? patch.shippingActualIdr : row.shipping_actual_idr;
     const nextBookedAt = patch.courierBooked ? at : row.courier_booked_at;
+    // Ongkir juga tidak boleh berstatus lunas bila nominalnya kosong — termasuk
+    // data lama yang dikonfirmasi sebelum aturan ini berlaku.
+    if (nextStatus === "paid" && (nextAmount === null || nextAmount === undefined)) {
+      return fail("Isi nominal ongkir sebelum mengonfirmasi.");
+    }
+    // Tanpa perubahan nyata: jangan tulis apa pun. Sebelumnya setiap klik
+    // "Simpan" menghasilkan baris audit yang isinya identik sebelum-sesudah.
+    if (
+      normalizeShippingStatus(row.shipping_status) === nextStatus &&
+      row.shipping_actual_idr === nextAmount &&
+      row.courier_booked_at === nextBookedAt
+    ) {
+      return { ok: true as const };
+    }
     await tx.run(
       "UPDATE orders SET shipping_status = ?, shipping_actual_idr = ?, courier_booked_at = ? WHERE id = ?",
       [nextStatus, nextAmount, nextBookedAt, row.id],
