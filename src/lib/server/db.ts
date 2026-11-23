@@ -10,6 +10,7 @@
 import path from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import { Pool, type PoolClient, types } from "pg";
+import { denganVersi } from "../foto-versi";
 import { ensureRuntimeEnv, hyperdriveConnectionString } from "./cf-env";
 import type { OrderStatus } from "./orders";
 import { generateOrderCode } from "./orders";
@@ -375,6 +376,83 @@ async function openSqlite(): Promise<Db> {
   return new SqliteDb(raw);
 }
 
+/**
+ * Jalankan migrasi db/migrations untuk Postgres.
+ *
+ * Sebelum ini applyMigrations() HANYA dipanggil di jalur SQLite, sehingga
+ * database produksi (Supabase) tidak pernah menerima migrasi apa pun —
+ * perubahan skema bergantung pada langkah manual yang mudah terlewat.
+ *
+ * Perbedaan penting dari versi SQLite:
+ * - Pelacak schema_migrations dipakai juga di sini, jadi tiap berkas cukup
+ *   sekali berlaku.
+ * - `ALTER TABLE ... ADD COLUMN` TIDAK memakai IF NOT EXISTS (SQLite menolak
+ *   sintaks itu). Kolom diperiksa lebih dulu, lalu ALTER dijalankan hanya bila
+ *   perlu. Galat "sudah ada" (42701) tetap ditelan sebagai jaring pengaman.
+ * - Satu berkas yang gagal TIDAK menghentikan aplikasi. Migrasi dicatat di
+ *   stderr lalu dilewati; situs tetap hidup dengan skema sebelumnya. Lebih
+ *   buruk mematikan seluruh toko karena satu berkas migrasi bermasalah.
+ */
+async function applyMigrationsPostgres(pool: Pool): Promise<void> {
+  const fs = await import("node:fs");
+  const path = await import("node:path");
+  await pool.query(
+    "CREATE TABLE IF NOT EXISTS schema_migrations (name TEXT PRIMARY KEY, applied_at TEXT NOT NULL)",
+  );
+  const dir = path.join(process.cwd(), "db", "migrations");
+  let daftar: string[];
+  try {
+    daftar = fs.readdirSync(dir).sort();
+  } catch {
+    // Runtime tanpa berkas migrasi (mis. bundel tanpa db/) — bukan galat fatal.
+    return;
+  }
+  for (const file of daftar) {
+    if (!file.endsWith(".sql")) continue;
+    try {
+      const sudah = await pool.query("SELECT 1 FROM schema_migrations WHERE name = $1", [file]);
+      if (sudah.rowCount) continue;
+      // Pisahkan pernyataan agar ALTER bisa ditangani satu per satu.
+      const isi = fs.readFileSync(path.join(dir, file), "utf8");
+      const pernyataan = isi
+        .split(/;\s*(?:\r?\n|$)/)
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0 && !/^--/.test(s.replace(/^\s*--.*$/gm, "").trim()));
+      for (const satu of pernyataan) {
+        // "-- komentar" di awal pernyataan dibuang; isi setelahnya yang jalan.
+        const bersih = satu.replace(/^\s*(?:--.*\r?\n)+/gm, "").trim();
+        if (!bersih) continue;
+        const tambahKolom = /^ALTER TABLE\s+(\w+)\s+ADD COLUMN\s+(?:IF NOT EXISTS\s+)?(\w+)/i.exec(
+          bersih,
+        );
+        if (tambahKolom) {
+          const [, tabel, kolom] = tambahKolom;
+          const ada = await pool.query(
+            "SELECT 1 FROM information_schema.columns WHERE table_name = $1 AND column_name = $2",
+            [tabel, kolom],
+          );
+          if (ada.rowCount) continue;
+          // SQLite-only syntax dibuang bila ada.
+          await pool.query(bersih.replace(/ADD COLUMN\s+IF NOT EXISTS/i, "ADD COLUMN"));
+          continue;
+        }
+        await pool.query(bersih);
+      }
+      await pool.query("INSERT INTO schema_migrations (name, applied_at) VALUES ($1, $2)", [
+        file,
+        new Date().toISOString(),
+      ]);
+    } catch (error) {
+      // Kode 42701 = kolom sudah ada; dianggap beres.
+      const kode = (error as { code?: string }).code;
+      if (kode === "42701") continue;
+      process.stderr.write(
+        `KURMAPLUS: migrasi ${file} dilewati (${kode ?? (error as Error).name}).\n`,
+      );
+    }
+  }
+}
+
 async function openPostgres(target: PostgresTarget): Promise<Db> {
   // Host Supabase me-resolve ke IPv6 lebih dulu, sedangkan jaringan serverless
   // tidak selalu memiliki jalur IPv6 (galat ENETUNREACH). Resolusi DNS dipaksa
@@ -413,6 +491,9 @@ async function openPostgres(target: PostgresTarget): Promise<Db> {
   });
   try {
     await pool.query("SELECT 1");
+    // Migrasi dijalankan setelah koneksi terbukti, sebelum query pertama
+    // aplikasi — supaya skema sudah mutakhir saat halaman meminta data.
+    await applyMigrationsPostgres(pool);
   } catch (error) {
     await pool.end().catch(() => undefined);
     // Kode galat saja (tanpa pesan/sandi) supaya mudah didiagnosis dari log
@@ -498,7 +579,7 @@ export interface ProductView {
   slug: string;
   name: string;
   description: string;
-  photos: { id: number; src: string }[];
+  photos: { id: number; src: string; versi: number }[];
   isBestSeller: boolean;
   variants: VariantView[];
   minPriceIdr: number;
@@ -507,7 +588,8 @@ export interface ProductView {
 
 // Sumber foto lewat endpoint /api/foto/{id} — URL data tidak disematkan di
 // HTML, halaman tetap ringan dan browser bisa menyimpan foto di cache.
-export const photoApiSrc = (photoId: number): string => `/api/foto/${photoId}`;
+export const photoApiSrc = (photoId: number, versi?: number): string =>
+  denganVersi(`/api/foto/${photoId}`, versi);
 
 interface VariantRow {
   id: number;
@@ -540,18 +622,52 @@ interface ProductRow {
   is_best_seller: number;
 }
 
-async function photosOf(db: Db, productId: number): Promise<{ id: number; src: string }[]> {
-  const rows = await db.all<{ id: number }>(
-    "SELECT id FROM product_photos WHERE product_id = ? ORDER BY sort_order, id",
-    [productId],
+/**
+ * Jalankan kueri yang menyebut kolom `version`, dengan cadangan tanpa kolom itu.
+ *
+ * Kolom `version` baru ada setelah migrasi 0012 berlaku. Bila migrasi itu
+ * belum berjalan (mis. deploy mendahului migrasi, atau migrasi dilewati),
+ * kueri yang menyebutnya akan galat dan penjualan berhenti total. Cadangan ini
+ * membuat foto tetap tampil — hanya tanpa versi — sampai migrasi menyusul.
+ */
+async function denganKolomVersi<T>(jalankan: (sebutVersi: boolean) => Promise<T>): Promise<T> {
+  try {
+    return await jalankan(true);
+  } catch (error) {
+    const pesan = error instanceof Error ? error.message : "";
+    // Postgres: kolom tidak ada (42703). SQLite: "no such column".
+    const kode = (error as { code?: string }).code;
+    if (kode === "42703" || /no such column/i.test(pesan)) {
+      return jalankan(false);
+    }
+    throw error;
+  }
+}
+
+async function photosOf(
+  db: Db,
+  productId: number,
+): Promise<{ id: number; src: string; versi: number }[]> {
+  const rows = await denganKolomVersi((sebutVersi) =>
+    db.all<{ id: number; version: number | null }>(
+      sebutVersi
+        ? "SELECT id, version FROM product_photos WHERE product_id = ? ORDER BY sort_order, id"
+        : "SELECT id FROM product_photos WHERE product_id = ? ORDER BY sort_order, id",
+      [productId],
+    ),
   );
-  return rows.map((row) => ({ id: row.id, src: photoApiSrc(row.id) }));
+  // Versi ikut ke URL supaya cache lama tidak menahan foto yang sudah diganti.
+  return rows.map((row) => ({
+    id: row.id,
+    src: photoApiSrc(row.id, row.version ?? 1),
+    versi: row.version ?? 1,
+  }));
 }
 
 function buildProductView(
   row: ProductRow,
   variants: VariantView[],
-  photos: { id: number; src: string }[],
+  photos: { id: number; src: string; versi: number }[],
 ): ProductView {
   const prices = variants.map((variant) => variant.priceIdr);
   return {
@@ -582,8 +698,12 @@ export async function listProducts(): Promise<ProductView[]> {
   const variantRows = await db.all<VariantRow>(
     "SELECT id, product_id, label, weight_grams, price_idr, stock FROM variants WHERE is_active = 1 ORDER BY weight_grams",
   );
-  const photoRows = await db.all<{ id: number; product_id: number }>(
-    "SELECT id, product_id FROM product_photos ORDER BY product_id, sort_order, id",
+  const photoRows = await denganKolomVersi((sebutVersi) =>
+    db.all<{ id: number; product_id: number; version: number | null }>(
+      sebutVersi
+        ? "SELECT id, product_id, version FROM product_photos ORDER BY product_id, sort_order, id"
+        : "SELECT id, product_id FROM product_photos ORDER BY product_id, sort_order, id",
+    ),
   );
   return rows.map((row) =>
     buildProductView(
@@ -599,7 +719,11 @@ export async function listProducts(): Promise<ProductView[]> {
         })),
       photoRows
         .filter((photo) => photo.product_id === row.id)
-        .map((photo) => ({ id: photo.id, src: photoApiSrc(photo.id) })),
+        .map((photo) => ({
+          id: photo.id,
+          src: photoApiSrc(photo.id, photo.version ?? 1),
+          versi: photo.version ?? 1,
+        })),
     ),
   );
 }

@@ -3,7 +3,7 @@ import { getProductBySlug, type ProductView } from "#lib/server/db";
 
 export interface ProductData {
   product: ProductView;
-  photos: { id: number; src: string }[];
+  photos: { id: number; src: string; versi: number }[];
 }
 
 export const load = async ({ params }): Promise<ProductData> => {

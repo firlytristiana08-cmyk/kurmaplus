@@ -28,7 +28,7 @@
 						{#if product.photos[0]}
 							<img
 								src={product.photos[0].src}
-								srcset={photoSrcset(product.photos[0].id)}
+								srcset={photoSrcset(product.photos[0].id, product.photos[0].versi)}
 								sizes="(max-width: 640px) 45vw, 230px"
 								alt={`Foto ${product.name}`}
 								width="430"

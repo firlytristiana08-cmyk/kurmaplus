@@ -1,6 +1,7 @@
 // Foto produk — tiga tingkat ukuran responsif (600/1200/1600px) untuk srcset.
 // Modul ini murni tanpa dependensi server supaya bisa dipakai komponen,
 // endpoint, dan tes.
+import { denganVersi } from "./foto-versi";
 
 export interface PhotoTiers {
   /** Turunan 600px — kosong bila tidak perlu (foto asli lebih kecil). */
@@ -11,14 +12,21 @@ export interface PhotoTiers {
   lg: string;
 }
 
-/** URL foto; beri w untuk meminta tingkat ukuran tertentu. */
-export function photoSrc(id: number, w?: number): string {
-  return w ? `/api/foto/${id}?w=${w}` : `/api/foto/${id}`;
+/**
+ * URL foto; beri w untuk meminta tingkat ukuran tertentu dan versi untuk
+ * memaksa cache diperbarui saat isi foto berubah (lihat foto-versi.ts).
+ *
+ * Tanpa versi, URL-nya sama seperti dulu — foto lama yang belum punya kolom
+ * versi tetap berfungsi.
+ */
+export function photoSrc(id: number, w?: number, versi?: number): string {
+  const dasar = w ? `/api/foto/${id}?w=${w}` : `/api/foto/${id}`;
+  return denganVersi(dasar, versi);
 }
 
 /** Nilai srcset untuk <img> — browser memilih otomatis sesuai layar. */
-export function photoSrcset(id: number): string {
-  return [600, 1200, 1600].map((w) => `${photoSrc(id, w)} ${w}w`).join(", ");
+export function photoSrcset(id: number, versi?: number): string {
+  return [600, 1200, 1600].map((w) => `${photoSrc(id, w, versi)} ${w}w`).join(", ");
 }
 
 /**
