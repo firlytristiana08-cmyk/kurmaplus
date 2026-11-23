@@ -58,13 +58,8 @@
 		`https://www.google.com/maps?q=${order.lat},${order.lng}`,
 	);
 
-	const shippingSteps: { key: string; label: string }[] = [
-		{ key: 'not_booked', label: 'Belum dipesan' },
-		{ key: 'booked', label: 'Pengiriman dipesan' },
-		{ key: 'billed', label: 'Ditagih' },
-		{ key: 'paid', label: 'Lunas' },
-	];
-	const shippingIndex = $derived(shippingSteps.findIndex((s) => s.key === order.shippingStatus));
+	// Ongkir hanya dua keadaan: belum dikonfirmasi / sudah dikonfirmasi.
+	const shippingConfirmed = $derived(order.shippingStatus === 'paid');
 
 	async function copyText(text: string, label: string): Promise<void> {
 		try {
@@ -190,40 +185,27 @@
 		</div>
 	</div>
 
-	<!-- Ongkir (AD-09, BA-06) -->
+	<!-- Ongkir (AD-09, BA-06): nominal + konfirmasi, dua hal saja. -->
 	<div class="surface">
 		<h3 style="margin-top: 0">Ongkir</h3>
-		<div class="stepchain" aria-label="Status ongkir">
-			{#each shippingSteps as step, i (step.key)}
-				<span class="step" class:is-done={i < shippingIndex} class:is-current={i === shippingIndex}>
-					<svg class="mk" viewBox="0 0 12 12" aria-hidden="true">
-						{#if i <= shippingIndex}<circle cx="6" cy="6" r="5" fill="currentColor" />{:else}<circle cx="6" cy="6" r="4.2" fill="none" stroke="currentColor" stroke-width="2" />{/if}
-					</svg>
-					{step.label}
-				</span>
-				{#if i < shippingSteps.length - 1}<span class="sep">›</span>{/if}
-			{/each}
-		</div>
+		<p>
+			{#if shippingConfirmed}
+				<span class="badge badge-ok">Ongkir dikonfirmasi</span>
+			{:else}
+				<span class="badge badge-wait">Belum dikonfirmasi</span>
+			{/if}
+		</p>
 		<form method="POST" action="?/ongkir" use:enhance={adminEnhance()}>
 			<div class="field">
 				<label for="nominal">Nominal ongkir dari aplikasi pengiriman</label>
 				<input id="nominal" name="nominal" type="text" inputmode="numeric" value={order.shippingActualIdr ?? ''} placeholder="mis. 25000" />
-				<p class="hint">Dicatat terpisah, tidak mengubah total pesanan.</p>
+				<p class="hint">Tersimpan terpisah, tidak mengubah total pesanan, dan otomatis terisi di templat WhatsApp “Tagih ongkir”.</p>
 			</div>
 			<div class="btn-row">
-				{#if order.shippingStatus === 'not_booked'}
-					<button class="btn-mini" type="submit" name="courier_booked" value="1">Catat kurir dipesan</button>
+				<button class="btn-mini is-rust" type="submit" name="konfirmasi" value="1">Konfirmasi ongkir</button>
+				{#if shippingConfirmed}
+					<button class="btn-mini" type="submit" name="batal" value="1">Batalkan konfirmasi</button>
 				{/if}
-				{#if shippingIndex > 0}
-					<button class="btn-mini" type="submit" name="shipping_status" value="not_booked">Kembali: belum dipesan</button>
-				{/if}
-				{#if shippingIndex < 2 && shippingIndex >= 0}
-					<button class="btn-mini is-rust" type="submit" name="shipping_status" value="billed">Tandai ditagih</button>
-				{/if}
-				{#if shippingIndex < 3 && shippingIndex >= 0}
-					<button class="btn-mini is-rust" type="submit" name="shipping_status" value="paid">Tandai lunas</button>
-				{/if}
-				<button class="btn-mini" type="submit" name="shipping_status" value={order.shippingStatus}>Simpan nominal</button>
 			</div>
 		</form>
 	</div>

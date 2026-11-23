@@ -11,7 +11,6 @@ import {
   adminOrderDetail,
   adminSaveNote,
   adminSetShipping,
-  type ShippingStatus,
 } from "#lib/server/admin";
 import { requireAdmin } from "#lib/server/admin-auth";
 import { expireStaleOrders, getSettings } from "#lib/server/db";
@@ -65,15 +64,19 @@ export const actions: Actions = {
     if (!result.ok) return fail(400, { message: result.error });
     return { done: true };
   },
+  // Ongkir disimpan sebagai: nominal + satu tombol konfirmasi. Nominal yang
+  // tersimpan otomatis dipakai templat WhatsApp "Tagih ongkir".
   ongkir: async ({ cookies, request, params }) => {
     const session = await requireAdmin(cookies);
     const form = await request.formData();
     const rawAmount = String(form.get("nominal") ?? "").replace(/[^\d]/g, "");
     const patch: Parameters<typeof adminSetShipping>[1] = {};
-    const statusValue = String(form.get("shipping_status") ?? "");
-    if (statusValue !== "") patch.shippingStatus = statusValue as ShippingStatus;
     if (rawAmount !== "") patch.shippingActualIdr = Number(rawAmount);
-    if (String(form.get("courier_booked") ?? "") === "1") patch.courierBooked = true;
+    if (String(form.get("batalkan") ?? "") === "1") {
+      patch.shippingStatus = "pending";
+    } else if (String(form.get("konfirmasi") ?? "") === "1") {
+      patch.shippingStatus = "paid";
+    }
     const result = await adminSetShipping(params.kode, patch, session.email);
     if (!result.ok) return fail(400, { message: result.error });
     return { done: true };

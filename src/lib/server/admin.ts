@@ -247,8 +247,16 @@ export async function adminManualPaid(
 
 // ---------- Ongkir (BA-06) ----------
 
-export type ShippingStatus = "not_booked" | "booked" | "billed" | "paid";
-const SHIPPING_STATUSES: ShippingStatus[] = ["not_booked", "booked", "billed", "paid"];
+// Ongkir cukup dua keadaan: belum dikonfirmasi / sudah dikonfirmasi lunas.
+// Nilai lama di database ("not_booked", "booked", "billed") diperlakukan
+// sebagai belum dikonfirmasi supaya tidak perlu migrasi data.
+export type ShippingStatus = "pending" | "paid";
+const SHIPPING_STATUSES: ShippingStatus[] = ["pending", "paid"];
+
+// Nilai apa pun selain "paid" dianggap belum dikonfirmasi.
+export function normalizeShippingStatus(value: string | null | undefined): ShippingStatus {
+  return value === "paid" ? "paid" : "pending";
+}
 
 export interface ShippingPatch {
   shippingStatus?: ShippingStatus;
@@ -290,7 +298,7 @@ export async function adminSetShipping(
       shipping_actual_idr: row.shipping_actual_idr,
       courier_booked_at: row.courier_booked_at,
     };
-    const nextStatus = patch.shippingStatus ?? row.shipping_status;
+    const nextStatus = normalizeShippingStatus(patch.shippingStatus ?? row.shipping_status);
     const nextAmount =
       patch.shippingActualIdr !== undefined ? patch.shippingActualIdr : row.shipping_actual_idr;
     const nextBookedAt = patch.courierBooked ? at : row.courier_booked_at;
@@ -1206,8 +1214,13 @@ export async function adminListOrders(filter: OrderFilter): Promise<{
     params.push(filter.courier);
   }
   if (filter.shippingStatus) {
-    where.push("shipping_status = ?");
-    params.push(filter.shippingStatus);
+    // "pending" harus mencakup nilai lama di database (not_booked/booked/
+    // billed) karena data lama tidak dimigrasi.
+    if (normalizeShippingStatus(filter.shippingStatus) === "pending") {
+      where.push("shipping_status <> 'paid'");
+    } else {
+      where.push("shipping_status = 'paid'");
+    }
   }
   if (filter.q && filter.q.trim() !== "") {
     const q = `%${filter.q.trim()}%`;

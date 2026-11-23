@@ -143,20 +143,36 @@ describe("admin: stok, ongkir, tanggal, pengaturan", () => {
     expect(await variantStock(2)).toBe(stockBefore - 2);
   });
 
-  it("ongkir: nominal divalidasi dan status berubah (BA-06)", async () => {
+  it("ongkir: nominal divalidasi dan bisa dikonfirmasi (BA-06)", async () => {
     await newOrder("TESTCCCC", 1, 1);
     const badAmount = await admin.adminSetShipping("TESTCCCC", { shippingActualIdr: -5 }, "tes");
     expect(badAmount.ok).toBe(false);
-    const ok = await admin.adminSetShipping(
-      "TESTCCCC",
-      { shippingActualIdr: 25000, courierBooked: true, shippingStatus: "booked" },
-      "tes",
-    );
+
+    // Simpan nominal saja: status tetap belum dikonfirmasi.
+    const saved = await admin.adminSetShipping("TESTCCCC", { shippingActualIdr: 25000 }, "tes");
+    expect(saved.ok).toBe(true);
+    expect((await admin.adminOrderDetail("TESTCCCC"))?.shippingStatus).toBe("pending");
+
+    // Satu tombol konfirmasi.
+    const ok = await admin.adminSetShipping("TESTCCCC", { shippingStatus: "paid" }, "tes");
     expect(ok.ok).toBe(true);
     const detail = await admin.adminOrderDetail("TESTCCCC");
-    expect(detail?.shippingStatus).toBe("booked");
+    expect(detail?.shippingStatus).toBe("paid");
     expect(detail?.shippingActualIdr).toBe(25000);
-    expect(detail?.courierBookedAt).toBeTruthy();
+
+    // Bisa dibatalkan kembali.
+    await admin.adminSetShipping("TESTCCCC", { shippingStatus: "pending" }, "tes");
+    expect((await admin.adminOrderDetail("TESTCCCC"))?.shippingStatus).toBe("pending");
+  });
+
+  it("ongkir: nilai lama di database dianggap belum dikonfirmasi", async () => {
+    // Data lama (not_booked/booked/billed) tidak dimigrasi; normalisasi harus
+    // memperlakukannya sebagai "pending" agar tidak perlu mengubah database.
+    expect(admin.normalizeShippingStatus("not_booked")).toBe("pending");
+    expect(admin.normalizeShippingStatus("booked")).toBe("pending");
+    expect(admin.normalizeShippingStatus("billed")).toBe("pending");
+    expect(admin.normalizeShippingStatus("paid")).toBe("paid");
+    expect(admin.normalizeShippingStatus(null)).toBe("pending");
   });
 
   it("pindah tanggal hanya Sabtu/Minggu dengan catatan (BA-07)", async () => {
