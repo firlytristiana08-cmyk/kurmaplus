@@ -6,6 +6,7 @@ import { goto } from '$app/navigation';
 	import PageFooter from '#lib/components/PageFooter.svelte';
 	import { stickyBar } from '#lib/sticky-bar';
 	import PageHeader from '#lib/components/PageHeader.svelte';
+	import { focusDialog } from '#lib/focus-dialog';
 	import type { ProductData } from './+page.server';
 
 	let { data }: { data: ProductData } = $props();
@@ -161,13 +162,14 @@ import { goto } from '$app/navigation';
 
 		<hr class="divider" />
 
-		<h2>Pilih ukuran</h2>
-		<div class="size-grid" role="group" aria-label="Pilihan ukuran">
+		<h2 id="ukuran-heading">Pilih ukuran</h2>
+		<div class="size-grid" role="group" aria-labelledby="ukuran-heading">
 			{#each product.variants as variant (variant.id)}
 				<button
 					type="button"
 					class="size-btn"
 					class:selected={variant.id === selectedVariant?.id}
+					aria-pressed={variant.id === selectedVariant?.id}
 					disabled={variant.stock < 1}
 					onclick={() => selectVariant(variant.id)}
 				>
@@ -245,6 +247,7 @@ import { goto } from '$app/navigation';
 		aria-modal="true"
 		aria-label={`Foto ${product.name}`}
 		tabindex="-1"
+		use:focusDialog
 		onclick={closeLightbox}
 		onkeydown={(event) => event.key === 'Escape' && closeLightbox()}
 	>
@@ -287,6 +290,7 @@ import { goto } from '$app/navigation';
 		aria-modal="true"
 		aria-labelledby="cart-dialog-title"
 		tabindex="-1"
+		use:focusDialog
 		onclick={() => (cartDialog = false)}
 		onkeydown={(event) => event.key === 'Escape' && (cartDialog = false)}
 	>
@@ -468,8 +472,9 @@ import { goto } from '$app/navigation';
 		background: #f2eadb;
 		background: color-mix(in srgb, var(--sand) 55%, var(--card));
 		border-radius: var(--radius-m);
-		color: #aea7ac;
-		color: color-mix(in srgb, var(--ink) 35%, var(--paper));
+		/* Ikon ini satu-satunya isi kotak → grafis bermakna, wajib ≥3:1.
+		   `--ink` 35% hanya 2,10:1 terhadap latar ini. */
+		color: var(--redup-lemah);
 	}
 
 	.photo-btn {
@@ -508,6 +513,8 @@ import { goto } from '$app/navigation';
 		background: color-mix(in srgb, var(--ink) 25%, var(--paper));
 	}
 
+	/* Titik aktif di atas latar krem (galeri biasa). Di dalam lightbox
+	   latarnya gelap, jadi warnanya ditimpa putih di aturan bawah. */
 	.dot.is-active::before {
 		width: 20px;
 		border-radius: 999px;

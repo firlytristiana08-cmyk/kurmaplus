@@ -405,7 +405,7 @@
 					type="button"
 					class="acc-head"
 					aria-expanded={kontakOpen}
-					aria-controls="acc-body"
+					aria-controls="kontak-body"
 					onclick={() => (kontakOpen = !kontakOpen)}
 				>
 					<span class="acc-title">Informasi pribadi (kontak)</span>
@@ -419,8 +419,7 @@
 					<svg class="acc-chevron" class:is-open={kontakOpen} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 10l5 5 5-5z" /></svg>
 				</button>
 				</h2>
-				{#if kontakOpen}
-				<div id="kontak-body" class="acc-body">
+				<div id="kontak-body" class="acc-body" hidden={!kontakOpen}>
 				<div class="field">
 					<label for="customerName">Nama <span class="required-mark">*</span></label>
 					<input
@@ -461,7 +460,6 @@
 					<p class="hint">Detail pesanan dan bukti pembayaran dikirim ke email ini.</p>
 				</div>
 				</div>
-				{/if}
 			</section>
 
 			<hr class="divider" />
@@ -472,7 +470,7 @@
 					type="button"
 					class="acc-head"
 					aria-expanded={lokasiOpen}
-					aria-controls="acc-body"
+					aria-controls="lokasi-body"
 					onclick={() => (lokasiOpen = !lokasiOpen)}
 				>
 					<span class="acc-title">Lokasi pengiriman</span>
@@ -486,8 +484,7 @@
 					<svg class="acc-chevron" class:is-open={lokasiOpen} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 10l5 5 5-5z" /></svg>
 				</button>
 				</h2>
-				{#if lokasiOpen}
-				<div id="lokasi-body" class="acc-body">
+				<div id="lokasi-body" class="acc-body" hidden={!lokasiOpen}>
 				<div class="field">
 					<label for="address">Alamat <span class="required-mark">*</span></label>
 					<textarea
@@ -525,7 +522,6 @@
 					{/if}
 				</div>
 				</div>
-				{/if}
 			</section>
 
 			<hr class="divider" />

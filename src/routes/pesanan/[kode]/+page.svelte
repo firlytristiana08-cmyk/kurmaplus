@@ -4,6 +4,7 @@
 	import { STATUS_LABEL_ID, type OrderStatus } from '#lib/order-status';
 	import PageFooter from '#lib/components/PageFooter.svelte';
 	import PageHeader from '#lib/components/PageHeader.svelte';
+	import { focusDialog } from '#lib/focus-dialog';
 	import ProsesLoader from '#lib/components/ProsesLoader.svelte';
 	import type { OrderPageData } from './+page.server';
 
@@ -81,6 +82,16 @@
 
 	let loading = $state(false);
 	let showModal = $state(false);
+
+	// Kunci gulir latar selama modal terbuka, pulihkan saat ditutup/dilepas.
+	$effect(() => {
+		if (!showModal) return;
+		const sebelumnya = document.body.style.overflow;
+		document.body.style.overflow = 'hidden';
+		return () => {
+			document.body.style.overflow = sebelumnya;
+		};
+	});
 	// svelte-ignore state_referenced_locally -- modal status tampil sekali saat render pertama.
 	if (data.showStatusModal) {
 		showModal = true;
@@ -218,6 +229,7 @@
 			aria-modal="true"
 			aria-labelledby="modal-status-title"
 			tabindex="-1"
+			use:focusDialog
 			onclick={(event) => event.stopPropagation()}
 			onkeydown={(event) => event.key === 'Escape' && closeModal()}
 		>
@@ -311,8 +323,7 @@
 	}
 
 	dt {
-		color: #73685f;
-		color: color-mix(in srgb, var(--ink) 62%, var(--paper));
+		color: var(--redup);
 	}
 
 	dd {
@@ -332,8 +343,7 @@
 
 	.hint {
 		font-size: 0.8125rem;
-		color: #73685f;
-		color: color-mix(in srgb, var(--ink) 62%, var(--paper));
+		color: var(--redup);
 	}
 
 	.modal-backdrop {
@@ -352,7 +362,7 @@
 		background: var(--paper);
 		border: 1px solid #d0c9c5;
 		border: 1px solid color-mix(in srgb, var(--ink) 18%, var(--paper));
-		border-radius: 12px;
+		border-radius: var(--radius-m);
 		padding: 1.5rem;
 		max-width: 22rem;
 		width: 100%;
@@ -376,8 +386,7 @@
 	}
 
 	.modal-mark.badge-wait {
-		color: #62574e;
-		color: color-mix(in srgb, var(--ink) 70%, var(--paper));
+		color: var(--redup);
 	}
 
 	.modal-mark.badge-alert {

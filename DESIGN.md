@@ -341,10 +341,78 @@ Untuk setiap daftar atau angka di portal:
 | 1 | Ikon tab "Lainnya" = `⋯` | Sebaiknya diganti ikon yang menggambarkan isi (Pengaturan/Laporan/Log) |
 | 2 | Detail pesanan memakai 13 kartu berurutan | Tiap bagian berdiri sendiri; menggabungkan butuh uji cetak ulang |
 | 3 | `cream-palette` ditandai detektor | **Dipertahankan** — itu warna kurma, bukan refleks. Lihat §2 |
+| 4 | `PageHeader`/`PageFooter` 430 px hardcoded | Belum diubah; tidak ada gejala, butuh uji visual |
+
+Portal pelanggan: **nol inline style**, nol nilai radius lepas, nol `color-mix`
+teks tanpa token. Lihat `docs/audit-desain-pelanggan.md`.
 
 ---
 
-## 12. Cara memeriksa pekerjaan sendiri
+## 12. Aksesibilitas
+
+Berlaku untuk portal pelanggan **dan** admin. Ini bukan lampiran — ini bagian
+dari sistem.
+
+### Fokus keyboard
+
+Semua elemen interaktif mendapat garis fokus yang sama, didefinisikan sekali di
+`app.css` dengan `:where()` (kekhususan nol, jadi komponen tetap boleh
+menimpanya):
+
+```css
+:where(button, [href], input, select, textarea, [tabindex]):focus-visible {
+  outline: 3px solid var(--rust);
+  outline-offset: 2px;
+}
+```
+
+Di atas latar gelap (lightbox, modal) warnanya diganti `--paper`. `--rust` di
+atas `#26222f` hanya 2,43:1 — gagal.
+
+**Jangan** menulis `outline: none` tanpa pengganti.
+
+### Dialog modal
+
+Setiap elemen dengan `role="dialog"` **wajib** memakai `use:focusDialog`
+(`src/lib/focus-dialog.ts`). Yang dilakukan aksi itu:
+
+1. memindahkan fokus ke isi pertama,
+2. menjebak Tab/Shift+Tab di dalam dialog,
+3. mengembalikan fokus ke elemen pemicu saat ditutup,
+4. mengunci gulir latar selama terbuka.
+
+`aria-modal="true"` tanpa ini adalah kebohongan: pembaca layar tetap membaca
+halaman di belakang.
+
+Bila isi dialog dirender bersyarat (`{#if terbuka}`), **jangan** taruh id yang
+dirujuk `aria-controls` di dalam blok itu — gunakan `hidden` agar elemen selalu
+ada di DOM.
+
+### Status & pilihan
+
+Status tidak pernah disampaikan lewat warna saja:
+
+- Lencana status: teks + **bentuk** (○ ● ■ ▲ ★ ◇ ✕).
+- Tombol pilihan (ukuran produk): `aria-pressed`.
+- Isian yang berubah tampil saat terpilih: `:has(input:checked)` + `aria`.
+
+### Kontras
+
+Ambang yang dipakai: **4,5:1** teks biasa, **3:1** teks besar, **3:1** elemen
+grafis bermakna (ikon yang menjadi satu-satunya isi). Ikon hiasan boleh lebih
+rendah.
+
+Yang sudah diukur dan **gagal** lalu diperbaiki:
+
+| Elemen | Sebelum | Sesudah |
+|---|---|---|
+| Ikon "foto belum tersedia" | 2,10:1 | 3,65:1 |
+| Pemisah rantai status (admin) | 2,19:1 | 3,91:1 |
+| Titik galeri aktif di lightbox | sudah 15,5:1 | ✓ |
+
+---
+
+## 13. Cara memeriksa pekerjaan sendiri
 
 1. `npm run check` — 0 galat, 0 peringatan.
 2. `npm run test` — semua lulus.
@@ -353,3 +421,8 @@ Untuk setiap daftar atau angka di portal:
 5. Uji di 430 px **dan** 900 px.
 6. Cetak satu pesanan ke PDF — harus terbaca hitam-putih.
 7. Matikan JavaScript di peramban: formulir harus tetap bisa dikirim.
+8. Tab saja (tanpa tetikus) dari atas halaman: fokus harus selalu terlihat, dan
+   tidak boleh keluar dari dialog yang sedang terbuka.
+9. Saat aksinya "jelas benar", **rusak sengaja** lalu pastikan tes atau
+   pemeriksaan Anda benar-benar gagal. Tes yang selalu hijau tidak membuktikan
+   apa pun.

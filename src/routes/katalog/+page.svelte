@@ -149,9 +149,10 @@ import { formatRupiah } from '#lib/format';
 		justify-content: center;
 		background: #f2eadb;
 		background: color-mix(in srgb, var(--sand) 55%, var(--card));
-		border-radius: var(--radius-l) var(--radius-l) var(--radius-m) var(--radius-m);
-		color: #aea7ac;
-		color: color-mix(in srgb, var(--ink) 35%, var(--paper));
+		border-radius: 0;
+		/* Ikon "foto belum tersedia" adalah satu-satunya isi kotak ini, jadi
+		   ia grafis bermakna: wajib ≥ 3:1 terhadap latarnya. 35% hanya 2,10:1. */
+		color: var(--redup-lemah);
 	}
 
 	.product-photo img {
@@ -160,8 +161,9 @@ import { formatRupiah } from '#lib/format';
 		aspect-ratio: 1 / 1;
 		object-fit: cover;
 		display: block;
-		/* Radius langsung di gambar — kliping overflow induk tidak andal di Safari lama. */
-		border-radius: var(--radius-l) var(--radius-l) 0 0;
+		/* Sudut dibulatkan oleh .product-card (overflow: hidden), bukan di sini.
+		   Sebelumnya gambar dan placeholder memakai campuran radius berbeda. */
+		border-radius: 0;
 	}
 
 	.best-badge {
@@ -195,8 +197,7 @@ import { formatRupiah } from '#lib/format';
 	.sold {
 		margin: 0.25rem 0 0;
 		font-size: 0.8125rem;
-		color: #776e68;
-		color: color-mix(in srgb, var(--ink) 62%, var(--card));
+		color: var(--redup);
 	}
 
 	.product-body .badge {
