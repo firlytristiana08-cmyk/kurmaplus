@@ -1384,10 +1384,10 @@ export interface TodaySummary {
     locked: number;
   }[];
   counts: { pending_payment: number; paid: number; packed: number; shipped: number };
-  // Ringkasan pendapatan (BA-06: ongkir TIDAK dihitung sebagai pendapatan).
-  // "Lunas" = total pesanan yang sudah dibayar, mencakup yang masih dikerjakan
-  // maupun yang sudah selesai — supaya angkanya tidak turun saat pesanan
-  // berpindah dari "dikirim" ke "selesai".
+  // Ringkasan pendapatan: cukup dua angka (total & hari ini).
+  // BA-06: ongkir TIDAK dihitung sebagai pendapatan — ongkir ditagih terpisah
+  // ke kurir. "Lunas" memakai total pesanan berbayar termasuk yang sudah
+  // selesai, supaya angkanya tidak turun saat pesanan ditandai selesai.
   revenue: {
     /** Omzet seluruh pesanan berbayar, sepanjang waktu. */
     totalIdr: number;
@@ -1397,10 +1397,6 @@ export interface TodaySummary {
     todayIdr: number;
     /** Jumlah pesanan yang membentuk todayIdr. */
     todayCount: number;
-    /** Sudah dibayar tetapi belum selesai (masih perlu dikerjakan). */
-    inProgressIdr: number;
-    /** Diterima pada 30 hari terakhir. */
-    last30Idr: number;
   };
   threshold: number;
   storeOpen: boolean;
@@ -1510,10 +1506,6 @@ export async function adminToday(now = new Date()): Promise<TodaySummary> {
     `SELECT COALESCE(SUM(total_idr), 0) AS total, COUNT(*) AS n
 		 FROM orders WHERE status IN ${PAID_STATUSES}`,
   );
-  const revenueInProgress = await db.get<{ total: number }>(
-    `SELECT COALESCE(SUM(total_idr), 0) AS total
-		 FROM orders WHERE status IN ('paid', 'packed', 'shipped')`,
-  );
   // Batas "hari ini" memakai zona Asia/Jakarta (UTC+7), sama seperti rekap
   // akhir pekan di atas — supaya pesanan pukul 00:30 WIB tidak terhitung
   // sebagai kemarin.
@@ -1527,11 +1519,6 @@ export async function adminToday(now = new Date()): Promise<TodaySummary> {
 		 FROM orders WHERE status IN ${PAID_STATUSES} AND created_at >= ?`,
     [todayStartUtc],
   );
-  const revenueLast30 = await db.get<{ total: number }>(
-    `SELECT COALESCE(SUM(total_idr), 0) AS total
-		 FROM orders WHERE status IN ${PAID_STATUSES} AND created_at >= ?`,
-    [new Date(now.getTime() - 30 * 24 * 3_600_000).toISOString()],
-  );
 
   return {
     needAction: needRows.map(toLine),
@@ -1543,8 +1530,6 @@ export async function adminToday(now = new Date()): Promise<TodaySummary> {
       orderCount: revenueTotals?.n ?? 0,
       todayIdr: revenueToday?.total ?? 0,
       todayCount: revenueToday?.n ?? 0,
-      inProgressIdr: revenueInProgress?.total ?? 0,
-      last30Idr: revenueLast30?.total ?? 0,
     },
     threshold,
     storeOpen: settings.store_open !== "0",

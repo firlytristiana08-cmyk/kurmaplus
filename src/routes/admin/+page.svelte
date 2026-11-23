@@ -30,10 +30,11 @@
 		<p class="error-box">{form.message}</p>
 	{/if}
 
-	<!-- Ringkasan pendapatan. Ongkir TIDAK dihitung (BA-06): ongkir ditagih
-	     terpisah ke kurir, bukan bagian dari omzet. Angka "Lunas" sengaja
-	     memakai total pesanan berbayar (termasuk yang sudah selesai) supaya
-	     tidak turun saat pesanan berpindah ke status selesai. -->
+	<!-- Ringkasan pendapatan: cukup dua angka — total dan hari ini.
+	     Ongkir TIDAK dihitung (BA-06): ongkir ditagih terpisah ke kurir, bukan
+	     bagian dari omzet. "Total lunas" memakai total pesanan berbayar termasuk
+	     yang sudah selesai, supaya angkanya tidak turun saat pesanan ditandai
+	     selesai. Rincian per periode ada di halaman Laporan. -->
 	<div class="section-head">
 		<h2>Pendapatan</h2>
 		<a href="/admin/laporan">Laporan per periode</a>
@@ -57,18 +58,6 @@
 				</span>
 			</span>
 		</div>
-		<div class="recap-line">
-			<span class="day">30 hari terakhir</span>
-			<span class="sum tabular">{formatRupiah(today.revenue.last30Idr)}</span>
-		</div>
-		<div class="recap-line">
-			<span class="day">Masih dikerjakan</span>
-			<span class="sum tabular">{formatRupiah(today.revenue.inProgressIdr)}</span>
-		</div>
-		<p class="hint" style="margin: 0.5rem 0 0">
-			Tanpa ongkir — ongkir ditagih terpisah ke kurir. "Masih dikerjakan" adalah bagian dari
-			total lunas yang belum selesai.
-		</p>
 	</div>
 
 	<!-- Status pembayaran daring: satu baris, selalu terlihat. Sebelumnya

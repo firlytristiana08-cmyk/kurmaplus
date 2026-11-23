@@ -263,21 +263,16 @@ describe("admin: stok, ongkir, tanggal, pengaturan", () => {
     const today = await admin.adminToday(new Date("2026-11-16T02:00:00Z"));
     const rev = today.revenue;
 
-    // Angka harus masuk akal dan konsisten satu sama lain.
+    // Ringkasan pendapatan sengaja hanya dua angka: total dan hari ini.
     expect(rev.totalIdr).toBeGreaterThan(0);
     expect(rev.orderCount).toBeGreaterThan(0);
-    expect(rev.inProgressIdr).toBeLessThanOrEqual(rev.totalIdr);
-    expect(rev.last30Idr).toBeLessThanOrEqual(rev.totalIdr);
-
-    // "Masih dikerjakan" hanya dari status paid/packed/shipped.
-    const dbi = await db.getDb();
-    const expected = await dbi.get<{ total: number }>(
-      "SELECT COALESCE(SUM(total_idr), 0) AS total FROM orders WHERE status IN ('paid', 'packed', 'shipped')",
-    );
-    expect(rev.inProgressIdr).toBe(expected?.total ?? 0);
+    expect(rev.todayIdr).toBeLessThanOrEqual(rev.totalIdr);
+    expect(rev).not.toHaveProperty("inProgressIdr");
+    expect(rev).not.toHaveProperty("last30Idr");
 
     // "Lunas" mencakup pesanan selesai juga, jadi tidak boleh turun saat
     // pesanan berpindah dari dikirim ke selesai.
+    const dbi = await db.getDb();
     const semua = await dbi.get<{ total: number }>(
       "SELECT COALESCE(SUM(total_idr), 0) AS total FROM orders WHERE status IN ('paid', 'packed', 'shipped', 'done')",
     );
