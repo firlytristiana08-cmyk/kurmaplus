@@ -3,6 +3,7 @@ import {
   createCheckoutPayment,
   type DokuConfig,
   digestBase64,
+  isTrustedPaymentUrl,
   loadDokuConfig,
   requestTimestamp,
   signHmacSha256,
@@ -168,7 +169,7 @@ describe("pengaman konfigurasi go-live", () => {
       return new Response(
         JSON.stringify({
           response: {
-            payment: { url: "https://bayar.example/x", expired_date: "2026-11-16T10:00:00Z" },
+            payment: { url: "https://checkout.doku.com/x", expired_date: "2026-11-16T10:00:00Z" },
           },
         }),
         { status: 200, headers: { "content-type": "application/json" } },
@@ -188,7 +189,7 @@ describe("pengaman konfigurasi go-live", () => {
         },
         new Date("2026-11-16T10:00:00Z"),
       );
-      expect(result.paymentUrl).toBe("https://bayar.example/x");
+      expect(result.paymentUrl).toBe("https://checkout.doku.com/x");
       const body = JSON.parse(captured) as {
         additional_info?: { override_notification_url?: string };
       };
@@ -198,5 +199,32 @@ describe("pengaman konfigurasi go-live", () => {
     } finally {
       vi.unstubAllGlobals();
     }
+  });
+
+  describe("host URL pembayaran (temuan produksi 23 Nov 2026)", () => {
+    it("menerima checkout.doku.com", () => {
+      expect(isTrustedPaymentUrl("https://checkout.doku.com/checkout-link-v2/abc")).toBe(true);
+    });
+
+    it("MENOLAK staging.doku.com (pernah dipakai pesanan nyata)", () => {
+      // MQ2QM4TV & 5J9NY6A7 menerima URL staging; pembayaran di sana tidak
+      // masuk ke akun produksi, jadi harus ditolak.
+      expect(isTrustedPaymentUrl("https://staging.doku.com/checkout-link-v2/9d0")).toBe(false);
+    });
+
+    it("menolak host lain, http, dan URL rusak", () => {
+      expect(isTrustedPaymentUrl("https://doku.com.evil.test/x")).toBe(false);
+      expect(isTrustedPaymentUrl("https://evil.test/checkout.doku.com")).toBe(false);
+      expect(isTrustedPaymentUrl("http://checkout.doku.com/x")).toBe(false);
+      expect(isTrustedPaymentUrl("bukan url")).toBe(false);
+    });
+
+    it("menolak subdomain doku.com lain — hanya checkout.doku.com yang sah", () => {
+      // Sengaja ketat: `staging.doku.com` juga subdomain doku.com, jadi aturan
+      // "berakhiran doku.com" akan meloloskannya. Daftar harus persis.
+      expect(isTrustedPaymentUrl("https://pay.doku.com/x")).toBe(false);
+      expect(isTrustedPaymentUrl("https://doku.com/x")).toBe(false);
+      expect(isTrustedPaymentUrl("https://sandbox.doku.com/x")).toBe(false);
+    });
   });
 });
