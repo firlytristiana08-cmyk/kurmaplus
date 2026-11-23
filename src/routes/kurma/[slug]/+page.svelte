@@ -132,7 +132,7 @@ import { goto } from '$app/navigation';
 						<button type="button" class="slide" onclick={() => openLightbox(index)}>
 							<img
 								src={photo.src}
-								srcset={photoSrcset(photo.id)}
+								srcset={photoSrcset(photo.id, photo.versi)}
 								sizes="(max-width: 720px) 92vw, 520px"
 								alt={`Foto ${product.name} ${index + 1}`}
 								width="600"
@@ -160,7 +160,7 @@ import { goto } from '$app/navigation';
 				<img
 					class="photo"
 					src={product.photos[0].src}
-					srcset={photoSrcset(product.photos[0].id)}
+					srcset={photoSrcset(product.photos[0].id, product.photos[0].versi)}
 					sizes="(max-width: 720px) 92vw, 520px"
 					alt={`Foto ${product.name}`}
 					width="430"
@@ -285,7 +285,7 @@ import { goto } from '$app/navigation';
 			role="presentation"
 		>
 			{#each data.photos as photo, index (photo.id)}
-				<img src={photo.src} srcset={photoSrcset(photo.id)} sizes="100vw" alt={`Foto ${product.name} ${index + 1}`} />
+				<img src={photo.src} srcset={photoSrcset(photo.id, photo.versi)} sizes="100vw" alt={`Foto ${product.name} ${index + 1}`} />
 			{/each}
 		</div>
 		<div class="dots" role="group" aria-label="Pilih foto">

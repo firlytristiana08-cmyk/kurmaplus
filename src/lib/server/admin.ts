@@ -7,6 +7,7 @@
 import type { PhotoTiers } from "#lib/photos";
 import type { Db } from "./db";
 import { getDb, getSettings } from "./db";
+import { idFotoBerikutnya } from "./foto-sequence";
 import type { OrderStatus } from "./orders";
 
 export type AdminResult = { ok: true } | { ok: false; error: string };
@@ -859,11 +860,11 @@ async function insertProductPhotos(tx: Db, productId: number, photos: PhotoTiers
   for (const photo of photos) {
     const lg = photo.lg.trim();
     if (lg === "") continue;
-    const next = await tx.get<{ id: number }>(
-      "SELECT COALESCE(MAX(id), 0) + 1 AS id FROM product_photos",
-      [],
-    );
-    const photoId = next?.id ?? 1;
+    // Id dari urutan yang hanya bergerak maju — BUKAN MAX(id)+1, karena id
+    // yang barusan dihapus bisa dipakai ulang dan URL fotonya jadi sama
+    // dengan yang lama (foto pengganti lalu tertahan cache). Lihat
+    // foto-sequence.ts.
+    const photoId = await idFotoBerikutnya(tx);
     await tx.run(
       "INSERT INTO product_photos (id, product_id, sort_order, data, data_sm, data_md) VALUES (?, ?, ?, ?, ?, ?)",
       [photoId, productId, sort, lg, photo.sm.trim(), photo.md.trim()],

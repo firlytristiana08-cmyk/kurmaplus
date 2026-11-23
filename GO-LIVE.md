@@ -133,3 +133,28 @@ selesai — halaman ini menampilkan (tersamar) informasi konfigurasi.
 - Deploy produksi dilakukan lewat Cloudflare Builds setelah PR digabung ke
   `main`; `wrangler deploy` dari komputer hanya untuk Worker dev.
 - Jangan menaruh rahasia di `wrangler.jsonc` atau `.dev.vars` yang di-commit.
+
+## 6. Cache Hyperdrive — WAJIB dimatikan
+
+Hyperdrive **meng-cache hasil query secara bawaan**: `max_age` 60 detik +
+`stale_while_revalidate` 15 detik. Cloudflare tidak membatalkan cache saat
+aplikasi menulis ke database, sehingga perubahan di panel admin baru terlihat
+setelah **~75 detik** — di portal admin maupun portal pelanggan. Ini pernah
+terjadi dan membingungkan pemilik toko.
+
+Sudah dimatikan 23 Nov 2026: Cloudflare → Storage & Databases → Hyperdrive →
+konfigurasi `HYPERDRIVE` → **Caching → Disable**.
+
+Kenapa dimatikan, bukan diatur ulang:
+
+- Toko ini punya 3 produk; query yang identik dalam 60 detik hampir tidak ada,
+  jadi cache praktis tidak pernah kena — seluruh risiko basi tanpa manfaat.
+- Kecepatan Hyperdrive yang sebenarnya berasal dari **connection pooling**
+  (menghapus 7 round-trip: TCP, TLS, autentikasi). Itu tetap bekerja walau
+  caching dimatikan (dokumentasi Cloudflare menyatakannya eksplisit).
+- Cache ikut menahan **sesi admin** (`admin-auth.ts` memakai `getDB()`), jadi
+  admin yang sudah logout masih dianggap masuk sampai 75 detik.
+
+Kalau kelak butuh cache lagi untuk katalog, buat konfigurasi Hyperdrive KEDUA
+dengan `--caching-disabled` untuk jalur admin/pasca-tulis — jangan mengaktifkan
+cache pada jalur yang menulis.
