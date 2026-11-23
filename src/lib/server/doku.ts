@@ -174,6 +174,37 @@ export function normalizeDokuPhone(phone: string): string {
 }
 
 // Membuat sesi DOKU Checkout (FR-11): invoice = kode pesanan.
+// Pengaman host URL pembayaran.
+//
+// Latar (temuan 23 Nov 2026 dari data produksi): pesanan MQ2QM4TV dan
+// 5J9NY6A7 menerima URL pembayaran berdomain staging.doku.com, sedangkan
+// pesanan lain mendapat checkout.doku.com. URL dikembalikan DOKU dan langsung
+// dipakai apa adanya, sehingga tidak ada yang mencegah pembeli diarahkan ke
+// lingkungan uji DOKU — pembayaran di sana tidak masuk ke akun produksi.
+//
+// Aturan: hanya domain DOKU yang sah yang diterima. Bila DOKU mengembalikan
+// host lain (staging, host penyerang, salah konfigurasi), transaksi DITOLAK
+// dan pesanan tetap bisa dibayar dari halaman pesanan.
+// Daftar PERSIS, bukan pencocokan akhiran: `staging.doku.com` juga subdomain
+// doku.com, sehingga aturan "berakhiran doku.com" justru meloloskannya.
+const PAYMENT_HOSTS = new Set(["checkout.doku.com"]);
+
+// Lingkungan uji DOKU — selalu ditolak, walau namanya mirip domain resmi.
+const REJECTED_HOST_PREFIXES = ["staging.", "sandbox.", "api-sandbox."];
+
+export function isTrustedPaymentUrl(url: string): boolean {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return false;
+  }
+  if (parsed.protocol !== "https:") return false;
+  const host = parsed.hostname.toLowerCase();
+  if (REJECTED_HOST_PREFIXES.some((prefix) => host.startsWith(prefix))) return false;
+  return PAYMENT_HOSTS.has(host);
+}
+
 export async function createCheckoutPayment(
   config: DokuConfig,
   payload: DokuCheckoutPayload,
@@ -233,6 +264,12 @@ export async function createCheckoutPayment(
         : "";
     throw new Error(
       `DOKU menolak permintaan pembayaran (HTTP ${response.status})${detail === "" ? "" : `: ${detail}`}`,
+    );
+  }
+  // Jangan pernah mengirim pembeli ke host di luar domain DOKU yang sah.
+  if (!isTrustedPaymentUrl(paymentUrl)) {
+    throw new Error(
+      `DOKU mengembalikan URL pembayaran yang tidak dikenal (${new URL(paymentUrl).hostname}); transaksi ditolak demi keamanan.`,
     );
   }
   return { paymentUrl, expiredDate };
