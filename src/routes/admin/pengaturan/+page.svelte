@@ -40,7 +40,7 @@
 
 	<form method="POST" action="?/simpan" use:enhance={adminEnhance()}>
 		<div class="surface">
-			<h3 style="margin-top: 0">Toko</h3>
+			<h2 class="card-title">Toko</h2>
 			<div class="field">
 				<label for="store_open">Keadaan toko</label>
 				<select id="store_open" name="store_open">
@@ -64,7 +64,7 @@
 		</div>
 
 		<div class="surface">
-			<h3 style="margin-top: 0">Pesanan &amp; stok</h3>
+			<h2 class="card-title">Pesanan &amp; stok</h2>
 			<div class="field">
 				<label for="order_cutoff_weekday">Batas pesan — hari (1 = Senin … 7 = Minggu)</label>
 				<input id="order_cutoff_weekday" name="order_cutoff_weekday" type="text" inputmode="numeric" value={s.order_cutoff_weekday ?? '4'} />
@@ -88,7 +88,7 @@
 		</div>
 
 		<div class="surface">
-			<h3 style="margin-top: 0">Templat pesan WhatsApp</h3>
+			<h2 class="card-title">Templat pesan WhatsApp</h2>
 			<p class="muted">
 				Tersedia variabel <code>{'{kode}'}</code>, <code>{'{nama}'}</code>, <code>{'{tanggal}'}</code>,
 				dan <code>{'{nominal}'}</code>.

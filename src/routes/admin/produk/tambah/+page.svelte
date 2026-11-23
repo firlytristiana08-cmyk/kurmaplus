@@ -58,22 +58,22 @@
 			{/each}
 		</div>
 
-		<div class="surface" style="margin-top: 0.75rem">
-			<p class="muted" style="margin: 0 0 0.25rem; font-size: 0.8125rem">
+		<div class="surface">
+			<p class="muted">
 				Varian (ukuran) yang dijual
 			</p>
 			{#each newRows as rowKey (rowKey)}
-				<div class="btn-row" style="margin: 0 0 0.5rem">
-					<input name="v_label" type="text" placeholder="Ukuran, mis. 500 gr" aria-label="Nama ukuran" required style="min-height: 44px; max-width: 8.5rem" />
-					<input name="v_weight" type="number" min="1" step="1" placeholder="Berat (gram)" aria-label="Berat gram" required style="min-height: 44px; max-width: 7rem" />
-					<input name="v_price" type="text" inputmode="numeric" placeholder="Harga (rupiah)" aria-label="Harga" required style="min-height: 44px; max-width: 8.5rem" />
-					<input name="v_stock" type="number" min="0" step="1" placeholder="Stok awal" aria-label="Stok awal" value="0" required style="min-height: 44px; max-width: 6.5rem" />
+				<div class="field-inline">
+					<input name="v_label" type="text" placeholder="Ukuran, mis. 500 gr" aria-label="Nama ukuran" required class="input-m" />
+					<input name="v_weight" type="number" min="1" step="1" placeholder="Berat (gram)" aria-label="Berat gram" required class="input-s" />
+					<input name="v_price" type="text" inputmode="numeric" placeholder="Harga (rupiah)" aria-label="Harga" required class="input-m" />
+					<input name="v_stock" type="number" min="0" step="1" placeholder="Stok awal" aria-label="Stok awal" value="0" required class="input-s" />
 					{#if newRows.length > 1}
 						<button class="btn-mini" type="button" onclick={() => removeRow(rowKey)}>Hapus baris</button>
 					{/if}
 				</div>
 			{/each}
-			<div class="btn-row" style="margin: 0">
+			<div class="btn-row">
 				<button class="btn-mini" type="button" onclick={addRow}>+ Varian lain</button>
 			</div>
 		</div>

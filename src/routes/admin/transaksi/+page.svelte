@@ -50,7 +50,7 @@
 
 	<div class="surface">
 		{#if data.rows.length === 0}
-			<p class="muted" style="margin: 0">Belum ada transaksi pada saringan ini.</p>
+			<p class="muted">Belum ada transaksi pada saringan ini.</p>
 		{:else}
 			{#each data.rows as row (row.invoiceNumber + row.createdAt)}
 				<div class="row">

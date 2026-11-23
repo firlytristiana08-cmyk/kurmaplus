@@ -41,9 +41,21 @@
 	--brick: #9b2c2c;
 	--card: #fffdf8;
 
+	/* Skala radius tiga langkah: kecil (isian) / sedang (tombol, chip, toast) /
+	   besar (kartu). Tidak ada nilai keempat. */
 	--radius-s: 0.625rem;
-	--radius-m: 1rem;
+	--radius-m: 0.75rem;
 	--radius-l: 1.625rem;
+
+	/* Teks redup (keterangan, meta, baris kedua daftar). Dua langkah:
+	   --redup        = teks sekunder yang masih harus terbaca (4,66:1 di kertas)
+	   --redup-lemah  = pemisah/label sangat kecil (3,91:1) — bukan untuk isi.
+	   Nilai heksadesimal ditulis LEBIH DULU sebagai fallback: peramban tanpa
+	   color-mix() jatuh ke warna yang sama, bukan ke warna warisan. */
+	--redup: #73685f;
+	--redup: color-mix(in srgb, var(--ink) 62%, var(--paper));
+	--redup-lemah: #877e78;
+	--redup-lemah: color-mix(in srgb, var(--ink) 55%, var(--paper));
 
 	color: var(--ink);
 	background: var(--paper);
@@ -167,8 +179,7 @@ img {
 }
 
 .muted {
-	color: #73685f;
-	color: color-mix(in srgb, var(--ink) 62%, var(--paper));
+	color: var(--redup);
 	font-size: 0.875rem;
 }
 
@@ -186,7 +197,7 @@ img {
 	gap: 0.5rem;
 	padding: 0.72rem 1.125rem;
 	border: none;
-	border-radius: 0.8125rem;
+	border-radius: var(--radius-m);
 	background: var(--rust);
 	color: #fffdf8;
 	font-family: inherit;
@@ -246,8 +257,7 @@ img {
 
 .field .hint {
 	font-size: 0.8125rem;
-	color: #73685f;
-	color: color-mix(in srgb, var(--ink) 62%, var(--paper));
+	color: var(--redup);
 	margin: 0.25rem 0 0;
 }
 
@@ -256,6 +266,8 @@ input[type='tel'],
 input[type='email'],
 input[type='password'],
 input[type='number'],
+input[type='search'],
+input[type='date'],
 input[type='file'],
 select,
 textarea {

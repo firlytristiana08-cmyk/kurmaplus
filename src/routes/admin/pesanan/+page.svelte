@@ -43,10 +43,10 @@
 	<form class="filters" method="GET" action="/admin/pesanan">
 		<div class="field">
 			<label for="q">Cari kode, nama, atau nomor WhatsApp</label>
-			<input id="q" name="q" type="text" value={filter.q ?? ''} placeholder="mis. DEMO4455 atau Budi" />
+			<input id="q" name="q" type="search" value={filter.q ?? ''} placeholder="mis. DEMO4455 atau Budi" />
 		</div>
 		<div class="chip-scroll">
-			<a class="chip" class:is-active={!filter.status} href={pageUrl({ status: null })}>Semua</a>
+			<a class="chip" class:is-active={!filter.status} href={pageUrl({ status: null, hal: null })}>Semua</a>
 			{#each statuses as status (status)}
 				<a class="chip" class:is-active={filter.status === status} href={pageUrl({ status, hal: null })}>
 					{STATUS_LABEL_ID[status]}
@@ -54,23 +54,26 @@
 			{/each}
 		</div>
 		<div class="chip-scroll">
-			<a class="chip" class:is-active={!filter.shippingStatus} href={pageUrl({ ongkir: null })}>Ongkir: semua</a>
+			<a class="chip" class:is-active={!filter.shippingStatus} href={pageUrl({ ongkir: null, hal: null })}>Ongkir: semua</a>
 			<a class="chip" class:is-active={filter.shippingStatus === 'pending'} href={pageUrl({ ongkir: 'pending', hal: null })}>Belum dikonfirmasi</a>
 			<a class="chip" class:is-active={filter.shippingStatus === 'paid'} href={pageUrl({ ongkir: 'paid', hal: null })}>Sudah dikonfirmasi</a>
 		</div>
+		<!-- Satu pola saringan untuk SEMUA halaman admin: ubah isian, lalu
+		     tekan Terapkan. Dulu di sini isian mengirim form sendiri DAN ada
+		     tombol Terapkan — dua mekanisme untuk hal yang sama. -->
 		<div class="chip-row">
-			<label class="chip" style="cursor: default">
+			<label class="chip chip-static" for="kurir">
 				Pengiriman
-				<select name="kurir" onchange={(event) => event.currentTarget.form?.submit()} style="min-height: 32px; border: none; padding: 0 0.25rem; background: transparent; font-weight: 700">
+				<select id="kurir" name="kurir">
 					<option value="" selected={!filter.courier}>Semua</option>
 					<option value="COD" selected={filter.courier === 'COD'}>COD</option>
 					<option value="Grab" selected={filter.courier === 'Grab'}>Grab</option>
 					<option value="Gojek" selected={filter.courier === 'Gojek'}>Gojek</option>
 				</select>
 			</label>
-			<label class="chip" style="cursor: default">
+			<label class="chip chip-static" for="tanggal">
 				Tanggal kirim
-				<input name="tanggal" type="date" value={filter.deliveryDate ?? ''} onchange={(event) => event.currentTarget.form?.submit()} style="min-height: 32px; border: none; background: transparent; font-weight: 700" />
+				<input id="tanggal" name="tanggal" type="date" value={filter.deliveryDate ?? ''} />
 			</label>
 			<button class="btn-mini" type="submit">Terapkan</button>
 		</div>
@@ -78,7 +81,7 @@
 
 	<div class="surface">
 		{#if list.rows.length === 0}
-			<p class="muted" style="margin: 0">Belum ada pesanan yang cocok dengan saringan ini.</p>
+			<p class="muted">Belum ada pesanan yang cocok dengan saringan ini.</p>
 		{:else}
 			{#each list.rows as order (order.code)}
 				<a class="row" href={`/admin/pesanan/${order.code}`}>
@@ -101,11 +104,11 @@
 	</div>
 
 	{#if list.pages > 1}
-		<div class="chip-row" style="justify-content: center">
+		<div class="chip-row is-center">
 			{#if list.page > 1}
 				<a class="chip" href={pageUrl({ hal: String(list.page - 1) })}>‹ Sebelumnya</a>
 			{/if}
-			<span class="chip is-active" style="cursor: default">Hal {list.page}/{list.pages}</span>
+			<span class="chip chip-static">Hal {list.page}/{list.pages}</span>
 			{#if list.page < list.pages}
 				<a class="chip" href={pageUrl({ hal: String(list.page + 1) })}>Berikutnya ›</a>
 			{/if}

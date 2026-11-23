@@ -60,21 +60,21 @@
 		<a class="chip" class:is-active={filter.entity === 'settings'} href={pageUrl({ objek: 'settings' })}>Pengaturan</a>
 		<a class="chip" class:is-active={filter.entity === 'export'} href={pageUrl({ objek: 'export' })}>Ekspor</a>
 	</div>
-	<form class="chip-row" method="GET" action="/admin/log">
-		<label class="chip" style="cursor: default">
+	<form class="filter-bar" method="GET" action="/admin/log">
+		<label class="chip chip-static" for="dari">
 			Dari
-			<input name="from" type="date" value={filter.from ?? ''} style="min-height: 32px; border: none; background: transparent; font-weight: 700" />
+			<input id="dari" name="from" type="date" value={filter.from ?? ''} />
 		</label>
-		<label class="chip" style="cursor: default">
+		<label class="chip chip-static" for="sampai">
 			Sampai
-			<input name="to" type="date" value={filter.to ?? ''} style="min-height: 32px; border: none; background: transparent; font-weight: 700" />
+			<input id="sampai" name="to" type="date" value={filter.to ?? ''} />
 		</label>
 		<button class="btn-mini" type="submit">Terapkan</button>
 	</form>
 
 	<div class="surface">
 		{#if data.entries.length === 0}
-			<p class="muted" style="margin: 0">Belum ada catatan pada saringan ini.</p>
+			<p class="muted">Belum ada catatan pada saringan ini.</p>
 		{:else}
 			<ul class="timeline">
 				{#each data.entries as entry (entry.id)}

@@ -132,7 +132,7 @@
 <main class="wrap" class:no-print={printing}>
 	<header class="admin-head">
 		<h1>Pesanan {order.code}</h1>
-		<p class="row-l1" style="margin: 0 0 0.25rem">
+		<p class="row-l1 head-meta">
 			<StatusBadge status={order.status} />
 			<span class="muted">Dibuat {formatDateTimeId(order.createdAt)}</span>
 		</p>
@@ -159,7 +159,7 @@
 
 	<!-- Item (AD-06) -->
 	<div class="surface">
-		<h3 style="margin-top: 0">Item</h3>
+		<h2 class="card-title">Item</h2>
 		{#each order.items as item (item.name + item.priceIdr)}
 			<div class="row">
 				<div class="row-main">
@@ -170,18 +170,18 @@
 			</div>
 		{/each}
 		<hr class="divider" />
-		<div class="row" style="border-bottom: none">
+		<div class="row is-plain-row">
 			<div class="row-main"><strong>Total pesanan</strong></div>
 			<div class="row-side tabular"><strong>{formatRupiah(order.totalIdr)}</strong></div>
 		</div>
-		<p class="muted" style="margin: 0">
+		<p class="muted">
 			Harga terkunci saat pesanan dibuat. Ongkir dicatat terpisah dan tidak mengubah total (BA-06).
 		</p>
 	</div>
 
 	<!-- Pembeli & pengiriman (AD-06, AD-08) -->
 	<div class="surface">
-		<h3 style="margin-top: 0">Pembeli &amp; pengiriman</h3>
+		<h2 class="card-title">Pembeli &amp; pengiriman</h2>
 		<div class="row">
 			<div class="row-main">
 				<div class="row-l1">{order.customerName} · <span class="tabular">{order.customerPhone}</span></div>
@@ -193,7 +193,7 @@
 				</div>
 			</div>
 		</div>
-		<p class="muted tabular" style="margin: 0.5rem 0 0">Titik peta: {order.lat}, {order.lng}</p>
+		<p class="muted tabular">Titik peta: {order.lat}, {order.lng}</p>
 		<div class="btn-row">
 			<button class="btn-mini" type="button" onclick={() => copyText(`${order.address}, ${order.city}`, 'Alamat')}>
 				<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16 1H4a2 2 0 0 0-2 2v14h2V3h12zm3 4H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm0 16H8V7h11z"/></svg>
@@ -211,7 +211,7 @@
 
 	<!-- Ongkir (AD-09, BA-06): nominal + konfirmasi, dua hal saja. -->
 	<div class="surface">
-		<h3 style="margin-top: 0">Ongkir</h3>
+		<h2 class="card-title">Ongkir</h2>
 		<p>
 			{#if shippingConfirmed}
 				<span class="badge badge-ok">Ongkir dikonfirmasi</span>
@@ -254,8 +254,8 @@
 
 	<!-- WhatsApp (AD-10) -->
 	<div class="surface">
-		<h3 style="margin-top: 0">WhatsApp ke pembeli</h3>
-		<p class="muted" style="margin-bottom: 0.5rem">
+		<h2 class="card-title">WhatsApp ke pembeli</h2>
+		<p class="muted">
 			Templat terisi kode pesanan, nama, dan nominal — dikirim ke {order.customerPhone}.
 		</p>
 		<div class="btn-row">
@@ -270,8 +270,8 @@
 
 	<!-- Pembayaran DOKU (AD-12) -->
 	<div class="surface">
-		<h3 style="margin-top: 0">Pembayaran DOKU</h3>
-		<p class="muted tabular" style="margin-bottom: 0.5rem">
+		<h2 class="card-title">Pembayaran DOKU</h2>
+		<p class="muted tabular">
 			Invoice {order.code} · dibayar {order.paidAt ? formatDateTimeId(order.paidAt) : '—'}
 			{#if order.manualPaidReason}· manual: {order.manualPaidReason}{/if}
 		</p>
@@ -302,10 +302,10 @@
 
 	<!-- Catatan internal (AD-11) -->
 	<div class="surface">
-		<h3 style="margin-top: 0">Catatan internal</h3>
+		<h2 class="card-title">Catatan internal</h2>
 		<form method="POST" action="?/catatan" use:enhance={localEnhance()}>
 			<div class="field">
-				<label for="catatan" class="visually-hidden" style="position: absolute; left: -9999px">Catatan internal</label>
+				<label for="catatan" class="visually-hidden">Catatan internal</label>
 				<textarea id="catatan" name="note" placeholder="Tulis catatan untuk diri sendiri…">{order.internalNote ?? ''}</textarea>
 				<p class="hint">Tidak pernah tampil ke pembeli.</p>
 			</div>
@@ -316,7 +316,7 @@
 	<!-- Pengembalian dana (BA-04) -->
 	{#if order.status === 'cancelled' || order.refundNote}
 		<div class="surface">
-			<h3 style="margin-top: 0">Pengembalian dana</h3>
+			<h2 class="card-title">Pengembalian dana</h2>
 			{#if order.refundNote}
 				<p class="info-box">
 					Tercatat {order.refundNotedAt ? formatDateTimeId(order.refundNotedAt) : ''} — {order.refundNote}
@@ -338,7 +338,7 @@
 	</div>
 	<div class="surface">
 		{#if order.history.length === 0}
-			<p class="muted" style="margin: 0">Belum ada perubahan tercatat untuk pesanan ini.</p>
+			<p class="muted">Belum ada perubahan tercatat untuk pesanan ini.</p>
 		{:else}
 			<ul class="timeline">
 				{#each order.history as entry (entry.id)}
@@ -357,7 +357,7 @@
 	</div>
 	<div class="surface">
 		<form method="POST" action="?/tanggal" use:enhance={localEnhance()}>
-			<h3 style="margin-top: 0">Pindah tanggal kirim</h3>
+			<h2 class="card-title">Pindah tanggal kirim</h2>
 			<p class="muted">Hanya Sabtu atau Minggu (BA-07). Pembeli perlu diberi tahu lewat WhatsApp.</p>
 			<div class="field">
 				<label for="tanggal-baru">Tanggal kirim baru</label>
@@ -383,26 +383,26 @@
 					}
 				}}
 			>
-				<h3 style="margin-top: 0">Batalkan pesanan</h3>
+				<h2 class="card-title">Batalkan pesanan</h2>
 				<p class="muted">Hanya dari status Dibayar atau Dikemas; alasan wajib (BA-03).</p>
 				<input type="hidden" name="to" value="cancelled" />
 				<div class="field">
 					<label for="alasan-batal">Alasan pembatalan</label>
 					<input id="alasan-batal" name="reason" type="text" placeholder="mis. pembeli membatalkan lewat WhatsApp" required />
 				</div>
-				<label style="display: flex; gap: 0.5rem; align-items: center; font-size: 0.9375rem; margin-bottom: 0.75rem">
-					<input type="checkbox" name="restore_stock" value="1" checked style="width: 20px; height: 20px; min-height: 0" />
+				<label class="check-line">
+					<input type="checkbox" name="restore_stock" value="1" checked />
 					Stok dikembalikan
 				</label>
 				<button class="btn-mini is-danger" type="submit">Ya, batalkan pesanan</button>
 			</form>
 		{:else if order.status === 'pending_payment'}
-			<p class="muted" style="margin: 0">
+			<p class="muted">
 				Pesanan menunggu bayar tidak dibatalkan admin (BA-02) — sistem yang menandai
 				kedaluwarsa saat batas waktu lewat.
 			</p>
 		{:else}
-			<p class="muted" style="margin: 0">
+			<p class="muted">
 				{order.status === 'shipped'
 					? 'Pesanan yang sudah dikirim tidak bisa dibatalkan (BA-05) — komplain dicatat di catatan internal.'
 					: 'Status akhir — tidak ada aksi pembatalan.'}
@@ -415,9 +415,9 @@
 	<div class="print-area">
 		<section class="print-sheet">
 			<h2 class="print-title">KURMAPLUS — Pesanan {order.code} — {formatDateId(order.deliveryDate)}</h2>
-			<p style="margin: 0.25rem 0 0.75rem">Tanggal pesanan: {formatDateTimeId(order.createdAt)}</p>
+			<p class="print-lede">Tanggal pesanan: {formatDateTimeId(order.createdAt)}</p>
 			<div class="surface">
-				<h3 style="margin-top: 0">Isi pesanan · {order.items.length} jenis · {kemasanCount} kemasan</h3>
+				<h2 class="card-title">Isi pesanan · {order.items.length} jenis · {kemasanCount} kemasan</h2>
 				{#each order.items as item}
 					<div class="row">
 						<div class="row-main">
@@ -460,7 +460,7 @@
 
 {#if forward[order.status] ?? backward[order.status]}
 	<div class="admin-sticky no-print">
-		<div class="wrap" style="padding: 0">
+		<div class="wrap sticky-flush">
 			{#if forward[order.status]}
 				<form
 					method="POST"
@@ -498,7 +498,7 @@
 					}}
 				>
 					<input type="hidden" name="to" value={backward[order.status]} />
-					<button class="btn btn-secondary" type="submit" style="margin-top: 0.5rem">Koreksi mundur satu langkah…</button>
+					<button class="btn btn-secondary mt-s" type="submit">Koreksi mundur satu langkah…</button>
 				</form>
 			{/if}
 			<p class="sticky-hint">Perpindahan status tercatat di log audit</p>

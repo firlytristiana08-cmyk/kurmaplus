@@ -7,6 +7,21 @@
 
 	let { data } = $props();
 	const report = $derived(data.report);
+
+	/** Pintasan periode: pertanyaan tersering tanpa mengetik dua tanggal. */
+	function shortcut(kind: '7' | '30' | 'bulan' | 'semua'): string {
+		const hariIni = new Date();
+		const iso = (d: Date): string => d.toISOString().slice(0, 10);
+		const akhir = iso(hariIni);
+		if (kind === 'semua') return '/admin/laporan?from=2020-01-01&to=' + akhir;
+		if (kind === 'bulan') {
+			const awal = new Date(hariIni.getFullYear(), hariIni.getMonth(), 1);
+			return `/admin/laporan?from=${iso(awal)}&to=${akhir}`;
+		}
+		const mulai = new Date(hariIni);
+		mulai.setDate(mulai.getDate() - Number(kind) + 1);
+		return `/admin/laporan?from=${iso(mulai)}&to=${akhir}`;
+	}
 </script>
 
 <svelte:head>
@@ -24,20 +39,27 @@
 		</p>
 	</header>
 
-	<form class="chip-row" method="GET" action="/admin/laporan">
-		<label class="chip" style="cursor: default">
+	<form class="filter-bar" method="GET" action="/admin/laporan">
+		<label class="chip chip-static" for="dari">
 			Dari
-			<input name="from" type="date" value={report.from} style="min-height: 32px; border: none; background: transparent; font-weight: 700" />
+			<input id="dari" name="from" type="date" value={report.from} />
 		</label>
-		<label class="chip" style="cursor: default">
+		<label class="chip chip-static" for="sampai">
 			Sampai
-			<input name="to" type="date" value={report.to} style="min-height: 32px; border: none; background: transparent; font-weight: 700" />
+			<input id="sampai" name="to" type="date" value={report.to} />
 		</label>
 		<button class="btn-mini" type="submit">Terapkan</button>
 	</form>
 
+	<div class="chip-row">
+		<a class="chip" href={shortcut('7')}>7 hari</a>
+		<a class="chip" href={shortcut('30')}>30 hari</a>
+		<a class="chip" href={shortcut('bulan')}>Bulan ini</a>
+		<a class="chip" href={shortcut('semua')}>Semua</a>
+	</div>
+
 	<div class="surface">
-		<h3 style="margin-top: 0">Ringkasan</h3>
+		<h2 class="card-title">Ringkasan</h2>
 		<div class="recap-line">
 			<span class="day">Jumlah pesanan</span>
 			<span class="sum tabular">{report.orderCount}</span>
@@ -55,9 +77,9 @@
 	</div>
 
 	<div class="surface">
-		<h3 style="margin-top: 0">Penjualan per varian</h3>
+		<h2 class="card-title">Penjualan per varian</h2>
 		{#if report.perVariant.length === 0}
-			<p class="muted" style="margin: 0">Belum ada penjualan pada periode ini.</p>
+			<p class="muted">Belum ada penjualan pada periode ini.</p>
 		{:else}
 			{#each report.perVariant as row (row.name)}
 				<div class="recap-line">
@@ -79,7 +101,7 @@
 	>
 		Ekspor CSV pesanan periode ini
 	</a>
-	<p class="muted" style="text-align: center; margin: 0.5rem 0 0">
+	<p class="muted is-center mt-s">
 		UTF-8 + BOM — terbuka benar di Excel dan Google Sheets.
 	</p>
 </main>
