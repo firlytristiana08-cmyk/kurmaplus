@@ -1,9 +1,9 @@
 // Kode pesanan acak (FR/BR terkait). Aturan status pesanan ada di
 // src/lib/order-status (modul bersama) agar bisa dipakai halaman browser.
 
-import { canTransition, isOrderStatus, type OrderStatus, STATUS_LABEL_ID } from "../order-status";
+import { isOrderStatus, type OrderStatus, STATUS_LABEL_ID } from "../order-status";
 
-export { canTransition, isOrderStatus, type OrderStatus, STATUS_LABEL_ID };
+export { isOrderStatus, type OrderStatus, STATUS_LABEL_ID };
 
 // Kode pesanan acak 8 karakter, tidak berurutan (Model data: orders.code).
 const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
