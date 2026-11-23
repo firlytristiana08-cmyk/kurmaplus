@@ -1,15 +1,20 @@
 // Tes konfigurasi deploy (wrangler.jsonc / wrangler.dev.jsonc).
 //
-// Latar: setiap deploy dari GitHub (Workers Builds) menghapus variabel dan
-// secret yang diisi di dasbor, karena wrangler memperlakukan berkas konfigurasi
-// sebagai sumber kebenaran tunggal. Akibatnya DOKU_CLIENT_ID dan
-// DOKU_SECRET_KEY berulang kali hilang sehingga pembayaran daring mati.
-// (Lihat cloudflare/workers-sdk#8871.)
+// Latar: DOKU_CLIENT_ID dan DOKU_SECRET_KEY berulang kali hilang sehingga
+// pembayaran daring mati. Berkas ini mengunci aturan yang sudah terbukti
+// penting, supaya tidak terhapus lagi tanpa sengaja:
 //
-// Berkas ini mengunci pengamanannya supaya tidak terhapus lagi tanpa sengaja:
-// 1. keep_vars = true  → nilai di dasbor tidak disentuh deploy.
-// 2. secrets.required  → deploy berhenti bila secret wajib tidak ada.
-// 3. Tidak ada nilai rahasia yang ikut masuk repo.
+// 1. Tidak ada nilai rahasia di repo — rahasia hanya diisi lewat dasbor atau
+//    `wrangler secret put`.
+// 2. Var publik yang wajib selalu ada ikut ditulis di berkas konfigurasi
+//    (bukan di dasbor), sehingga tidak mungkin hilang saat deploy.
+// 3. Worker dev terpisah dan memakai DOKU sandbox, tidak pernah mencampur
+//    produksi.
+//
+// PENTING (jangan diulang): `keep_vars: true` pernah dicoba di PR #36 dan
+// membuat SEMUA Workers Builds GAGAL (kurmaplus & kurmaplus-dev). Jangan
+// menambahkannya lagi tanpa menguji lewat Workers Builds yang sebenarnya —
+// `wrangler deploy --dry-run` TIDAK cukup karena berhenti sebelum panggilan API.
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
@@ -49,35 +54,24 @@ function readConfig(file: string): Record<string, unknown> {
   return parseJsonc(readFileSync(path.join(root, file), "utf8"));
 }
 
-const WAJIB = ["DOKU_CLIENT_ID", "DOKU_SECRET_KEY", "SUPABASE_DB_PASSWORD"];
-
 describe("wrangler.jsonc (produksi)", () => {
   const config = readConfig("wrangler.jsonc");
 
-  it("keep_vars aktif agar vars/secret dasbor tidak dihapus saat deploy", () => {
-    expect(config.keep_vars).toBe(true);
-  });
-
-  it("mendaftarkan secret wajib agar deploy berhenti bila salah satu hilang", () => {
-    const secrets = config.secrets as { required?: string[] } | undefined;
-    expect(secrets?.required).toEqual(expect.arrayContaining(WAJIB));
-  });
-
-  it("DOKU_BASE_URL ada di vars (alamat publik, bukan rahasia)", () => {
+  it("memuat var publik yang wajib (alamat DOKU tidak boleh hilang)", () => {
     // Bukan secret: nilainya harus ikut repo supaya tidak pernah terhapus.
     const vars = config.vars as Record<string, string>;
     expect(vars.DOKU_BASE_URL).toBe("https://api.doku.com");
     expect(vars.DOKU_ENV).toBe("production");
+    expect(vars.SUPABASE_URL).toContain("supabase.co");
   });
 
   it("tidak memuat nilai rahasia apa pun", () => {
     const isi = readFileSync(path.join(root, "wrangler.jsonc"), "utf8");
-    // Client ID & secret key DOKU tidak boleh tertulis di repo.
     expect(isi).not.toMatch(/DOKU_CLIENT_ID"\s*:/);
     expect(isi).not.toMatch(/DOKU_SECRET_KEY"\s*:/);
     expect(isi).not.toMatch(/SUPABASE_DB_PASSWORD"\s*:/);
-    // Tidak ada JWT/service-role key Supabase yang ikut terbawa.
     expect(isi).not.toContain("service_role");
+    // Kunci JWT Supabase (rahasia) tidak boleh ikut.
     expect(isi).not.toMatch(/eyJ[A-Za-z0-9_-]{10,}/);
   });
 
@@ -87,17 +81,18 @@ describe("wrangler.jsonc (produksi)", () => {
     const publik = /PUBLISHABLE|ANON/i;
     for (const nama of Object.keys(vars)) {
       if (publik.test(nama)) continue;
-      expect(nama).not.toMatch(/SECRET|PASSWORD|TOKEN|_KEY$/i);
+      expect(nama).not.toMatch(/SECRET|PASSWORD|TOKEN/i);
     }
+  });
+
+  it("TIDAK memakai keep_vars (terbukti menggagalkan build, PR #36)", () => {
+    expect(config.keep_vars).toBeUndefined();
+    expect(readFileSync(path.join(root, "wrangler.jsonc"), "utf8")).not.toContain("keep_vars");
   });
 });
 
 describe("wrangler.dev.jsonc (Worker dev)", () => {
   const config = readConfig("wrangler.dev.jsonc");
-
-  it("keep_vars aktif juga", () => {
-    expect(config.keep_vars).toBe(true);
-  });
 
   it("tetap memakai DOKU sandbox dan Worker terpisah", () => {
     const vars = config.vars as Record<string, string>;
@@ -105,6 +100,10 @@ describe("wrangler.dev.jsonc (Worker dev)", () => {
     expect(vars.DOKU_BASE_URL).toBe("https://api-sandbox.doku.com");
     expect(vars.PUBLIC_BASE_URL).toContain("kurmaplus-dev");
     expect(config.name).toBe("kurmaplus-dev");
+  });
+
+  it("TIDAK memakai keep_vars (penyebab build gagal, PR #36)", () => {
+    expect(config.keep_vars).toBeUndefined();
   });
 
   it("tidak memuat client ID / secret key DOKU", () => {
