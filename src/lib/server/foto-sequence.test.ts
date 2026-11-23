@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { langkahSequence } from "./foto-sequence";
+import type { Db } from "./db";
+import { idFotoBerikutnya, langkahSequence } from "./foto-sequence";
 
 /**
  * Tes urutan id foto.
@@ -57,5 +58,63 @@ describe("langkahSequence", () => {
   it("tahan nilai rusak dari database", () => {
     expect(langkahSequence(Number.NaN, 3)).toBe(4);
     expect(langkahSequence(0, Number.NaN)).toBe(1);
+  });
+});
+
+describe("idFotoBerikutnya: tidak boleh mematikan penambahan produk", () => {
+  // Kesalahan nyata di produksi: tabel product_photo_seq belum ada karena
+  // migrasi belum berjalan, kueri sequence melempar galat di tengah transaksi,
+  // dan SELURUH transaksi penambahan produk ikut dibatalkan.
+  type SqlValue = string | number | null;
+  function buatDb(opsi: { adaTabel: boolean; bisaBuat: boolean; gagalTulis?: boolean }) {
+    const data = new Map<number, number>();
+    const db = {
+      async get<T>(sql: string): Promise<T | undefined> {
+        if (sql.includes("MAX(id)")) return { maks: 7 } as unknown as T;
+        if (sql.includes("FROM product_photo_seq")) {
+          if (!opsi.adaTabel) throw new Error("no such table: product_photo_seq");
+          const nilai = data.get(1);
+          return nilai === undefined ? undefined : ({ next_id: nilai } as unknown as T);
+        }
+        return undefined;
+      },
+      async run(sql: string, params: SqlValue[] = []) {
+        if (sql.startsWith("CREATE TABLE")) {
+          if (!opsi.bisaBuat) throw new Error("permission denied");
+          opsi.adaTabel = true;
+          return { changes: 0 };
+        }
+        if (opsi.gagalTulis) throw new Error("read only");
+        data.set(1, Number(params[0]));
+        return { changes: 1 };
+      },
+      // Anggota lain dari antarmuka Db tidak dipakai fungsi yang diuji.
+      // Dibuat melempar supaya pemakaian tak terduga langsung ketahuan.
+      async all<T>(): Promise<T[]> {
+        throw new Error("all() tidak dipakai");
+      },
+      async transaction<T>(): Promise<T> {
+        throw new Error("transaction() tidak dipakai");
+      },
+    } as unknown as Db;
+    return db;
+  }
+
+  it("tabel belum ada -> tetap memberi id (TIDAK melempar galat)", async () => {
+    const db = buatDb({ adaTabel: false, bisaBuat: false });
+    // Ini yang dulu membatalkan seluruh transaksi penambahan produk.
+    await expect(idFotoBerikutnya(db)).resolves.toBe(8);
+  });
+
+  it("tabel bisa dibuat sendiri -> id berikutnya melanjutkan sequence", async () => {
+    const db = buatDb({ adaTabel: false, bisaBuat: true });
+    expect(await idFotoBerikutnya(db)).toBe(8);
+    // Sequence kini tercatat; id berikutnya naik, tidak memakai 8 lagi.
+    expect(await idFotoBerikutnya(db)).toBe(9);
+  });
+
+  it("sequence tidak bisa ditulis -> id tetap diberikan", async () => {
+    const db = buatDb({ adaTabel: true, bisaBuat: true, gagalTulis: true });
+    await expect(idFotoBerikutnya(db)).resolves.toBe(8);
   });
 });

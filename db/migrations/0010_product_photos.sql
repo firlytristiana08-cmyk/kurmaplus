@@ -13,9 +13,33 @@ CREATE TABLE IF NOT EXISTS product_photos (
 
 CREATE INDEX IF NOT EXISTS idx_product_photos_product ON product_photos(product_id);
 
+-- Penjaga per-SLOT, bukan per-produk.
+--
+-- Tanpa penjaga, migrasi yang dijalankan ulang (atau pada database yang
+-- galerinya sudah terisi lewat jalur lain) MENDUPLIKASI setiap foto lama.
+-- Di produksi berkas ini sempat tercatat "sudah jalan" hanya berdasarkan
+-- keberadaan kolom, bukan isi datanya — jadi penjaganya wajib ada.
+--
+-- Penjaga harus memeriksa SLOT yang sama (sort_order 0/1/2), bukan "apakah
+-- produk ini sudah punya foto apa pun". Versi pertama saya memakai bentuk
+-- kedua, dan akibatnya pada database baru hanya foto PERTAMA yang tersalin:
+-- setelah baris pertama masuk, dua INSERT berikutnya melihat "sudah ada foto"
+-- lalu melewati slot 1 dan 2. Tertangkap oleh migrasi.test.ts.
 INSERT INTO product_photos (product_id, sort_order, data)
-  SELECT id, 0, photo FROM products WHERE photo IS NOT NULL AND photo <> '';
+  SELECT p.id, 0, p.photo FROM products p
+  WHERE p.photo IS NOT NULL AND p.photo <> ''
+    AND NOT EXISTS (
+      SELECT 1 FROM product_photos f WHERE f.product_id = p.id AND f.sort_order = 0
+    );
 INSERT INTO product_photos (product_id, sort_order, data)
-  SELECT id, 1, photo_2 FROM products WHERE photo_2 IS NOT NULL AND photo_2 <> '';
+  SELECT p.id, 1, p.photo_2 FROM products p
+  WHERE p.photo_2 IS NOT NULL AND p.photo_2 <> ''
+    AND NOT EXISTS (
+      SELECT 1 FROM product_photos f WHERE f.product_id = p.id AND f.sort_order = 1
+    );
 INSERT INTO product_photos (product_id, sort_order, data)
-  SELECT id, 2, photo_3 FROM products WHERE photo_3 IS NOT NULL AND photo_3 <> '';
+  SELECT p.id, 2, p.photo_3 FROM products p
+  WHERE p.photo_3 IS NOT NULL AND p.photo_3 <> ''
+    AND NOT EXISTS (
+      SELECT 1 FROM product_photos f WHERE f.product_id = p.id AND f.sort_order = 2
+    );

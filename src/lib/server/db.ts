@@ -12,6 +12,7 @@ import type { DatabaseSync } from "node:sqlite";
 import { Pool, type PoolClient, types } from "pg";
 import { denganVersi } from "../foto-versi";
 import { ensureRuntimeEnv, hyperdriveConnectionString } from "./cf-env";
+import { MIGRASI } from "./migrasi";
 import type { OrderStatus } from "./orders";
 import { generateOrderCode } from "./orders";
 import { subtotalIdr, totalIdr } from "./pricing";
@@ -312,22 +313,22 @@ function resolveConnection(): PostgresTarget | null {
   });
 }
 
-function applyMigrations(raw: DatabaseSync, fs: typeof import("node:fs")): void {
+function applyMigrations(raw: DatabaseSync): void {
   // Pelacak migrasi: berkas di db/migrations dijalankan sekali per database,
   // sehingga ALTER TABLE pada migrasi berikutnya aman dijalankan berulang kali.
   raw.exec(
     "CREATE TABLE IF NOT EXISTS schema_migrations (name TEXT PRIMARY KEY, applied_at TEXT NOT NULL)",
   );
-  const dir = path.join(process.cwd(), "db", "migrations");
-  for (const file of fs.readdirSync(dir).sort()) {
-    if (!file.endsWith(".sql")) continue;
+  // Sumber migrasi = modul MIGRASI, bukan folder di disk: bundel produksi tidak
+  // memuat db/migrations (lihat kepala src/lib/server/migrasi.ts).
+  for (const { name: file, statements } of MIGRASI) {
     const done = sqliteGet<{ ok: number }>(
       raw,
       "SELECT 1 AS ok FROM schema_migrations WHERE name = ?",
       [file],
     );
     if (done) continue;
-    raw.exec(fs.readFileSync(path.join(dir, file), "utf8"));
+    for (const pernyataan of statements) raw.exec(pernyataan);
     sqliteRun(raw, "INSERT INTO schema_migrations (name, applied_at) VALUES (?, ?)", [
       file,
       new Date().toISOString(),
@@ -343,7 +344,7 @@ async function openSqlite(): Promise<Db> {
   const dataDir = process.env.KURMAPLUS_DATA_DIR ?? path.join(process.cwd(), ".data");
   fs.mkdirSync(dataDir, { recursive: true });
   const raw = new DatabaseSync(path.join(dataDir, "kurmaplus.db"));
-  applyMigrations(raw, fs);
+  applyMigrations(raw);
   const seeded = sqliteGet<{ n: number }>(raw, "SELECT COUNT(*) AS n FROM products", []);
   if ((seeded?.n ?? 0) === 0) {
     raw.exec(fs.readFileSync(path.join(process.cwd(), "db/seed.sql"), "utf8"));
@@ -394,36 +395,22 @@ async function openSqlite(): Promise<Db> {
  *   buruk mematikan seluruh toko karena satu berkas migrasi bermasalah.
  */
 async function applyMigrationsPostgres(pool: Pool): Promise<void> {
-  const fs = await import("node:fs");
-  const path = await import("node:path");
   await pool.query(
     "CREATE TABLE IF NOT EXISTS schema_migrations (name TEXT PRIMARY KEY, applied_at TEXT NOT NULL)",
   );
-  const dir = path.join(process.cwd(), "db", "migrations");
-  let daftar: string[];
-  try {
-    daftar = fs.readdirSync(dir).sort();
-  } catch {
-    // Runtime tanpa berkas migrasi (mis. bundel tanpa db/) — bukan galat fatal.
-    return;
-  }
-  for (const file of daftar) {
-    if (!file.endsWith(".sql")) continue;
+  // Sumber migrasi = modul MIGRASI yang ikut ke bundel Worker. Versi sebelumnya
+  // membaca db/migrations dari disk; folder itu tidak ada di bundel, sehingga
+  // setiap penerapan migrasi di produksi berhenti diam-diam dan skema Supabase
+  // tidak pernah berubah.
+  for (const { name: file, statements } of MIGRASI) {
     try {
       const sudah = await pool.query("SELECT 1 FROM schema_migrations WHERE name = $1", [file]);
       if (sudah.rowCount) continue;
-      // Pisahkan pernyataan agar ALTER bisa ditangani satu per satu.
-      const isi = fs.readFileSync(path.join(dir, file), "utf8");
-      const pernyataan = isi
-        .split(/;\s*(?:\r?\n|$)/)
-        .map((s) => s.trim())
-        .filter((s) => s.length > 0 && !/^--/.test(s.replace(/^\s*--.*$/gm, "").trim()));
-      for (const satu of pernyataan) {
-        // "-- komentar" di awal pernyataan dibuang; isi setelahnya yang jalan.
-        const bersih = satu.replace(/^\s*(?:--.*\r?\n)+/gm, "").trim();
-        if (!bersih) continue;
+      for (const satu of statements) {
+        // "ADD COLUMN IF NOT EXISTS" hanya sah di Postgres; SQLite menolaknya.
+        // Di sini klausa itu dibuang dan keberadaan kolom diperiksa lebih dulu.
         const tambahKolom = /^ALTER TABLE\s+(\w+)\s+ADD COLUMN\s+(?:IF NOT EXISTS\s+)?(\w+)/i.exec(
-          bersih,
+          satu,
         );
         if (tambahKolom) {
           const [, tabel, kolom] = tambahKolom;
@@ -432,11 +419,10 @@ async function applyMigrationsPostgres(pool: Pool): Promise<void> {
             [tabel, kolom],
           );
           if (ada.rowCount) continue;
-          // SQLite-only syntax dibuang bila ada.
-          await pool.query(bersih.replace(/ADD COLUMN\s+IF NOT EXISTS/i, "ADD COLUMN"));
+          await pool.query(satu.replace(/ADD COLUMN\s+IF NOT EXISTS/i, "ADD COLUMN"));
           continue;
         }
-        await pool.query(bersih);
+        await pool.query(satu);
       }
       await pool.query("INSERT INTO schema_migrations (name, applied_at) VALUES ($1, $2)", [
         file,
@@ -446,6 +432,8 @@ async function applyMigrationsPostgres(pool: Pool): Promise<void> {
       // Kode 42701 = kolom sudah ada; dianggap beres.
       const kode = (error as { code?: string }).code;
       if (kode === "42701") continue;
+      // Satu berkas gagal tidak boleh mematikan toko. Kode galat saja (tanpa
+      // pesan SQL) supaya tidak ada data yang bocor ke log.
       process.stderr.write(
         `KURMAPLUS: migrasi ${file} dilewati (${kode ?? (error as Error).name}).\n`,
       );
