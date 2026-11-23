@@ -1,36 +1,11 @@
 <script lang="ts">
 	import { photoSrcset } from '#lib/photos';
-import { formatRupiah } from '#lib/format';
+	import { formatRupiah } from '#lib/format';
 	import PageFooter from '#lib/components/PageFooter.svelte';
 	import PageHeader from '#lib/components/PageHeader.svelte';
 	import type { KatalogData } from './+page.server';
 
 	let { data }: { data: KatalogData } = $props();
-
-	const BULAN_PENDEK = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
-
-	// "Sabtu & Minggu, 21–22 Nov" — versi pendek tanggal kirim terdekat.
-	function ringkasTanggal(options: { date: string; weekdayName: string }[]): string {
-		if (options.length === 0) return '—';
-		const parsed = options.map((option) => {
-			const d = new Date(`${option.date}T00:00:00`);
-			return {
-				day: d.getDate(),
-				month: d.getMonth(),
-				year: d.getFullYear(),
-				weekday: option.weekdayName
-			};
-		});
-		const weekdays = parsed.map((d) => d.weekday).join(' & ');
-		const sameMonth = parsed.every((d) => d.month === parsed[0].month && d.year === parsed[0].year);
-		if (sameMonth) {
-			const nums = parsed.map((d) => d.day);
-			const berurutan = parsed.length === 2 && nums[1] === nums[0] + 1;
-			const angka = berurutan ? `${nums[0]}–${nums[1]}` : nums.join(' & ');
-			return `${weekdays}, ${angka} ${BULAN_PENDEK[parsed[0].month]}`;
-		}
-		return parsed.map((d) => `${d.weekday} ${d.day} ${BULAN_PENDEK[d.month]}`).join(' & ');
-	}
 </script>
 
 <svelte:head>
@@ -43,13 +18,6 @@ import { formatRupiah } from '#lib/format';
 <main class="wrap">
 	<section class="intro">
 		<h1>Kurma enak untuk tiap hari — dikirim tiap akhir pekan.</h1>
-		<div class="info-box">
-			<strong class="info-title">Pengiriman terdekat:</strong>
-			<span class="info-rest">{ringkasTanggal(data.deliveryDates)} & Ongkir Grab/Gojek, dibayar langsung ke kurir.</span>
-			{#if data.deliveryDates.some((option) => option.isFull)}
-				<span class="badge badge-off">Sebagian penuh</span>
-			{/if}
-		</div>
 	</section>
 
 	<ul class="product-list">
@@ -100,12 +68,11 @@ import { formatRupiah } from '#lib/format';
 <PageFooter />
 
 <style>
+	/* Kotak "Pengiriman terdekat" dihapus atas permintaan pemilik: jadwal
+	   kirim sudah tampil di checkout (pilihan tanggal) dan di halaman Cara
+	   pesan, jadi di sini hanya mengulang dan mendorong produk ke bawah. */
 	.intro {
-		padding: 1.25rem 0 0.5rem;
-	}
-
-	.intro .info-box {
-		margin-top: 0.75rem;
+		padding: 1.25rem 0 0.25rem;
 	}
 
 	.product-list {
