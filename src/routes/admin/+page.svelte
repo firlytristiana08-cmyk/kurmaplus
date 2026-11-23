@@ -44,18 +44,14 @@
 			<span class="day">Total lunas</span>
 			<span class="sum tabular">
 				{formatRupiah(today.revenue.totalIdr)}
-				<span class="muted" style="font-weight: 400">
-					· {today.revenue.orderCount} pesanan
-				</span>
+				<span class="muted count-note">· {today.revenue.orderCount} pesanan</span>
 			</span>
 		</div>
 		<div class="recap-line">
 			<span class="day">Hari ini</span>
 			<span class="sum tabular">
 				{formatRupiah(today.revenue.todayIdr)}
-				<span class="muted" style="font-weight: 400">
-					· {today.revenue.todayCount} pesanan
-				</span>
+				<span class="muted count-note">· {today.revenue.todayCount} pesanan</span>
 			</span>
 		</div>
 	</div>
@@ -63,23 +59,23 @@
 	<!-- Status pembayaran daring: satu baris, selalu terlihat. Sebelumnya
 	     admin harus membuka /diagnostics untuk tahu DOKU mati atau hidup. -->
 	{#if data.payment.ok}
-		<p style="display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin: 0 0 1rem">
+		<p class="pay-status">
 			<span class="badge badge-ok">Pembayaran DOKU aktif</span>
 			<span class="muted">Pembeli diarahkan ke halaman bayar DOKU saat checkout.</span>
 		</p>
 	{:else}
-		<div class="surface" style="border-color: var(--rust)">
-			<p style="margin: 0 0 0.375rem">
+		<div class="surface is-alert">
+			<p>
 				<span class="badge badge-alert">Pembayaran DOKU belum aktif</span>
 			</p>
-			<p style="margin: 0 0 0.5rem">{data.payment.detail}</p>
+			<p>{data.payment.detail}</p>
 			{#if data.payment.action}
-				<p class="hint" style="margin: 0">
+				<p class="hint">
 					<strong>Tindakan:</strong>
 					{data.payment.action}
 				</p>
 			{/if}
-			<p class="hint" style="margin: 0.5rem 0 0">
+			<p class="hint">
 				Pesanan tetap tersimpan dan bisa dibayar dari halaman pesanan pembeli, jadi tidak ada dana
 				yang hilang.
 			</p>
@@ -105,7 +101,7 @@
 	</div>
 	<div class="surface">
 		{#if today.needAction.length === 0}
-			<p class="muted" style="margin: 0">Belum ada pesanan yang menunggu tindakan.</p>
+			<p class="muted">Belum ada pesanan yang menunggu tindakan.</p>
 		{:else}
 			{#each today.needAction as order (order.code)}
 				<a class="row" href={`/admin/pesanan/${order.code}`}>
@@ -150,7 +146,7 @@
 	</div>
 	<div class="surface">
 		{#if today.lowStock.length === 0}
-			<p class="muted" style="margin: 0">Semua varian di atas ambang {today.threshold}.</p>
+			<p class="muted">Semua varian di atas ambang {today.threshold}.</p>
 		{:else}
 			{#each today.lowStock as row (row.variantId)}
 				<div class="row">
@@ -171,7 +167,7 @@
 
 	<!-- Keadaan toko (AD-04) -->
 	<div class="surface">
-		<div class="row" style="border-bottom: none; padding: 0">
+		<div class="row is-plain">
 			<div class="row-main">
 				<div class="row-l1">
 					<span class="badge {today.storeOpen ? 'badge-ok' : 'badge-off'}">

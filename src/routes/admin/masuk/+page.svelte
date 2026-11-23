@@ -25,7 +25,7 @@
 
 	{#if data.session}
 		<div class="surface">
-			<p style="margin: 0 0 0.75rem">
+			<p>
 				Anda sudah masuk sebagai <strong>{data.session.label}</strong>.
 			</p>
 			<form method="POST" action="?/keluar">
@@ -34,7 +34,7 @@
 		</div>
 	{:else if data.isDev}
 		<div class="surface">
-			<p class="info-box" style="margin-top: 0">
+			<p class="info-box">
 				Mode pengembangan — masuk memakai sesi demo pemilik. Login Supabase Auth (email dan
 				password) aktif di produksi.
 			</p>
